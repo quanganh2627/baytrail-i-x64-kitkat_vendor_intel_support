@@ -63,7 +63,7 @@ make_kernel() {
     local custom_board=${1}
     local _config_file=""
 
-    cd ${TOP}/hardware/intel/linux
+    cd ${TOP}/hardware/intel/linux-2.6
     _config_file=i386_${custom_board}_android_defconfig
 
     if [ -z "$_preserve_kernel_config" ]; then
