@@ -1,0 +1,21 @@
+To build the Moorestown "mrst_edv" image from the top of the srouce tree:
+  ./vendor/intel/support/kernel-build-hack.sh -c mrst_edv
+  source build/envsetup.sh
+  lunch mrst_edv-eng
+  make mrst_edv
+
+host system build setup assumes:
+AOSP build system packages are pressent:
+http://source.android.com/source/download.html
+Ubuntu Linux (32-bit x86) 
+sudo apt-get install git-core gnupg flex bison gperf libsdl-dev libesd0-dev libwxgtk2.6-dev build-essential zip curl libncurses5-dev zlib1g-dev 
+
+Ubuntu Linux (64-bit x86)
+sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev
+
+Froyo still requiers jdk 1.5  You need to get that from java from: 
+http://java.sun.com/javase/downloads/index_jdk5.jsp
+
+NOTE: the new master branch is moving the jdk 1.6 and a TBD 64 bit build host requierment. 
+
+
