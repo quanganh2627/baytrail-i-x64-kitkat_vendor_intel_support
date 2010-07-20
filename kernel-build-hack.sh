@@ -46,44 +46,51 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
-        KERNEL_OUT=${TOP}/prebuilt/android-x86/kernel/kernel
+        KERNEL_FILE=${TOP}/prebuilt/android-x86/kernel/kernel
         ;;
     mrst_ref | ivydale | mrst_edv)
         VENDOR=intel
         BOARD=${custom_board}
         PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
-        KERNEL_OUT=${PRODUCT_OUT}/bzImage
+        KERNEL_FILE=${PRODUCT_OUT}/bzImage
         ;;
     *)
         echo "Unknown board specified \"${custom_board}\""
         exit_on_error 2
         ;;
     esac
+
+    KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 }
 
 make_kernel() {
     local custom_board=${1}
     local _config_file=""
 
+    KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
+    mkdir -p ${KERNEL_BUILD_DIR}
+
     cd ${TOP}/hardware/intel/linux-2.6
     _config_file=i386_${custom_board}_android_defconfig
 
     if [ -z "$_preserve_kernel_config" ]; then
-        rm -f .config
+        rm -f ${KERNEL_BUILD_DIR}/.config
     fi
     if [ "$_clean" ]; then
-        make mrproper
+        make O=${KERNEL_BUILD_DIR} mrproper
     fi
-    if [ ! -e .config ]; then
+    if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
         echo "Fetching a kernel .config file for ${_config_file}"
 
-        make ${_config_file}
+        make O=${KERNEL_BUILD_DIR} ${_config_file}
         exit_on_error $? quiet
     fi
 
     # Check .config to see if we get what we expect
-    awk 'NR>4' arch/x86/configs/$_config_file | grep -v '^#' > /tmp/build.$$.1.tmp
-    awk 'NR>4' .config | grep -v '^#' > /tmp/build.$$.2.tmp
+    awk 'NR>4' arch/x86/configs/$_config_file |
+        grep -v '^#' > /tmp/build.$$.1.tmp
+    awk 'NR>4' ${KERNEL_BUILD_DIR}/.config |
+        grep -v '^#' > /tmp/build.$$.2.tmp
     diff /tmp/build.$$.1.tmp /tmp/build.$$.2.tmp > /dev/null
     if [ $? -ne 0 ]; then
         echo >&3
@@ -91,16 +98,16 @@ make_kernel() {
         echo -n >&3 "   reference config file $_config_file..."
     fi
 
-    if [ arch/x86/configs/${_config_file} -nt .config ]; then
+    if [ arch/x86/configs/${_config_file} -nt ${KERNEL_BUILD_DIR}/.config ]; then
         echo >&3
         echo -n >&3 "WARNING: ${_config_file} is newer than .config..."
     fi
 
-    make -j${_jobs} bzImage
+    make O=${KERNEL_BUILD_DIR} -j${_jobs} bzImage
     exit_on_error $? quiet
 
-    mkdir -p `dirname ${KERNEL_OUT}`
-    cp arch/x86/boot/bzImage ${KERNEL_OUT}
+    mkdir -p `dirname ${KERNEL_FILE}`
+    cp ${KERNEL_BUILD_DIR}/arch/x86/boot/bzImage ${KERNEL_FILE}
     exit_on_error $? quiet
 
     case "${custom_board}" in
@@ -133,10 +140,10 @@ make_modules() {
         mkdir -p ${MODULE_DEST}
     fi
 
-    make -j${_jobs} modules
+    make O=${KERNEL_BUILD_DIR} -j${_jobs} modules
     exit_on_error $? quiet
 
-    make -j${_jobs} modules_install \
+    make O=${KERNEL_BUILD_DIR} -j${_jobs} modules_install \
         INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC}
     exit_on_error $? quiet
 
