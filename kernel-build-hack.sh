@@ -46,11 +46,13 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
+        KERNEL_OUT=${TOP}/prebuilt/android-x86/kernel/kernel
         ;;
     mrst_ref | ivydale | mrst_edv)
         VENDOR=intel
         BOARD=${custom_board}
         PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
+        KERNEL_OUT=${PRODUCT_OUT}/bzImage
         ;;
     *)
         echo "Unknown board specified \"${custom_board}\""
@@ -97,8 +99,8 @@ make_kernel() {
     make -j${_jobs} bzImage
     exit_on_error $? quiet
 
-    mkdir -p ${PRODUCT_OUT}
-    cp arch/x86/boot/bzImage ${PRODUCT_OUT}/.
+    mkdir -p `dirname ${KERNEL_OUT}`
+    cp arch/x86/boot/bzImage ${KERNEL_OUT}
     exit_on_error $? quiet
 
     case "${custom_board}" in
@@ -157,7 +159,7 @@ usage() {
 }
 
 main() {
-    local custom_board=
+    local custom_board_list="vbox mrst_ref ivydale mrst_edv"
 
     while getopts Kc:j:kthC opt
     do
@@ -167,7 +169,7 @@ main() {
             exit 0
             ;;
         c)
-            custom_board=${OPTARG}
+            custom_board_list="${OPTARG}"
             ;;
         j)
             if [ ${OPTARG} -gt 0 ]; then
@@ -195,13 +197,16 @@ main() {
         esac
     done
 
-    init_variables "$custom_board"
-
-    make_kernel ${custom_board} 
-    exit_on_error $?
-
-        exit 0
-
+    for custom_board in $custom_board_list
+    do
+        echo >&3 
+        echo >&3 "Building kernel for $custom_board"
+        echo >&3 "---------------------------------"
+        init_variables "$custom_board"
+        make_kernel ${custom_board} 
+        exit_on_error $?
+    done
+    exit 0
 }
 
 main $*
