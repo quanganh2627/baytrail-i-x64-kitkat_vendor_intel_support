@@ -1,74 +1,66 @@
-To build the Moorestown "mrst_edv" image from the top of the srouce tree:
-  ./vendor/intel/support/kernel-build-hack.sh -c mrst_edv
+To build the Moorestown "mrst_edv" image from the top of the source tree:
   source build/envsetup.sh
   lunch mrst_edv-eng
   make mrst_edv
 
 host system build setup assumes:
-AOSP build system packages are pressent:
-http://source.android.com/source/download.html
-Ubuntu Linux (32-bit x86) 
-sudo apt-get install git-core gnupg flex bison gperf libsdl-dev libesd0-dev libwxgtk2.6-dev build-essential zip curl libncurses5-dev zlib1g-dev 
+  o AOSP build system packages are present:
+  o http://source.android.com/source/download.html
+
+Ubuntu Linux (32-bit x86)  [also works 
+  sudo apt-get install git-core gnupg flex bison gperf libsdl-dev \
+                 libesd0-dev libwxgtk2.6-dev build-essential zip curl \
+                 libncurses5-dev zlib1g-dev 
 
 Ubuntu Linux (64-bit x86)
-sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev
+  sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl \
+               zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev \
+               ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev
 
-Froyo still requiers jdk 1.5  You need to get that from java from: 
-http://java.sun.com/javase/downloads/index_jdk5.jsp
+Froyo still requiers jdk 1.5. You need to get that from java from: 
+  http://java.sun.com/javase/downloads/index_jdk5.jsp
 
 NOTE: the new master branch is moving the jdk 1.6 and a TBD 64 bit build host requierment. 
 
-
-
+----------------------- ----------------------- -----------------------
 
 To load and boot your images, we use fastboot.
-i.e.:
+Although you can script the fastboot yourself, you should
+instead use the flash_device.sh script in this directory.
+flash_device.sh may also be found in the tool/ directory in the
+release tree.
+  Usage: flash_device.sh [-d nand|sd] (default sd)
 
 Procedure to boot using fastboot and creating SD card images:
-* Update your target  platform with the latest  “kboot_fastboot”  (named like
-USB-kboot.ivydale.2010.0701.1432.bin)  the same way you updated   kboot using
-‘FSTK” tool.  Make sure you have the lastest “fastboot” binary present in your
-Linux Host system.
+  * Update your firmware to the latest version (see the release tree)
+  * Update your target device with the latest kboot (see the release tree)
+  * Be sure to use the latest fastboot (tool directory in the release tree)
+  * Be sure to use the latest adb (tool directory in the release tree)
+  * Connect your platform to your Linux Host system via USB.
+  * Reboot the platform , you will see the following boot messages on serial console
 
-* Connect your platform to your Linux Host system via USB.
-
-* Reboot the platform , you will see the following boot messages  on serial   console
-
-*************************************************************************
-   Android Kboot. version: kboot built by root for ivydale on ...
-*************************************************************************
-
-Override aboot version by putting it on the root of the media partition (mmcblk0p3)
-
-To terminate aboot: Hit ESC on your internal keyboard.
-To disable autoboot either:
- - Execute a fastboot command (other than getvar).
- - Place the file 'no_autoboot' on your boot partition.
- - Stroke the touch screen
- - Press any key or button
-Listening for the fastboot protocol on the USB OTG.
-KBoot> Autobooting in 8 seconds...
+    *************************************************************************
+       Android Kboot. version: kboot built by root for ivydale on ...
+    *************************************************************************
+    
+    Override aboot version by putting it on the root of the media partition (mmcblk0p3)
+    
+    To terminate aboot: Hit ESC on your internal keyboard.
+    To disable autoboot either:
+     - Execute a fastboot command (other than getvar).
+     - Place the file 'no_autoboot' on your boot partition.
+     - Stroke the touch screen
+     - Press any key or button
+    Listening for the fastboot protocol on the USB OTG.
+    KBoot> Autobooting in 8 seconds...
  
-When you see this message, within 8 seconds either hit a key (except <Esc>) in
-the keypad OR   enter any fastboot command from your Linux system console to
-disable Autoboot.  Example fastboot command:  fastboot oem system echo 
+  When you see this message, within 8 seconds either hit a key (except
+  <Esc>) in the keypad OR enter any fastboot command from your Linux
+  system console to disable Autoboot. Example fastboot command:
+    fastboot oem system echo
 
-Now Autoboot  should be  stopped and you are ready to load binary images into
-the SD card inserted into the  target platform.  Enter the following commands
-from your Linux Host  system console.:
-(you should be in ../out/target/product/$TARGET directory) 
-
-fastboot oem system /sbin/PartitionDisk.sh /dev/mmcblk0 
-
-fastboot erase boot 
-fastboot erase system 
-fastboot erase userdata 
-fastboot erase recovery 
-fastboot erase media 
-fastboot erase cache 
-fastboot flash boot boot_sdcard.tar.gz     
-fastboot flash system system.tar.gz
-
-fastboot continue  (This command will restart the boot process using the newly
-added img files)  
-
+Now Autoboot should be stopped and you are ready to load binary images into
+the SD card inserted into the target platform. Use flash_device.sh:
+  TARGET={ivydale|mrst_ref|mrst_edv}
+  cd out/target/product/$TARGET
+  flash_device.sh
