@@ -45,14 +45,10 @@ init_variables() {
     generic_x86 | vbox )
         VENDOR=""
         BOARD=generic_x86
-        PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
-        KERNEL_FILE=${TOP}/prebuilt/android-x86/kernel/kernel
         ;;
     mrst_ref | ivydale | mrst_edv)
         VENDOR=intel
         BOARD=${custom_board}
-        PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
-        KERNEL_FILE=${PRODUCT_OUT}/bzImage
         ;;
     *)
         echo "Unknown board specified \"${custom_board}\""
@@ -60,6 +56,8 @@ init_variables() {
         ;;
     esac
 
+    PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
+    KERNEL_FILE=${PRODUCT_OUT}/bzImage
     KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 }
 
