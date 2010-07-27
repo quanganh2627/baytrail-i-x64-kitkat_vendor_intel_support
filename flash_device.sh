@@ -6,7 +6,7 @@
 #  o  flash the contents of the boot and system file systems
 
 _error=0
-_boot=sd
+_boot=sdcard
 _cmd=`basename $0`
 
 
@@ -47,7 +47,7 @@ function do_fastboot {
 }
 
 function usage {
-    echo "Usage: $_cmd [-d nand|sd] (default $_boot)"
+    echo "Usage: $_cmd [-d nand|sdcard] (default $_boot)"
 }
 
 function main {
@@ -67,15 +67,11 @@ function main {
     done
 
     case "$_boot" in
-    sd )
+    sdcard )
         _device=/dev/mmcblk0
-        _boot_gz=boot_sdcard.tar.gz
-        _system_gz=system.tar.gz
         ;;
     nand )
         _device=/dev/nda
-        _boot_gz=boot_nand.tar.gz
-        _system_gz=system.tar.gz
         ;;
     * )
         _error=1
@@ -87,11 +83,8 @@ function main {
         exit 1;
     fi
 
-    if [ "$_boot" == "sd" -a ! -f "$_boot_gz" ]; then
-        echo -n >&2 "$_cmd: Can not find $_boot_gz. "
-        _boot_gz=boot.tar.gz
-        echo >&2 "Trying $_boot_gz. "
-    fi
+    _boot_gz=boot.tar.gz
+    _system_gz=system.tar.gz
 
     if [ ! -r "$_boot_gz" ]; then
         echo >&2 "$_cmd: Can not find $_boot_gz."
