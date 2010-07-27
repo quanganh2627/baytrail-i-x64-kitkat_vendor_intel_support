@@ -47,13 +47,21 @@ function do_fastboot {
 }
 
 function usage {
-    echo "Usage: $_cmd [-d nand|sdcard] (default $_boot)"
+    echo "Usage: $_cmd [-d nand|sdcard] [-c <dir>]"
+    echo "       -d: select boot device. (default $_boot)"
+    echo "       -c: find images in <dir>"
 }
 
 function main {
-    while getopts xd: opt
+    while getopts c:xd: opt
     do
         case "${opt}" in
+        c )
+            if [ ! -d "${OPTARG}" ]; then
+                _error=1
+            fi
+            cd ${OPTARG}
+            ;;
         d )
             _boot=${OPTARG}
             ;;
