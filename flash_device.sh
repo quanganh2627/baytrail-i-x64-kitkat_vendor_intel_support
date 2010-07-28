@@ -6,7 +6,7 @@
 #  o  flash the contents of the boot and system file systems
 
 _error=0
-_boot=sdcard
+_boot=sd
 _cmd=`basename $0`
 
 
@@ -47,7 +47,7 @@ function do_fastboot {
 }
 
 function usage {
-    echo "Usage: $_cmd [-d nand|sdcard] [-c <dir>]"
+    echo "Usage: $_cmd [-d nand|sd] [-c <dir>]"
     echo "       -d: select boot device. (default $_boot)"
     echo "       -c: find images in <dir>"
 }
@@ -75,7 +75,7 @@ function main {
     done
 
     case "$_boot" in
-    sdcard )
+    sd )
         _device=/dev/mmcblk0
         ;;
     nand )
