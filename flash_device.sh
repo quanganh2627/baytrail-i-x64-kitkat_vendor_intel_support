@@ -103,6 +103,7 @@ function main {
         _error=1
     fi
     if [ "$_error" -ne 0 ]; then
+        usage
         exit 1
     fi
 
