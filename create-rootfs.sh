@@ -4,7 +4,7 @@
 #
 TRUE=1
 FALSE=0
-BOOT_TARBALL=boot_sdcard.tar.gz
+BOOT_TARBALL=boot.tar.gz
 SYSTEM_TARBALL=system.tar.gz
 
 # Volume Label
@@ -142,7 +142,7 @@ fmt() {
 
 partition() {
   # wipe out the MBR and primary partition table
-    echo "  Clear the first 512 bytes of the prtition(${blkdev}) to zero"
+    echo "  Clear the first 512 bytes of the partition(${blkdev}) to zero"
     dd if=/dev/zero of=${blkdev} count=1 bs=512 >/dev/null 2>&1
 
     echo "  Creating partitions on $blkdev..."
@@ -369,8 +369,8 @@ main() {
         exit 1
     fi
 
-    if [[ ! -e boot_sdcard.tar.gz ]]; then
-        echo "ERROR: boot_sdcard.tar.gz does not exist"
+    if [[ ! -e $BOOT_TARBALL ]]; then
+        echo "ERROR: $BOOT_TARBALL does not exist"
         exit 2
     fi
 
