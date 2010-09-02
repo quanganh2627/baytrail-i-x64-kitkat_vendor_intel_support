@@ -1,5 +1,5 @@
-am start -a com.android.music.PAYEBACK_VIEWER -d file:///mnt/sdcard/testmp3.mp3 -n com.android.music/.MediaPlaybackActivity
-am start -a com.android.music.PAYEBACK_VIEWER -d file:///mnt/sdcard/testaac.aac -n com.android.music/.MediaPlaybackActivity
+am start -a com.android.music.PLAYBACK_VIEWER -d file:///mnt/sdcard/testmp3.mp3 -n com.android.music/.MediaPlaybackActivity
+am start -a com.android.music.PLAYBACK_VIEWER -d file:///mnt/sdcard/testaac.aac -n com.android.music/.MediaPlaybackActivity
 
 am start -a android.content.Intent.ACTION_VIEW -d file:///mnt/sdcard/Lady_Gaga_MPEG4_320x240.mp4  -t video/mp4 
 am start -a android.content.Intent.ACTION_VIEW -d file:///mnt/sdcard/480x272_Lady_Gaga_264.mp4 -t video/mp4 
