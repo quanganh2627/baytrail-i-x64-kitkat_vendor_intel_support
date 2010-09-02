@@ -25,6 +25,7 @@ _logfile_prefix=`date "+build.%Y%m%d%H%M"`
 _nnn=0
 _logfile=""
 _preserve_kernel_config=""
+_menuconfig="false"
 
 init_variables() {
     local custom_board=$1
@@ -82,6 +83,10 @@ make_kernel() {
 
         make O=${KERNEL_BUILD_DIR} ${_config_file}
         exit_on_error $? quiet
+    fi
+    if "$_menuconfig" ; then
+        make O=${KERNEL_BUILD_DIR} menuconfig
+        cp ${KERNEL_BUILD_DIR}/.config arch/x86/configs/$_config_file
     fi
 
     # Check .config to see if we get what we expect
@@ -166,7 +171,7 @@ usage() {
 main() {
     local custom_board_list="vbox mrst_ref ivydale mrst_edv"
 
-    while getopts Kc:j:kthC opt
+    while getopts Kc:j:kthCm opt
     do
         case "${opt}" in
         h)
@@ -193,6 +198,9 @@ main() {
             ;;
         C)
             _clean=1
+            ;;
+        m)
+            _menuconfig=true
             ;;
         ?)
             echo "Unknown option"
