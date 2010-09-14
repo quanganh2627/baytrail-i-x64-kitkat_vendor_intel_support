@@ -30,10 +30,12 @@ _menuconfig="false"
 init_variables() {
     local custom_board=$1
 
-    TOOLCHAIN=$TOP/prebuilt/linux-x86/toolchain/i686-unknown-linux-gnu-4.2.1/bin
-    export PATH=$TOOLCHAIN:$PATH
+    if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
+        TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-unknown-linux-gnu-4.2.1/bin/i686-unknown-linux-gnu-
+    fi
+    export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
-        export CROSS_COMPILE=i686-unknown-linux-gnu-
+        export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
     fi
     export ARCH=x86
 
