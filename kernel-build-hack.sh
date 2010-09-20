@@ -31,7 +31,8 @@ init_variables() {
     local custom_board=$1
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
-        TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-unknown-linux-gnu-4.2.1/bin/i686-unknown-linux-gnu-
+        echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
+        TARGET_TOOLS_PREFIX=`pwd`/prebuilt/linux-x86/toolchain/i686-unknown-linux-gnu-4.2.1/bin/i686-unknown-linux-gnu-
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
