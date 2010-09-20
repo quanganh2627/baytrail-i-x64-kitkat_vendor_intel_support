@@ -49,7 +49,7 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         ;;
-    mrst_ref | ivydale | mrst_edv)
+    mrst_ref | ivydale | mrst_edv | crossroads)
         VENDOR=intel
         BOARD=${custom_board}
         ;;
@@ -116,7 +116,7 @@ make_kernel() {
     exit_on_error $? quiet
 
     case "${custom_board}" in
-    mrst_ref | ivydale | mrst_edv)
+    mrst_ref | ivydale | mrst_edv | crossroads)
         make_modules ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -161,7 +161,7 @@ usage() {
     echo "Usage: $0 [-c custom_board] [-j jobs]"
 
     echo ""
-    echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv]"
+    echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       preserve kernel .config file"
@@ -171,7 +171,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mrst_ref ivydale mrst_edv"
+    local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads"
 
     while getopts Kc:j:kthCm opt
     do

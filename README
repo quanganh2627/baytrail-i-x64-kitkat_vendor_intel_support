@@ -61,6 +61,6 @@ Procedure to boot using fastboot and creating SD card images:
 
 Now Autoboot should be stopped and you are ready to load binary images into
 the SD card inserted into the target platform. Use flash_device.sh:
-  TARGET={ivydale|mrst_ref|mrst_edv}
+  TARGET={ivydale|mrst_ref|mrst_edv|crossroads}
   cd out/target/product/$TARGET
   flash_device.sh
