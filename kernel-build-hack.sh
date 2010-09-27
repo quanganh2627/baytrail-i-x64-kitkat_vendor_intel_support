@@ -26,19 +26,20 @@ _nnn=0
 _logfile=""
 _preserve_kernel_config=""
 _menuconfig="false"
+_config_file_type=android
 
 init_variables() {
     local custom_board=$1
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
-        TARGET_TOOLS_PREFIX=`pwd`/prebuilt/linux-x86/toolchain/i686-unknown-linux-gnu-4.2.1/bin/i686-unknown-linux-gnu-
+        TARGET_TOOLS_PREFIX=prebuilt/linux-x86/toolchain/i686-unknown-linux-gnu-4.2.1/bin/i686-unknown-linux-gnu-
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
         export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
     fi
-    export ARCH=x86
+    export ARCH=i386
 
     if [ -z "${custom_board}" ]; then
         echo "No custom board specified"
@@ -62,33 +63,37 @@ init_variables() {
 
     PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
     KERNEL_FILE=${PRODUCT_OUT}/bzImage
-    KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
+    KERNEL_SRC_DIR=${TOP}/hardware/intel/linux-2.6
+    if [ "$_config_file_type" != "kboot" ]; then
+        KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
+    else
+        KERNEL_BUILD_DIR=${PRODUCT_OUT}/kboot/kernel_build
+    fi
 }
 
 make_kernel() {
     local custom_board=${1}
     local _config_file=""
-
-    KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
+    local KMAKEFLAGS="ARCH=${ARCH} V=1 O=${KERNEL_BUILD_DIR}"
     mkdir -p ${KERNEL_BUILD_DIR}
 
-    cd ${TOP}/hardware/intel/linux-2.6
-    _config_file=i386_${custom_board}_android_defconfig
+    cd $KERNEL_SRC_DIR
+    _config_file=i386_${custom_board}_${_config_file_type}_defconfig
 
     if [ -z "$_preserve_kernel_config" ]; then
         rm -f ${KERNEL_BUILD_DIR}/.config
     fi
     if [ "$_clean" ]; then
-        make O=${KERNEL_BUILD_DIR} mrproper
+        make $KMAKEFLAGS mrproper
     fi
     if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
         echo "Fetching a kernel .config file for ${_config_file}"
 
-        make O=${KERNEL_BUILD_DIR} ${_config_file}
+        make $KMAKEFLAGS ${_config_file}
         exit_on_error $? quiet
     fi
     if "$_menuconfig" ; then
-        make O=${KERNEL_BUILD_DIR} menuconfig
+        make $KMAKEFLAGS menuconfig
         cp ${KERNEL_BUILD_DIR}/.config arch/x86/configs/$_config_file
     fi
 
@@ -109,22 +114,23 @@ make_kernel() {
         echo -n >&3 "WARNING: ${_config_file} is newer than .config..."
     fi
 
-    make O=${KERNEL_BUILD_DIR} -j${_jobs} bzImage
+    make $KMAKEFLAGS -j${_jobs} bzImage
     exit_on_error $? quiet
 
     mkdir -p `dirname ${KERNEL_FILE}`
     cp ${KERNEL_BUILD_DIR}/arch/x86/boot/bzImage ${KERNEL_FILE}
     exit_on_error $? quiet
 
-    case "${custom_board}" in
-    mrst_ref | ivydale | mrst_edv | crossroads)
-        make_modules ${custom_board}
-        exit_on_error $? quiet
-        ;;
-    generic_x86 | vbox)
-        ;;
-    esac
-
+    if [ "$_config_file_type" != "kboot" ]; then
+        case "${custom_board}" in
+        mrst_ref | ivydale | mrst_edv | crossroads)
+            make_modules ${custom_board}
+            exit_on_error $? quiet
+            ;;
+        generic_x86 | vbox)
+            ;;
+        esac
+    fi
 
     cd ${TOP}
 }
@@ -146,10 +152,10 @@ make_modules() {
         mkdir -p ${MODULE_DEST}
     fi
 
-    make O=${KERNEL_BUILD_DIR} -j${_jobs} modules
+    make $KMAKEFLAGS -j${_jobs} modules
     exit_on_error $? quiet
 
-    make O=${KERNEL_BUILD_DIR} -j${_jobs} modules_install \
+    make $KMAKEFLAGS -j${_jobs} modules_install \
         INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC}
     exit_on_error $? quiet
 
@@ -165,7 +171,7 @@ usage() {
     echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
-    echo " -K                       preserve kernel .config file"
+    echo " -K                       Build a kboot kernel"
     echo " -k                       build kernel only"
     echo " -t                       testtool build"
     echo " -C                       clean first"
@@ -177,6 +183,9 @@ main() {
     while getopts Kc:j:kthCm opt
     do
         case "${opt}" in
+        K)
+            _config_file_type=kboot
+            ;;
         h)
             usage
             exit 0
