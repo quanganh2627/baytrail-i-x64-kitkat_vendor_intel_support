@@ -47,15 +47,20 @@ function do_fastboot {
 }
 
 function usage {
-    echo "Usage: $_cmd [-d nand|sd] [-c <dir>]"
+    echo "Usage: $_cmd [-d nand|sd|usb] [-p] [-c <dir>]"
     echo "       -d: select boot device. (default $_boot)"
     echo "       -c: find images in <dir>"
+    echo "       -p: don't remake the partition table or erase the /media partition"
+    echo "       -a: auto-select the image directory"
 }
 
 function main {
-    while getopts c:xd: opt
+    while getopts apc:xd: opt
     do
         case "${opt}" in
+        p )
+            _preserve_media=1
+            ;;
         c )
             if [ ! -d "${OPTARG}" ]; then
                 _error=1
@@ -64,6 +69,9 @@ function main {
             ;;
         d )
             _boot=${OPTARG}
+            ;;
+        a )
+            _auto_select=1
             ;;
         x )
             _debug=1
@@ -77,9 +85,18 @@ function main {
     case "$_boot" in
     sd )
         _device=/dev/mmcblk0
+        _boot_gz=boot_sdcard.tar.gz
+        _system_gz=system.tar.gz
         ;;
     nand )
         _device=/dev/nda
+        _boot_gz=boot_nand.tar.gz
+        _system_gz=system.tar.gz
+        ;;
+    usb )
+        _device=/dev/sda
+        _boot_gz=boot_harddisk.tar.gz
+        _system_gz=system.tar.gz
         ;;
     * )
         _error=1
@@ -91,8 +108,30 @@ function main {
         exit 1;
     fi
 
-    _boot_gz=boot.tar.gz
-    _system_gz=system.tar.gz
+    if [ -z "$_auto_select" -a -d out -a ! -f $_system_gz ]; then
+        _auto_select=1
+        echo >&2 "Auto Selecting Fastboot Directory"
+    fi
+
+    if [ "$_auto_select" ]
+    then
+        _product=`fastboot getvar product 2>&1 | tail -1 |
+            sed 's/<.*>//
+                 s/product://
+                 s/[ 	]//g'`
+        _product_dir="out/target/product/$_product"
+        if [ ! -d "$_product_dir" ]; then
+            echo >&2 $_product_dir not found.
+            exit 1
+        fi
+        echo >&2 Using $_product_dir
+        cd $_product_dir
+    fi
+    if [ ! -f "$_boot_gz" ]; then
+        echo -n >&2 "$_cmd: Can not find $_boot_gz. "
+        _boot_gz=boot.tar.gz
+        echo >&2 "Trying $_boot_gz. "
+    fi
 
     if [ ! -r "$_boot_gz" ]; then
         echo >&2 "$_cmd: Can not find $_boot_gz."
@@ -102,8 +141,8 @@ function main {
         echo >&2 "$_cmd: Can not find $_system_gz."
         _error=1
     fi
+
     if [ "$_error" -ne 0 ]; then
-        usage
         exit 1
     fi
 
@@ -113,13 +152,16 @@ function main {
     echo -n "Setting tarball_origin to root. "
     exit_on_failure do_fastboot oem tarball_origin root
 
-    echo -n /sbin/PartitionDisk.sh $_device
-    exit_on_failure do_fastboot oem system /sbin/PartitionDisk.sh $_device
+    if [ -z "$_preserve_media" ]; then
+        echo -n /sbin/PartitionDisk.sh $_device
+        exit_on_failure do_fastboot oem system /sbin/PartitionDisk.sh $_device
+
+        exit_on_failure do_fastboot erase media
+    fi
 
     exit_on_failure do_fastboot erase recovery
     exit_on_failure do_fastboot erase cache
     exit_on_failure do_fastboot erase userdata
-    exit_on_failure do_fastboot erase media
     exit_on_failure do_fastboot erase boot
     exit_on_failure do_fastboot erase system
 
