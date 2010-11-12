@@ -47,15 +47,16 @@ function do_fastboot {
 }
 
 function usage {
-    echo "Usage: $_cmd [-d nand|sd|usb] [-p] [-c <dir>]"
+    echo "Usage: $_cmd [-d nand|sd|usb] [-p] [-c <dir>] [-n]"
     echo "       -d: select boot device. (default $_boot)"
     echo "       -c: find images in <dir>"
     echo "       -p: don't remake the partition table or erase the /media partition"
     echo "       -a: auto-select the image directory"
+    echo "       -n: don't continue the boot after flashing the image"
 }
 
 function main {
-    while getopts apc:xd: opt
+    while getopts napc:xd: opt
     do
         case "${opt}" in
         p )
@@ -72,6 +73,9 @@ function main {
             ;;
         a )
             _auto_select=1
+            ;;
+        n )
+            _dont_reboot=1
             ;;
         x )
             _debug=1
@@ -173,7 +177,9 @@ function main {
     echo -n "Syncing storage devices"
     exit_on_failure do_fastboot oem system sync
 
-    exit_on_failure do_fastboot continue
+    if [ -z "$_dont_reboot" ]; then
+        exit_on_failure do_fastboot continue
+    fi
 }
 
 main $@
