@@ -13,13 +13,18 @@ if [ -z "$BUILD_NUM_CPUS" ] ; then
     BUILD_NUM_CPUS=`expr $HOST_NUM_CPUS \* 2`
 fi
 
-# Build for the VirtualBox Emulator
-BOARDS=""
-BOARDS="$BOARDS ivydale"
-BOARDS="$BOARDS full_x86"
-BOARDS="$BOARDS mrst_ref"
-BOARDS="$BOARDS mrst_edv"
-BOARDS="$BOARDS crossroads"
+if [ $# -eq 0 ]; then
+    # Build for the VirtualBox Emulator
+    boards=""
+    boards="$boards ivydale"
+    boards="$boards full_x86"
+    boards="$boards mrst_ref"
+    boards="$boards mrst_edv"
+    boards="$boards crossroads"
+    set -- $boards
+fi
+
+BOARDS="$@"
 
 # Start clean
 rm -rf out
@@ -37,13 +42,18 @@ for i in $BOARDS; do
   case "$i" in
   full_x86 )
     target=installer_vdi
+    time make -j$BUILD_NUM_CPUS $target showcommands >> $i.log 2>&1
+
+    # Build again (no target) to pick up some objects needed by the NDK build.
+    time make -j$BUILD_NUM_CPUS showcommands > $i.log 2>&1
     ;;
+
   * )
     target=$i
+    time make -j$BUILD_NUM_CPUS $target showcommands >> $i.log 2>&1
     ;;
   esac
 
-  time make -j$BUILD_NUM_CPUS $target showcommands > $i.log 2>&1
   echo
 
 done

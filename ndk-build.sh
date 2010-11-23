@@ -90,7 +90,11 @@ time build/tools/build-ndk-sysroot.sh \
       --build-out=$SDK/out/target/product/$PRODUCT \
       --platform=android-8 \
       --package \
-      --abi=x86
+      --abi=x86 > $SDK/build-ndk-sysroot.log 2>&1
+if [ $? -ne 0 ]; then
+    echo >&2 "build/tools/build-ndk-sysroot.sh failed. Logfile in $SDK/build-ndk-sysroot.log"
+    exit 1
+fi
 
 echo
 echo "Cleaning: Removing unneeded files"
@@ -106,7 +110,11 @@ time build/tools/build-gcc.sh \
       --binutils-version=$BINUTILS_VERSION \
       --build-out=$BUILD_OUT \
       -j $BUILD_NUM_CPUS \
-      $ANDROID_TOOLCHAIN $SDK/ndk $TOOLCHAIN
+      $ANDROID_TOOLCHAIN $SDK/ndk $TOOLCHAIN > $SDK/build/tools/build-gcc.log 2>&1
+if [ $? -ne 0 ]; then
+    echo >&2 "build/tools/build-gcc.sh failed. Logfile in $SDK/build/tools/build-gcc.log"
+    exit 1
+fi
 
 echo
 echo "Building: build/tools/build-gdbserver.sh"
@@ -115,7 +123,11 @@ time build/tools/build-gdbserver.sh \
       --platform=android-8 \
       --build-out=$BUILD_OUT \
       -j $BUILD_NUM_CPUS \
-      $ANDROID_TOOLCHAIN/gdb/gdb-$GDB_VERSION/gdb/gdbserver/ $SDK/ndk $TOOLCHAIN
+      $ANDROID_TOOLCHAIN/gdb/gdb-$GDB_VERSION/gdb/gdbserver/ $SDK/ndk $TOOLCHAIN > $SDK/build/tools/build-gdbserver.log 2>&1
+if [ $? -ne 0 ]; then
+    echo >&2 "build/tools/build-gcc.sh failed. Logfile in $SDK/build/tools/build-gdbserver.log"
+    exit 1
+fi
 
 echo
 echo "Building: /tmp/android-ndk-prebuilt-$TODAY-linux-$ARCH.tar.bz2"
@@ -128,6 +140,10 @@ time build/tools/make-release.sh \
       --prebuilt-prefix=/tmp/android-ndk-prebuilt-$TODAY \
       --release=$TODAY \
       --systems=linux-$ARCH
+if [ $? -ne 0 ]; then
+    echo >&2 "build/tools/build-ndk-sysroot.sh failed. Logfile in $SDK/build-ndk-sysroot.log"
+    exit 1
+fi
 
 echo
 echo "Building: Installing the updated toolchain"
