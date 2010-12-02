@@ -42,10 +42,10 @@ for i in $BOARDS; do
   case "$i" in
   full_x86 )
     target=installer_vdi
-    time make -j$BUILD_NUM_CPUS $target showcommands >> $i.log 2>&1
+    time make -j$BUILD_NUM_CPUS $target showcommands > $i.log 2>&1
 
     # Build again (no target) to pick up some objects needed by the NDK build.
-    time make -j$BUILD_NUM_CPUS showcommands > $i.log 2>&1
+    time make -j$BUILD_NUM_CPUS showcommands >> $i.log 2>&1
     ;;
 
   * )
