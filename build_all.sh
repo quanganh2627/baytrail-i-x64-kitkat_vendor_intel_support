@@ -24,7 +24,11 @@ BOARDS="$BOARDS mrst_ref"
 BOARDS="$BOARDS mrst_edv"
 BOARDS="$BOARDS crossroads"
 
-while getopts nhj:c: opt
+# ARM
+BOARDS="$BOARDS full"
+
+
+while getopts snhj:c: opt
 do
     case "${opt}" in
     c)
@@ -39,6 +43,9 @@ do
         ;;
     n )
         dont_clean=1
+        ;;
+    s )
+	SHOW="showcommands"
         ;;
     ? | h)
         usage
@@ -80,17 +87,22 @@ for i in $BOARDS; do
   echo "Cleaned: $z files from the hardware/intel/PRIVATE/pvr directory"
 
   case "$i" in
+  full )
+    target=droid
+    time make -j$_jobs $target $SHOW > $i.log 2>&1
+    ;;
+
   full_x86 )
     target=installer_vdi
-    time make -j$_jobs $target showcommands > $i.log 2>&1
+    time make -j$_jobs $target $SHOW > $i.log 2>&1
 
     # Build again (no target) to pick up some objects needed by the NDK build.
-    time make -j$_jobs showcommands >> $i.log 2>&1
+    time make -j$_jobs $SHOW >> $i.log 2>&1
     ;;
 
   * )
     target=$i
-    time make -j$_jobs $target showcommands >> $i.log 2>&1
+    time make -j$_jobs $target $SHOW >> $i.log 2>&1
     ;;
   esac
 
