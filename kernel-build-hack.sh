@@ -5,6 +5,7 @@
 # invoked shell. We do this so that a function can directly exit on failure...
 # but still output its failure message.
 exec 3>&2
+exec 2>&1
 
 
 function exit_on_error {
@@ -54,7 +55,7 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         ;;
-    mrst_ref | ivydale | mrst_edv | crossroads)
+    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk)
         VENDOR=intel
         BOARD=${custom_board}
         ;;
@@ -126,7 +127,7 @@ make_kernel() {
 
     if [ "$_config_file_type" != "kboot" ]; then
         case "${custom_board}" in
-        mrst_ref | ivydale | mrst_edv | crossroads)
+        mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk)
             make_modules ${custom_board}
             exit_on_error $? quiet
             ;;
@@ -171,7 +172,7 @@ usage() {
     echo "Usage: $0 [-c custom_board] [-j jobs]"
 
     echo ""
-    echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads]"
+    echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads|mfld_cdk]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -181,7 +182,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads"
+    local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads mfld_cdk"
 
     while getopts Kc:j:kthCm opt
     do

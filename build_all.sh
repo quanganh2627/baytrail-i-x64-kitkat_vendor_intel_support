@@ -23,10 +23,21 @@ BOARDS="$BOARDS full_x86"
 BOARDS="$BOARDS mrst_ref"
 BOARDS="$BOARDS mrst_edv"
 BOARDS="$BOARDS crossroads"
+BOARDS="$BOARDS mfld_cdk"
 
 # ARM
 BOARDS="$BOARDS full"
 
+# Verify java version.
+java_version=`javac -version 2>&1 | head -1`
+case "$java_version" in
+*1.6* )
+    ;;
+* )
+    echo >&1 "Java 1.6 must be used, version $java_version found."
+    exit 1
+    ;;
+esac
 
 while getopts snhj:c: opt
 do
@@ -88,24 +99,18 @@ for i in $BOARDS; do
 
   case "$i" in
   full )
-    target=droid
-    time make -j$_jobs $target $SHOW > $i.log 2>&1
+    target=""
     ;;
 
   full_x86 )
     target=installer_vdi
-    time make -j$_jobs $target $SHOW > $i.log 2>&1
-
-    # Build again (no target) to pick up some objects needed by the NDK build.
-    time make -j$_jobs $SHOW >> $i.log 2>&1
     ;;
 
   * )
     target=$i
-    time make -j$_jobs $target $SHOW >> $i.log 2>&1
     ;;
   esac
 
-  echo
+  time make -j$_jobs droid $target $SHOW > $i.log 2>&1
 
 done
