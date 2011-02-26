@@ -142,7 +142,7 @@ make_kernel() {
 make_modules() {
     local custom_board=${1}
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
-    local MODULE_DEST=${PRODUCT_OUT}/system/lib/modules
+    local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
 
     echo "  Making driver modules..."
 
