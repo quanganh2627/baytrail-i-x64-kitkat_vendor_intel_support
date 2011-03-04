@@ -133,7 +133,7 @@ function main {
     fi
     if [ ! -f "$_boot_gz" ]; then
         echo -n >&2 "$_cmd: Can not find $_boot_gz. "
-        _boot_gz=boot.tar.gz
+        _boot_gz=boot.bin
         echo >&2 "Trying $_boot_gz. "
     fi
 
@@ -166,7 +166,7 @@ function main {
     exit_on_failure do_fastboot erase recovery
     exit_on_failure do_fastboot erase cache
     exit_on_failure do_fastboot erase userdata
-    exit_on_failure do_fastboot erase boot
+#    exit_on_failure do_fastboot erase boot
     exit_on_failure do_fastboot erase system
 
     echo "Flashing boot image: $_boot_gz"
