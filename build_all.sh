@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Use the correct java...
+# Uncomment this if you have a macro for setting the 1.6 java environment
+# source ~/.bashrc
+# aosp
+
 # This script builds all variations/images cleanly.
 
 z="none"
@@ -13,20 +18,35 @@ usage() {
     exit 1
 }
 
-# Default the -j factor to the number of CPUs
+# Default the -j factor to a bit less than the number of CPUs
 _jobs=`grep -c processor /proc/cpuinfo`
+_jobs=$(($_jobs * 8 / 10))
 
-# Default board list
+# The full build list that this script knows how to build...
 BOARDS=""
-BOARDS="$BOARDS ivydale"
-BOARDS="$BOARDS full_x86"
-BOARDS="$BOARDS mrst_ref"
-BOARDS="$BOARDS mrst_edv"
-BOARDS="$BOARDS crossroads"
-BOARDS="$BOARDS mfld_cdk"
 
-# ARM
+# x86 builds also available in AOSP/master and in honeycomb
+BOARDS="$BOARDS full_x86"		# QEMU/emulator bootable disk
+BOARDS="$BOARDS vbox"			# installer_vdi for virtualbox
+BOARDS="$BOARDS android_disk"		# Bootable disk for virtualbox
+
+# MRST targets (not supported in this tree)
+# BOARDS="$BOARDS mrst_ref"
+# BOARDS="$BOARDS ivydale"
+# BOARDS="$BOARDS mrst_edv"
+# BOARDS="$BOARDS crossroads"
+
+# MFLD targets
+BOARDS="$BOARDS mfld_cdk"
+BOARDS="$BOARDS mfld_pr1"
+
+# ARM builds (keep us honest)
 BOARDS="$BOARDS full"
+
+# SDK builds (both arm and x86)
+BOARDS="$BOARDS sdk_x86"
+BOARDS="$BOARDS sdk"
+
 
 # Verify java version.
 java_version=`javac -version 2>&1 | head -1`
@@ -48,8 +68,6 @@ do
     j)
         if [ ${OPTARG} -gt 0 ]; then
             _jobs=${OPTARG}
-        else
-            _jobs=`grep -c processor /proc/cpuinfo`
         fi
         ;;
     n )
@@ -89,7 +107,6 @@ echo
 
 source build/envsetup.sh
 for i in $BOARDS; do
-  lunch $i-eng
   mv $i.log $i.log-1
   echo Building $i ....
 
@@ -98,19 +115,48 @@ for i in $BOARDS; do
   echo "Cleaned: $z files from the hardware/intel/PRIVATE/pvr directory"
 
   case "$i" in
+  sdk )
+    target=sdk
+    lunch=sdk
+    ;;
+
+  sdk_x86 )
+    target=sdk
+    lunch=sdk_x86
+    ;;
+
   full )
-    target=""
+    target="droid"
+    lunch=full
+    ;;
+
+  vbox | vbox_x86 )
+    target="installer_vdi"
+    lunch=vbox_x86
+    ;;
+
+  android_disk | android_disk_x86 )
+    target="android_disk_vdi"
+    lunch=vbox_x86
     ;;
 
   full_x86 )
-    target=installer_vdi
+    target="droid"
+    lunch=full_x86
+    ;;
+
+  mrst_ref | mrst_edv | mfld_pr1 | mfld_cdk | crossroads | ivydale )
+    target="$i"
+    lunch=$target
     ;;
 
   * )
-    target=$i
+    echo >&2 "Target unknown. Guessing with target=\"droid $i\", lunch=\"$target\""
+    target="droid $i"
+    lunch=$target
     ;;
   esac
 
-  time make -j$_jobs droid $target $SHOW > $i.log 2>&1
-
+  lunch $lunch-eng
+  time make -j$_jobs $target $SHOW > $i.log 2>&1
 done
