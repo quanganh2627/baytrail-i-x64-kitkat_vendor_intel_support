@@ -82,7 +82,7 @@ make_kernel() {
     mkdir -p ${KERNEL_BUILD_DIR}
 
     cd $KERNEL_SRC_DIR
-    _config_file=i386_${custom_board}_${_config_file_type}_defconfig${KERNEL_CONFIG_POSTFIX}
+    _config_file=${KERNEL_CONFIG_PREFIX}i386_${custom_board}_${_config_file_type}_defconfig
 
     if [ -z "$_preserve_kernel_config" ]; then
         rm -f ${KERNEL_BUILD_DIR}/.config
