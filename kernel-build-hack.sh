@@ -36,9 +36,17 @@ init_variables() {
         echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
 	TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
     fi
+    if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
+        echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set."
+	CCACHE_TOOLS_DIR=$TOP/prebuilt/linux-x86/ccache
+    fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
         export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
+    fi
+    if [ ! -z ${USE_CCACHE} ]; then
+	export PATH="${CCACHE_TOOLS_DIR}:$PATH"
+        export CROSS_COMPILE="ccache $CROSS_COMPILE"
     fi
     export ARCH=i386
     echo >&3 "ARCH: $ARCH"
