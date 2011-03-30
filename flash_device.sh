@@ -169,10 +169,10 @@ function main {
 #    exit_on_failure do_fastboot erase boot
     exit_on_failure do_fastboot erase system
 
-    echo "Flashing boot image: $_boot_gz"
-    exit_on_failure do_fastboot flash boot $_boot_gz
     echo "Flashing system image: $_system_gz"
     exit_on_failure do_fastboot flash system $_system_gz
+    echo "Flashing boot image: $_boot_gz"
+    exit_on_failure do_fastboot flash boot $_boot_gz
 
     echo -n "Syncing storage devices"
     exit_on_failure do_fastboot oem system sync
