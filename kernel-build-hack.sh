@@ -133,16 +133,14 @@ make_kernel() {
     cp ${KERNEL_BUILD_DIR}/arch/x86/boot/bzImage ${KERNEL_FILE}
     exit_on_error $? quiet
 
-    if [ "$_config_file_type" != "kboot" ]; then
-        case "${custom_board}" in
-        mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1)
-            make_modules ${custom_board}
-            exit_on_error $? quiet
-            ;;
-        generic_x86 | vbox)
-            ;;
-        esac
-    fi
+    case "${custom_board}" in
+    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1)
+        make_modules ${custom_board}
+        exit_on_error $? quiet
+        ;;
+    generic_x86 | vbox)
+        ;;
+    esac
 
     cd ${TOP}
 }
