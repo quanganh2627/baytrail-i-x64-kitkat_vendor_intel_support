@@ -7,20 +7,16 @@ host system build setup assumes:
   o AOSP build system packages are present:
   o http://source.android.com/source/download.html
 
-Ubuntu Linux (32-bit x86)  [also works 
-  sudo apt-get install git-core gnupg flex bison gperf libsdl-dev \
-                 libesd0-dev libwxgtk2.6-dev build-essential zip curl \
-                 libncurses5-dev zlib1g-dev 
-
-Ubuntu Linux (64-bit x86)
+Ubuntu Linux 10.04 and 10.10 (64-bit x86)
   sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl \
                zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev \
-               ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev
+               ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev tofrodos gawk
 
-Froyo still requiers jdk 1.5. You need to get that from java from: 
-  http://java.sun.com/javase/downloads/index_jdk5.jsp
+Gingerbread requires oracle / sun jdk 6
+http://www.oracle.com/technetwork/java/javase/downloads/index.html
 
-NOTE: the new master branch is moving the jdk 1.6 and a TBD 64 bit build host requierment. 
+Install it to $HOME/bin and update your shell PATH variable to find this
+version of javac first in its search path.
 
 ----------------------- ----------------------- -----------------------
 
@@ -29,38 +25,13 @@ Although you can script the fastboot yourself, you should
 instead use the flash_device.sh script in this directory.
 flash_device.sh may also be found in the tool/ directory in the
 release tree.
-  Usage: flash_device.sh [-d nand|sd] (default sd)
+  Usage: flash_device.sh
 
-Procedure to boot using fastboot and creating SD card images:
+Procedure to boot using fastboot:
   * Update your firmware to the latest version (see the release tree)
   * Update your target device with the latest kboot (see the release tree)
   * Be sure to use the latest fastboot (tool directory in the release tree)
   * Be sure to use the latest adb (tool directory in the release tree)
   * Connect your platform to your Linux Host system via USB.
-  * Reboot the platform , you will see the following boot messages on serial console
+  * Reboot the platform.
 
-    *************************************************************************
-       Android Kboot. version: kboot built by root for ivydale on ...
-    *************************************************************************
-    
-    Override aboot version by putting it on the root of the media partition (mmcblk0p3)
-    
-    To terminate aboot: Hit ESC on your internal keyboard.
-    To disable autoboot either:
-     - Execute a fastboot command (other than getvar).
-     - Place the file 'no_autoboot' on your boot partition.
-     - Stroke the touch screen
-     - Press any key or button
-    Listening for the fastboot protocol on the USB OTG.
-    KBoot> Autobooting in 8 seconds...
- 
-  When you see this message, within 8 seconds either hit a key (except
-  <Esc>) in the keypad OR enter any fastboot command from your Linux
-  system console to disable Autoboot. Example fastboot command:
-    fastboot oem system echo
-
-Now Autoboot should be stopped and you are ready to load binary images into
-the SD card inserted into the target platform. Use flash_device.sh:
-  TARGET={ivydale|mrst_ref|mrst_edv|crossroads}
-  cd out/target/product/$TARGET
-  flash_device.sh
