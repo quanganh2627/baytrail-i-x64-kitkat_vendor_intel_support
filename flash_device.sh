@@ -160,13 +160,13 @@ function main {
         echo -n /sbin/PartitionDisk.sh $_device
         exit_on_failure do_fastboot oem system /sbin/PartitionDisk.sh $_device
 
-        exit_on_failure do_fastboot erase media
+        exit_on_failure do_fastboot erase sdcard
     fi
 
     exit_on_failure do_fastboot erase recovery
     exit_on_failure do_fastboot erase cache
-    exit_on_failure do_fastboot erase userdata
-#    exit_on_failure do_fastboot erase boot
+    exit_on_failure do_fastboot erase data
+    exit_on_failure do_fastboot erase factory
     exit_on_failure do_fastboot erase system
 
     echo "Flashing system image: $_system_gz"
