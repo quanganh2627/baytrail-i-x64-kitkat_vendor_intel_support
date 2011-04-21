@@ -142,10 +142,11 @@ else
         grep Ubuntu /etc/issue > /dev/null
         if [ $? -eq 0 ]; then
                 distro=ubuntu
-                if [ "`awk 'NR==1{print $2}' /etc/issue`" != "9.10" ]; then
+                distro_version=`awk 'NR==1{print $2}' /etc/issue`
+                if [ "$distro_version" != "10.04.2" ]; then
                   warning_found
-                  echo "WARNING - Not a supported Ubuntu distribution"
-                  echo "          This should work, but 9.10 is recommended"
+                  echo "WARNING - Not a supported Ubuntu distribution ($distro_version)"
+                  echo "          This should work, but 10.04.2 is recommended"
                 fi
         else
           grep Fedora /etc/issue > /dev/null
@@ -167,17 +168,15 @@ else
 fi
 
 echo Check host arch
-case "x`uname -p`" in
-	xi[356]86)
-		# Nothing to do
-		;;
+case "x`uname -m`" in
 	xx86_64)
-		if [ "$distro" != "fedora" ]; then
-		  warning_found
-		  echo -n "WARNING - ${distro}/`uname -p` is not known to "
-		  echo "be a good host configuration"
-		  echo ""
-		fi
+		# Current recommended is x86_64
+		;;
+	xi[356]86)
+		warning_found
+		echo -n "WARNING - ${distro}/`uname -p` is not known to "
+		echo "be a good host configuration"
+		echo ""
 		;;
 	*)
 		error_found
@@ -415,29 +414,31 @@ if [ $curl_ok -ne 0 ]; then
         fi
 fi
 
-if [ $curl_ok -ne 0 ]; then
-        echo "Check http to UMG wiki"
-        curl --silent --max-time 20 http://${umgwiki} > $tmpf
-        if [ $? -ne 0 ]; then
-            error_found
-            echo "ERROR - curl could not get http://${umgwiki}"
-            echo "        (could be proxy problem)"
-        else
-            echo "        OK, can connect to http://${umgwiki}"
-            grep "401 Unauthoriz" $tmpf > /dev/null
-            if [ $? -eq 0 ]; then
-                warning_found
-                echo ""
-                echo "WARNING - Wiki reports that you are not authorized."
-                echo "          This is OK if you use a different machine to use the wiki."
-                echo "          But, you do need access, so be sure you browse to the site"
-                echo "          and request access if you do not already have it"
-                echo ""
-                echo "              http://${umgwiki}"
-                echo ""
-            fi
-        fi
-fi
+# This step seems to be broken... at least for me.
+# you need to have a cookie to log into it... so how did it ever work?
+#if [ $curl_ok -ne 0 ]; then
+#        echo "Check http to UMG wiki"
+#        curl --silent --max-time 20 http://${umgwiki} > $tmpf
+#        if [ $? -ne 0 ]; then
+#            error_found
+#            echo "ERROR - curl could not get http://${umgwiki}"
+#            echo "        (could be proxy problem)"
+#        else
+#            echo "        OK, can connect to http://${umgwiki}"
+#            grep "401 Unauthoriz" $tmpf > /dev/null
+#            if [ $? -eq 0 ]; then
+#                warning_found
+#                echo ""
+#                echo "WARNING - Wiki reports that you are not authorized."
+#                echo "          This is OK if you use a different machine to use the wiki."
+#                echo "          But, you do need access, so be sure you browse to the site"
+#                echo "          and request access if you do not already have it"
+#                echo ""
+#                echo "              http://${umgwiki}"
+#                echo ""
+#            fi
+#        fi
+#fi
 
 echo "Check repo"
 f_effective=""
@@ -696,7 +697,7 @@ echo Check java version
 if [ -z "$JAVA_HOME" ]; then
         error_found
         echo ""
-        echo "ERROR - JAVA_HOME is not set, it must point to Java 1.5.0"
+        echo "ERROR - JAVA_HOME is not set, it must point to Java 1.6.0"
         echo ""
         echo "        Recommend you add this to ~/.bashrc"
 else
@@ -710,16 +711,16 @@ else
                 echo "        or it is not executable"
         else
             $JAVA_HOME/bin/javac -version 2> $tmpf
-            grep 1.5.0 $tmpf > /dev/null
+            grep 1.6.0 $tmpf > /dev/null
             if [ $? -ne 0 ]; then
                 error_found
-                echo "ERROR - JAVA_HOME does not point to Java 1.5.0"
+                echo "ERROR - JAVA_HOME does not point to Java 1.6.0"
             else
-                grep 1.5.0_22 $tmpf > /dev/null
+                grep 1.6.0_22 $tmpf > /dev/null
                 if [ $? -ne 0 ]; then
                     warning_found
-                    echo "WARNING - JAVA_HOME is 1.5.0, but not 1.5.0_22"
-                    echo "          1.5.0_22 is specifically recommended"
+                    echo "WARNING - JAVA_HOME is 1.6.0, but not 1.6.0_22"
+                    echo "          1.6.0_22 is specifically recommended"
                 fi
             fi
         fi
