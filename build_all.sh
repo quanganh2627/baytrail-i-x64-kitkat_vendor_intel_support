@@ -162,7 +162,7 @@ for i in $BOARDS; do
   time make -j$_jobs $target $SHOW > $i.log 2>&1
   rc=$?
   if [ "$rc" -ne 0 ]; then
-    echo >&2 "Error: $rc returned from build\n\n"
-    echo >>$i.log "\nError: $rc returned from build"
+    echo -e >&2 "Error: $rc returned from build\n\n"
+    echo -e >>$i.log "\nError: $rc returned from build"
   fi
 done
