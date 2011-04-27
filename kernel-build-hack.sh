@@ -63,7 +63,7 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         ;;
-    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1)
+    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1 | mfld_pr2)
         VENDOR=intel
         BOARD=${custom_board}
         ;;
@@ -134,7 +134,7 @@ make_kernel() {
     exit_on_error $? quiet
 
     case "${custom_board}" in
-    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1)
+    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1 | mfld_pr2)
         make_modules ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -178,7 +178,7 @@ usage() {
     echo "Usage: $0 [-c custom_board] [-j jobs]"
 
     echo ""
-    echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads|mfld_cdk|mfld_pr1]"
+    echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads|mfld_cdk|mfld_pr1|mfld_pr2]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -188,7 +188,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads mfld_cdk mfld_pr1"
+    local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads mfld_cdk mfld_pr1 mfld_pr2"
 
     while getopts Kc:j:kthCm opt
     do
