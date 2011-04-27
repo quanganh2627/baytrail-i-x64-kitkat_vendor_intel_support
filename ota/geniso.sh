@@ -46,7 +46,7 @@ function gen_md5sum () {
 }
 
 function script_append () {
-    echo $1 >> $setup_script;
+    echo "$1" >> $setup_script;
 }
 
 function process_build_result () {
@@ -100,8 +100,11 @@ function process_build_result () {
 
         if [[ -f ${ANDROID_DIR}/${RADIO_BIN} ]]; then
             gen_md5sum ${ANDROID_DIR}/${RADIO_BIN}
-            script_append "# update radio firmware"
-            script_append "# TODO: burn \$TOP/${RADIO_BIN}..."
+            #script_append "# update radio firmware"
+            #script_append "# TODO: burn \$TOP/${RADIO_BIN}..."
+            script_append "if [ -f /sbin/loadfw_modem.sh ]; then"
+            script_append "    loadfw_modem.sh \$TOP/${RADIO_BIN}"
+	    script_append "fi"
         fi
     fi
 
