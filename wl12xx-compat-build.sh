@@ -79,7 +79,7 @@ init_variables() {
 
 make_compat() {
     echo "  Making wl12xx compat wireless"
-    local COMPAT_SRC_DIR=$TOP/hardware/intel/PRIVATE/tiwl1283/wl12xx-compat/
+    local COMPAT_SRC_DIR=$TOP/hardware/ti/wlan/wl12xx-compat/
     local MODULE_DEST_TMP=${PRODUCT_OUT}/compat_modules
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
 
