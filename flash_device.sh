@@ -167,6 +167,7 @@ function main {
     exit_on_failure do_fastboot erase cache
     exit_on_failure do_fastboot erase data
     exit_on_failure do_fastboot erase factory
+    exit_on_failure do_fastboot erase config
     exit_on_failure do_fastboot erase system
 
     echo "Flashing system image: $_system_gz"
