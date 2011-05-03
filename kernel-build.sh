@@ -27,25 +27,25 @@ _nnn=0
 _logfile=""
 _preserve_kernel_config=""
 _menuconfig="false"
-_config_file_type=android
+_soc_type="mfld"
 
 init_variables() {
     local custom_board=$1
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
-	TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
+        TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
     fi
     if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set."
-	CCACHE_TOOLS_DIR=$TOP/prebuilt/linux-x86/ccache
+        CCACHE_TOOLS_DIR=$TOP/prebuilt/linux-x86/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
         export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
     fi
     if [ ! -z ${USE_CCACHE} ]; then
-	export PATH="${CCACHE_TOOLS_DIR}:$PATH"
+        export PATH="${CCACHE_TOOLS_DIR}:$PATH"
         export CROSS_COMPILE="ccache $CROSS_COMPILE"
     fi
     export ARCH=i386
@@ -62,6 +62,7 @@ init_variables() {
     generic_x86 | vbox )
         VENDOR=""
         BOARD=generic_x86
+        _soc_type="vbox"
         ;;
     mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1 | mfld_pr2)
         VENDOR=intel
@@ -73,10 +74,12 @@ init_variables() {
         ;;
     esac
 
+    BOARD_CONFIG_DIR=${TOP}/vendor/intel/${BOARD}
+
     PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
     KERNEL_FILE=${PRODUCT_OUT}/bzImage
     KERNEL_SRC_DIR=${TOP}/hardware/intel/linux-2.6
-    if [ "$_config_file_type" != "kboot" ]; then
+    if [ "$DIFFCONFIGS" != "kboot" ]; then
         KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
     else
         KERNEL_BUILD_DIR=${PRODUCT_OUT}/kboot/kernel_build
@@ -85,12 +88,10 @@ init_variables() {
 
 make_kernel() {
     local custom_board=${1}
-    local _config_file=""
-    local KMAKEFLAGS="ARCH=${ARCH} V=1 O=${KERNEL_BUILD_DIR}"
+    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR}"
     mkdir -p ${KERNEL_BUILD_DIR}
 
     cd $KERNEL_SRC_DIR
-    _config_file=${KERNEL_CONFIG_PREFIX}i386_${custom_board}_${_config_file_type}_defconfig
 
     if [ -z "$_preserve_kernel_config" ]; then
         rm -f ${KERNEL_BUILD_DIR}/.config
@@ -99,31 +100,36 @@ make_kernel() {
         make $KMAKEFLAGS mrproper
     fi
     if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
-        echo "Fetching a kernel .config file for ${_config_file}"
-
-        make $KMAKEFLAGS ${_config_file}
+        echo "making kernel ${KERNEL_BUILD_DIR}/.config file"
+        cp arch/x86/configs/i386_${_soc_type}_defconfig ${KERNEL_BUILD_DIR}/.config
+        diffconfigs="${custom_board} ${DIFFCONFIGS}"
+        echo ${diffconfigs}
+        for diffconfig in ${diffconfigs}
+        do
+            if [ -f $BOARD_CONFIG_DIR/${diffconfig}_diffconfig ]
+            then
+                echo apply $diffconfig
+                cat $BOARD_CONFIG_DIR/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
+            fi
+        done
+        if [ -f user_diffconfig ]
+        then
+            echo apply user_diffconfig
+            cat user_diffconfig >> ${KERNEL_BUILD_DIR}/.config
+        fi
+        make V=1 $KMAKEFLAGS defoldconfig
         exit_on_error $? quiet
     fi
     if "$_menuconfig" ; then
+        cp ${KERNEL_BUILD_DIR}/.config ${KERNEL_BUILD_DIR}/.config.saved
         make $KMAKEFLAGS menuconfig
-        cp ${KERNEL_BUILD_DIR}/.config arch/x86/configs/$_config_file
-    fi
-
-    # Check .config to see if we get what we expect
-    awk 'NR>4' arch/x86/configs/$_config_file |
-        grep -v '^#' > /tmp/build.$$.1.tmp
-    awk 'NR>4' ${KERNEL_BUILD_DIR}/.config |
-        grep -v '^#' > /tmp/build.$$.2.tmp
-    diff /tmp/build.$$.1.tmp /tmp/build.$$.2.tmp > /dev/null
-    if [ $? -ne 0 ]; then
-        echo >&3
-        echo >&3 "WARNING: The .config file does not match the"
-        echo -n >&3 "   reference config file $_config_file..."
-    fi
-
-    if [ arch/x86/configs/${_config_file} -nt ${KERNEL_BUILD_DIR}/.config ]; then
-        echo >&3
-        echo -n >&3 "WARNING: ${_config_file} is newer than .config..."
+        diff -up  ${KERNEL_BUILD_DIR}/.config.saved ${KERNEL_BUILD_DIR}/.config |grep CONFIG_ |grep -v '@@'| grep + |sed 's/^+//' >>user_diffconfig
+        rm ${KERNEL_BUILD_DIR}/.config.saved
+        echo =========
+        echo
+        echo `pwd`/user_diffconfig modified accordingly. You can save your modifications to the appropriate config file
+        echo
+        echo =========
     fi
 
     make $KMAKEFLAGS -j${_jobs} bzImage
@@ -190,11 +196,11 @@ usage() {
 main() {
     local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads mfld_cdk mfld_pr1 mfld_pr2"
 
-    while getopts Kc:j:kthCm opt
+    while getopts Kc:j:kthCmo: opt
     do
         case "${opt}" in
         K)
-            _config_file_type=kboot
+            DIFFCONFIGS="kboot"
             ;;
         h)
             usage
@@ -221,8 +227,11 @@ main() {
         C)
             _clean=1
             ;;
-        m)
-            _menuconfig=true
+        o)
+            if [ "x${OPTARG}" == "xmenuconfig" ]
+            then
+                    _menuconfig=true
+            fi
             ;;
         ?)
             echo "Unknown option"
