@@ -10,7 +10,8 @@ host system build setup assumes:
 Ubuntu Linux 10.04 and 10.10 (64-bit x86)
   sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl \
                zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev \
-               ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev tofrodos gawk
+               ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev \
+               tofrodos gawk mkisofs
 
 Gingerbread requires oracle / sun jdk 6
 http://www.oracle.com/technetwork/java/javase/downloads/index.html
