@@ -180,9 +180,60 @@ make_modules() {
 }
 
 
-usage() {
-    echo "Usage: $0 [-c custom_board] [-j jobs]"
+# Build a kernel module from source that is not in the kernel build directory
+make_module_external() {
+    local custom_board=${1}
+    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR}"
 
+    cd $KERNEL_SRC_DIR
+
+    if [ ! -d `dirname ${KERNEL_FILE}` ]; then
+        echo >&3 "The kernel must be built first. Directory not found: `dirname ${KERNEL_FILE}`"
+        exit 1
+    fi
+
+    case "${custom_board}" in
+    mrst_ref | ivydale | mrst_edv | crossroads | mfld_cdk | mfld_pr1 | mfld_pr2)
+        make_module_external_fcn ${custom_board}
+        exit_on_error $? quiet
+        ;;
+    generic_x86 | vbox)
+        ;;
+    esac
+
+    cd ${TOP}
+}
+
+make_module_external_fcn() {
+    local custom_board=${1}
+    local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
+    local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
+    local modules_name=""
+
+    echo "  Making driver modules from external source directory..."
+
+    make $KMAKEFLAGS -j${_jobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules
+    exit_on_error $? quiet
+
+    make $KMAKEFLAGS -j${_jobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules_install \
+        INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC} \
+        | tee modules_install.list
+    exit_on_error $? quiet
+
+    modules_name=`cat modules_install.list | grep -o -e "[a-zA-Z0-9_\.\-]*.ko"`
+    rm -f modules_install.list
+
+    for module in $modules_name
+    do
+        find ${MODULE_SRC} -name ${module} -exec cp -vf {} ${MODULE_DEST} \;
+        exit_on_error $? quiet
+    done
+}
+
+
+
+usage() {
+    echo "Usage: $0 <options>..."
     echo ""
     echo " -c [generic_x86|vbox|mrst_ref|ivydale|mrst_edv|crossroads|mfld_cdk|mfld_pr1|mfld_pr2]"
     echo "                          custom board (target platform)"
@@ -191,12 +242,13 @@ usage() {
     echo " -k                       build kernel only"
     echo " -t                       testtool build"
     echo " -C                       clean first"
+    echo " -M                       external module source directory"
 }
 
 main() {
     local custom_board_list="vbox mrst_ref ivydale mrst_edv crossroads mfld_cdk mfld_pr1 mfld_pr2"
 
-    while getopts Kc:j:kthCmo: opt
+    while getopts M:Kc:j:kthCmo: opt
     do
         case "${opt}" in
         K)
@@ -205,6 +257,9 @@ main() {
         h)
             usage
             exit 0
+            ;;
+        M)
+            EXTERNAL_MODULE_DIRECTORY="${OPTARG}"
             ;;
         c)
             custom_board_list="${OPTARG}"
@@ -243,10 +298,19 @@ main() {
 
     for custom_board in $custom_board_list
     do
+        init_variables "$custom_board"
+
+        if [ "$EXTERNAL_MODULE_DIRECTORY" ]; then
+            echo >&3
+            echo >&3 "Building external module for $custom_board"
+            echo >&3 "------------------------------------------------"
+            make_module_external ${custom_board}
+            continue
+        fi
+
         echo >&3 
         echo >&3 "Building kernel for $custom_board"
         echo >&3 "---------------------------------"
-        init_variables "$custom_board"
         make_kernel ${custom_board} 
         exit_on_error $?
     done
