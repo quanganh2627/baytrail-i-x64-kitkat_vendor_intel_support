@@ -19,6 +19,7 @@ fi
 BOOT_BIN=android/boot/boot.bin
 SYSTEM_ZIP=android/system/system.zip
 IFWI_BIN=android/firmware/ifwi_firmware.bin
+DNX_BIN=android/firmware/dnx_firmware.bin
 RADIO_BIN=android/firmware/radio_firmware.bin
 
 BOOT_BUILD_TAG=${SOURCE_DIR}/boot/build_tag
@@ -34,6 +35,7 @@ function init () {
         BOOT=$SOURCE_DIR/boot.bin
         SYSTEM=$SOURCE_DIR/system
         IFWI_FW=$SOURCE_DIR/ifwi_firmware.bin
+        DNX_FW=$SOURCE_DIR/dnx_firmware.bin
     else
         source $TOP/content.list
     fi
@@ -65,7 +67,7 @@ function process_build_result () {
         if [[ -f ${ANDROID_DIR}/${BOOT_BIN} ]]; then
             gen_md5sum ${ANDROID_DIR}/${BOOT_BIN}
             script_append "# update boot partition"
-            script_append "flash_stitched \$TOP/${BOOT_BIN}"
+            script_append "update_osip --update 0 --image \$TOP/${BOOT_BIN}"
         fi
     fi
 
@@ -87,11 +89,16 @@ function process_build_result () {
 
     if [[ -f ${IFWI_FW} ]]; then
         cp ${IFWI_FW} ${ANDROID_DIR}/${IFWI_BIN}
-
-        if [[ -f ${ANDROID_DIR}/${IFWI_BIN} ]]; then
-            gen_md5sum ${ANDROID_DIR}/${IFWI_BIN}
-            script_append "# update IFWI(SCU) firmware"
-            script_append "# loadfw \$TOP/${IFWI_BIN}"
+        if [[ -f ${DNX_FW} ]]; then
+            cp ${DNX_FW} ${ANDROID_DIR}/${DNX_BIN}
+            if [[ -f ${ANDROID_DIR}/${IFWI_BIN} ]]; then
+                if [[ -f ${ANDROID_DIR}/${DNX_BIN} ]]; then
+                    gen_md5sum ${ANDROID_DIR}/${IFWI_BIN}
+                    gen_md5sum ${ANDROID_DIR}/${DNX_BIN}
+                    script_append "# update IFWI(SCU) firmware"
+                    script_append "# loadfw \$TOP/${IFWI_BIN}"
+                fi
+            fi
         fi
     fi
 
