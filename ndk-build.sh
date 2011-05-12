@@ -15,7 +15,6 @@
 export SDK=$PWD
 export TOP=$SDK
 export TODAY=`date '+%Y%m%d'`
-export ANDROID_TOOLCHAIN=`dirname $SDK`/Toolchain.AOSP
 export BUILD_OUT=/tmp/Toolchain.$LOGNAME.$TODAY
 export PLATFORM=android-9
 export PACKAGE_DIR=$SDK/ndk-release-$TODAY
@@ -32,27 +31,15 @@ if [ -z "$BUILD_NUM_CPUS" ] ; then
     export BUILD_NUM_CPUS=`expr $HOST_NUM_CPUS`
 fi
 
-if [ ! -d $ANDROID_TOOLCHAIN ]; then
-    echo >&2 "Pulling the toolchain from the Google server"
-    echo >&2 "Note: This will fail if your proxy isn't set"
-    mkdir -p $ANDROID_TOOLCHAIN
-    cd $ANDROID_TOOLCHAIN
-    repo init -u git://android.git.kernel.org/toolchain/manifest.git -b master
-    repo sync
-fi
-
-echo >&2 "Cleaning the Toolchain project"
-cd $ANDROID_TOOLCHAIN
-repo forall -c git clean -d -f -x
-
 # CLEAN
 rm -rf $BUILD_OUT
 rm -rf /tmp/ndk-release
-rm -rf /tmp/ndk-toolchain-*
+rm -rf /tmp/ndk-release-*
+rm -rf /tmp/ndk-toolchain/*
 rm -rf /tmp/android-toolchain*
 rm -rf /tmp/android-ndk-*
 
-for ARCH in x86 # arm
+for ARCH in arm x86
 do
     case "$ARCH" in
     arm )
@@ -130,7 +117,6 @@ do
     cd $SDK
     ndk/build/tools/rebuild-all-prebuilt.sh \
         --sysroot=$SDK/ndk/platforms/$PLATFORM/arch-$ARCH \
-        --toolchain-src-dir=$ANDROID_TOOLCHAIN \
         --arch=$ARCH \
         --package-dir=$PACKAGE_DIR \
         $MPFR_VERSION $GDB_VERSION $BINUTILS_VERSION \
@@ -152,9 +138,9 @@ do
         --out-dir=$PACKAGE_DIR \
         --abi=$ARCH \
         --prefix=android-ndk-$ARCH \
-        --no-git > $SDK/$ARCH.package-release.log 2>&1
+        --no-git > $SDK/$ARCH.release-package.log 2>&1
     if [ $? -ne 0 ]; then
-        echo >&2 "ndk/build/tools/package-release.sh failed. Logfile in $SDK/$ARCH.package-release.log"
+        echo >&2 "ndk/build/tools/package-release.sh failed. Logfile in $SDK/$ARCH.release-package.log"
         exit 1
     fi
 done
