@@ -165,4 +165,19 @@ for i in $BOARDS; do
     echo -e >&2 "Error: $rc returned from build\n\n"
     echo -e >>$i.log "\nError: $rc returned from build"
   fi
+
+
+  case "$i" in
+  sdk | sdk_x86 )
+    TODAY=`date '+%Y%m%d'`
+    SDK=sdk-release-$TODAY
+    mkdir -p $SDK
+    bash -c -x "cp out/host/linux-x86/sdk/android-sdk_eng.${LOGNAME}_linux-x86.zip $SDK/$i.zip" >> $i.log 2>&1
+    ;;
+
+  full | full_x86)
+    # We also build libm.a - required for making an NDK
+    mmm bionic/libm >> $i.log 2>&1
+    ;;
+  esac
 done
