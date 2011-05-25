@@ -7,16 +7,6 @@
 
 # This script builds all variations/images cleanly.
 
-z="none"
-
-usage() {
-    echo >&1 "Usage: $0 [-c <board_list> ] [ -j <jobs> ] [ -h ] [ -n ]"
-    echo >&1 "       -c <board_list>:   defaults to $BOARDS"
-    echo >&1 "       -j <jobs>:         defaults to $_jobs"
-    echo >&1 "       -h:                this help message"
-    echo >&1 "       -n:                Don't clean up the out/ directory first"
-    exit 1
-}
 
 # Default the -j factor to a bit less than the number of CPUs
 _jobs=`grep -c processor /proc/cpuinfo`
@@ -48,6 +38,23 @@ BOARDS="$BOARDS full"
 BOARDS="$BOARDS sdk_x86"
 BOARDS="$BOARDS sdk"
 
+# List of projects that need scrubbing before each build
+DIRTY_LIST="hardware/intel/PRIVATE/pvr hardware/ti/wlan hardware/intel/linux-2.6"
+
+usage() {
+    echo >&1 "Usage: $0 [-c <board_list> ] [ -j <jobs> ] [ -h ] [ -n ] [ -N ]"
+    echo >&1 "       -c <board_list>:   defaults to $BOARDS"
+    echo >&1 "       -j <jobs>:         defaults to $_jobs"
+    echo >&1 "       -h:                this help message"
+    echo >&1 "       -n:                Don't clean up the out/ directory first"
+    echo >&1 "       -N:                Don't clean up the (selected) source projects"
+    echo >&1 "                          (be careful with this)"
+    echo >&1 "List of source projects to clean:"
+    echo >&1 "  $DIRTY_LIST"
+    echo >&1
+    exit 1
+}
+
 
 # Verify java version.
 java_version=`javac -version 2>&1 | head -1`
@@ -60,7 +67,7 @@ case "$java_version" in
     ;;
 esac
 
-while getopts snhj:c: opt
+while getopts snNhj:c: opt
 do
     case "${opt}" in
     c)
@@ -73,6 +80,9 @@ do
         ;;
     n )
         dont_clean=1
+        ;;
+    N )
+        dont_clean_dirty=1
         ;;
     s )
 	SHOW="showcommands"
@@ -111,9 +121,13 @@ for i in $BOARDS; do
   mv $i.log $i.log-1
   echo Building $i ....
 
-  # make sure that PVR is clean
-  z=`repo forall hardware/intel/PRIVATE/pvr -c git clean -d -f -x | wc -l`
-  echo "Cleaned: $z files from the hardware/intel/PRIVATE/pvr directory"
+  if [ -d .repo -a -z "$dont_clean_dirty" ]; then
+    for _dirty in $DIRTY_LIST
+    do
+      z=`repo forall $_dirty -c git clean -d -f -x | wc -l`
+      echo "Cleaned: $z files from the $_dirty directory"
+    done
+  fi
 
   case "$i" in
   sdk )
