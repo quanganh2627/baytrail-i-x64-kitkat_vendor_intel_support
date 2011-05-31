@@ -16,10 +16,24 @@ function exit_on_failure {
         set -x
     fi
     $@
-    if [ $? -ne 0 ]; then
-        exit $?
+    rv=$?
+    if [ $rv -ne 0 ]; then
+        exit $rv
     fi
 }
+
+# Exit the script on failure of a command
+function warning_on_failure {
+    if [ "$_debug" ]; then
+        set -x
+    fi
+    $@
+    rv=$?
+    if [ $rv -ne 0 ]; then
+        echo >&2 "\"$@\" exited with error: $rv"
+    fi
+}
+
 
 # Fastboot doesn't return a non-zero exit value when a command fails.
 # We have to test stderr for the error.
@@ -167,7 +181,7 @@ function main {
     exit_on_failure do_fastboot erase cache
     exit_on_failure do_fastboot erase data
     exit_on_failure do_fastboot erase factory
-    exit_on_failure do_fastboot erase config
+    warning_on_failure do_fastboot erase config
     exit_on_failure do_fastboot erase system
 
     echo "Flashing system image: $_system_gz"
