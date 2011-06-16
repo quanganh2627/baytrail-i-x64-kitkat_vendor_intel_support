@@ -3,7 +3,7 @@
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 target-name bootstub out"
-    echo "target-name = ivydale"
+    echo "target-name = mfld_cdk"
     echo "out = filename of output file"
     exit 1
 fi
@@ -16,7 +16,7 @@ TEMP=out/target/product/$1/tmp
 TARG=out/target/product/$1
 OUT=$2
 
-if [ "$1" == "mfld_cdk" ] || [ "$1" == "mfld_pr1" ] || [ "$1" == "mfld_pr2" ] ;then
+if [ "$1" == "mfld_cdk" ] || [ "$1" == "mfld_pr2" ] ;then
             SILICON=1;
     else
             SILICON=0;

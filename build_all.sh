@@ -20,15 +20,8 @@ BOARDS="$BOARDS full_x86"		# QEMU/emulator bootable disk
 BOARDS="$BOARDS vbox"			# installer_vdi for virtualbox
 BOARDS="$BOARDS android_disk"		# Bootable disk for virtualbox
 
-# MRST targets (not supported in this tree)
-# BOARDS="$BOARDS mrst_ref"
-# BOARDS="$BOARDS ivydale"
-# BOARDS="$BOARDS mrst_edv"
-# BOARDS="$BOARDS crossroads"
-
 # MFLD targets
 BOARDS="$BOARDS mfld_cdk"
-BOARDS="$BOARDS mfld_pr1"
 BOARDS="$BOARDS mfld_pr2"
 
 # ARM builds (keep us honest)
@@ -166,7 +159,7 @@ for i in $BOARDS; do
     lunch=full_x86
     ;;
 
-  mrst_ref | mrst_edv | mfld_pr1 | mfld_pr2 | mfld_cdk | crossroads | ivydale )
+  mfld_pr2 | mfld_cdk )
     target="$i"
     lunch=$target
     ;;

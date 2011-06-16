@@ -1,7 +1,7 @@
-To build the Moorestown "mrst_edv" image from the top of the source tree:
+To build the Medfield iCDK "mfld_cdk" image from the top of the source tree:
   source build/envsetup.sh
-  lunch mrst_edv-eng
-  make mrst_edv
+  lunch mfld_cdk-eng
+  make mfld_cdk
 
 host system build setup assumes:
   o AOSP build system packages are present:
