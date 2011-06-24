@@ -8,7 +8,7 @@
 
 from optparse import OptionParser
 from subprocess import *
-import sys,os,re
+import sys,os,re,errno
 
 # _FindRepo() is from repo script
 # used to find the root a the repo we are currently in
@@ -40,7 +40,7 @@ def split_patch(patchfile):
 		patch = open(patchfile, 'r')
 	except IOError:                     
 		print "file", patch,"does not exist"
-		sys.exit()
+		sys.exit(errno.ENOENT)
 
 	comment=[]
 	file_list=[]
@@ -110,13 +110,13 @@ def check_comment(comment):
 	report=""
 	change_id=get_change_id(paragraphs[-1])
 	if len(paragraphs[0])!=1:
-		report="\n".join([report,"Error: no blank line between subject line and comment body"])
+		report="\n".join([report,"    Error: no blank line between subject line and comment body"])
 	if not re.match(bzpattern,bzline):
-		report="\n".join([report,"Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
+		report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
 	if change_id=="":
-		report="\n".join([report,"Error: last paragraph of comment body should have gerrit Change-ID"])
+		report="\n".join([report,"    Error: last paragraph of comment body should have gerrit Change-ID"])
 	if report=="":
-		report="Comment OK"
+		report="    Comment OK"
 	else:
 		report=report[1:]
 	return (report,subject,change_id)
@@ -126,7 +126,12 @@ def check_comment(comment):
 # parse options
 parser = OptionParser()
 
+parser.add_option("-f", "--force",
+                  action="store_true", dest="force", default=False,
+                  help="don't ask before deleting patches at root of repo")
+
 (options, args) = parser.parse_args()
+ask_before_delete=not options.force
 
 # get the reference manifest (.repo/manifest.xml)
 repo=_FindRepo()[1]
@@ -134,7 +139,7 @@ manifest=repo+'/manifest.xml'
 
 if (not os.path.exists(manifest)):
 	print "Error: no manifest in repo",repo
-	sys.exit()
+	sys.exit(errno.ENOENT)
 
 # cd to repo root (repo format-patch writes patch files at the repo root)
 os.chdir(os.path.dirname(repo))
@@ -143,19 +148,20 @@ os.chdir(os.path.dirname(repo))
 files=os.listdir(".")
 old_patches=[ patch.strip() for patch in files if re.match("\d{4}\-.*\.patch", patch.strip()) ]
 if len(old_patches) != 0:
-	print "There are old patches in %s:" %(os.getcwd())
-	for old_patch in old_patches:
-		print "    ",old_patch
-	answer = raw_input("Are you OK to remove them? (y/n)")
-	if not (answer == "y" or answer == "Y"):
-		print "Error: please move your old patches before running this script"
-		sys.exit()
+	if ask_before_delete:
+		print "There are old patches in %s:" %(os.getcwd())
+		for old_patch in old_patches:
+			print "    ",old_patch
+		answer = raw_input("Are you OK to remove them? (y/n)")
+		if not (answer == "y" or answer == "Y"):
+			print "Error: please move your old patches before running this script"
+			sys.exit(errno.EPERM)
 	for old_patch in old_patches:
 		try:
 			ret=os.remove(old_patch)
 		except OSError:
 			print "Error: impossible to delete %s" %(old_patch)
-			sys.exit()
+			sys.exit(errno.EPERM)
 
 # list patches to be checked
 p5 = Popen(["repo", "format-patch", manifest], stdout=PIPE)
@@ -164,15 +170,18 @@ patches = [ patch.strip() for patch in output.split('\n') if patch.strip() != ''
 
 if len(patches) == 0:
 	print "Error: no patch to check"
-	sys.exit()
+	sys.exit(errno.ENOENT)
+global_status=0
 
 # check patches
 print "############## REPORT START #################"
 for patch in patches:
 	(comment,file_list)=split_patch(patch)
 	(report,subject,change_id)=check_comment(comment)
-	print "checking patch",subject,"..."
-	print "    ",report
+	if report != "    Comment OK":
+		global_status=errno.EAGAIN
+	print "checking patch %s ..." %(subject)
+	print report
 	print
 	print"Change-Id: %s" %(change_id.strip())
 	print
@@ -187,3 +196,5 @@ print
 print "Please check that all patches in other maintainers' projects are CodeReviewed+2 and Verified+1"
 print "Please check that all patches in the projects you manage are merged"
 print
+
+sys.exit(global_status)
