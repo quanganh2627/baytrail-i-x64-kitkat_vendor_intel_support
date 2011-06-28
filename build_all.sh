@@ -41,10 +41,13 @@ BOARDS="$BOARDS sdk"
 # List of projects that need scrubbing before each build
 DIRTY_LIST="hardware/intel/PRIVATE/pvr hardware/ti/wlan hardware/intel/linux-2.6"
 
+BUILD_TYPE=eng
+
 usage() {
     echo >&1 "Usage: $0 [-c <board_list> ] [ -j <jobs> ] [ -h ] [ -n ] [ -N ]"
     echo >&1 "       -c <board_list>:   defaults to $BOARDS"
     echo >&1 "       -j <jobs>:         defaults to $_jobs"
+    echo >&1 "       -t:                Build type. Defaults to ${BUILD_TYPE}"
     echo >&1 "       -h:                this help message"
     echo >&1 "       -n:                Don't clean up the out/ directory first"
     echo >&1 "       -N:                Don't clean up the (selected) source projects"
@@ -67,9 +70,12 @@ case "$java_version" in
     ;;
 esac
 
-while getopts snNhj:c: opt
+while getopts t:snNhj:c: opt
 do
     case "${opt}" in
+    t)
+        BUILD_TYPE=${OPTARG}
+        ;;
     c)
         BOARDS="${OPTARG}"
         ;;
@@ -85,7 +91,7 @@ do
         dont_clean_dirty=1
         ;;
     s )
-	SHOW="showcommands"
+        SHOW="showcommands"
         ;;
     ? | h)
         usage
@@ -172,7 +178,7 @@ for i in $BOARDS; do
     ;;
   esac
 
-  lunch $lunch-eng
+  lunch $lunch-$BUILD_TYPE
   time make -j$_jobs $target $SHOW > $i.log 2>&1
   rc=$?
   if [ "$rc" -ne 0 ]; then
