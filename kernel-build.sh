@@ -209,19 +209,21 @@ make_module_external_fcn() {
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
     local modules_name=""
-
+    local modules_file=""
     echo "  Making driver modules from external source directory..."
 
     make $KMAKEFLAGS -j${_jobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules
     exit_on_error $? quiet
 
+    modules_file=`basename ${EXTERNAL_MODULE_DIRECTORY}`.list
+
     make $KMAKEFLAGS -j${_jobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules_install \
         INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC} \
-        | tee modules_install.list
+        | tee $modules_file
     exit_on_error $? quiet
 
-    modules_name=`cat modules_install.list | grep -o -e "[a-zA-Z0-9_\.\-]*.ko"`
-    rm -f modules_install.list
+    modules_name=`cat $modules_file | grep -o -e "[a-zA-Z0-9_\.\-]*.ko"`
+    rm -f $modules_file
 
     for module in $modules_name
     do
