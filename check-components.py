@@ -6,6 +6,8 @@
 # the tool will only check patches in the checked out branch
 # more checks will appear soon
 
+from xml.dom import minidom
+from xml.dom.minidom import parseString
 from optparse import OptionParser
 from subprocess import *
 import sys,os,re,errno
@@ -38,7 +40,7 @@ def _FindRepo():
 def split_patch(patchfile):
 	try:
 		patch = open(patchfile, 'r')
-	except IOError:                     
+	except IOError:
 		print "file", patch,"does not exist"
 		sys.exit(errno.ENOENT)
 
@@ -94,6 +96,35 @@ def get_change_id(lines):
 			change_id=l[len("Change-Id: "):]
 	return change_id
 
+# get_info_bug retrieves infos from the BZ server
+# in: bug number
+# out: 0 if the BZ exists
+#      -1 on error
+def get_info_bug(bug):
+  try:
+    p = Popen("curl \"http://umgbugzilla.sh.intel.com:41006/show_bug.cgi?id=%s&ctype=xml\" --netrc --silent" %(bug),
+      shell=True, bufsize=10000, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+    (child_stdin, child_stdout, child_stderr) = (p.stdin, p.stdout, p.stderr)
+    tmp = ""
+    for i in child_stdout.readlines():
+      tmp += i
+    dom3 = parseString(tmp)
+    reflist = dom3.getElementsByTagName('bug')
+    error = reflist[0].hasAttribute('error')
+    if error == True:
+        print "BZ:", bug, "doesn't exist"
+        return -1
+    reflist = dom3.getElementsByTagName('bug_id')
+    bug_id = reflist[0].childNodes[0].nodeValue
+    print "BZ: ", bug_id
+    reflist = dom3.getElementsByTagName('bug_status')
+    status = reflist[0].childNodes[0].nodeValue
+    print "    status:", status
+  except:
+    print "BZ:", bug, "doesn't exist"
+    return -1
+  return 0
+
 # check_comment verifies if a comment complies with process rules (it can be updated/enriched over time)
 # in: string
 # out: (string,string,string) (report status,subject,change_id)
@@ -102,24 +133,32 @@ def get_change_id(lines):
 #	- 3rd line (start of comment body) starts with: BZ nnnn
 #	- last paragraph contains change_id
 def check_comment(comment):
-	paragraphs=split_comment(comment)
-	bzpattern=r'BZ: \d+'
-	subject=paragraphs[0][0].strip()
-	bzline=paragraphs[1][0].strip()
-	check_ok=True
-	report=""
-	change_id=get_change_id(paragraphs[-1])
-	if len(paragraphs[0])!=1:
-		report="\n".join([report,"    Error: no blank line between subject line and comment body"])
-	if not re.match(bzpattern,bzline):
-		report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
-	if change_id=="":
-		report="\n".join([report,"    Error: last paragraph of comment body should have gerrit Change-ID"])
-	if report=="":
-		report="    Comment OK"
-	else:
-		report=report[1:]
-	return (report,subject,change_id)
+    paragraphs=split_comment(comment)
+    subject=paragraphs[0][0].strip()
+    bzline=paragraphs[1][0].strip()
+    bzpattern=r'BZ:?\s*(?P<num>.*)'
+    m=re.match(bzpattern,bzline)
+    check_ok=True
+    report=""
+    change_id=get_change_id(paragraphs[-1])
+    if len(paragraphs[0])!=1:
+        report="\n".join([report,"    Error: no blank line between subject line and comment body"])
+    if m:
+        bzlist=re.split('\s+',m.group("num"))
+#        print "DEBUG bzlist=",bzlist
+        if ask_bz_server:
+            for i in bzlist:
+                if get_info_bug(i):
+                    report="\n".join([report,"    Error: Bugzilla id is not correct"])
+    else:
+        report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
+    if change_id=="":
+        report="\n".join([report,"    Error: last paragraph of comment body should have gerrit Change-ID"])
+    if report=="":
+        report="    Comment OK"
+    else:
+        report=report[1:]
+    return (report,subject,change_id)
 
 # main
 
@@ -130,8 +169,13 @@ parser.add_option("-f", "--force",
                   action="store_true", dest="force", default=False,
                   help="don't ask before deleting patches at root of repo")
 
+parser.add_option("-b", "--bugzilla",
+                  action="store_true", dest="bugzilla", default=False,
+                  help="ask Bugzilla server for status on each bug id")
+
 (options, args) = parser.parse_args()
 ask_before_delete=not options.force
+ask_bz_server = options.bugzilla
 
 # get the reference manifest (.repo/manifest.xml)
 repo=_FindRepo()[1]
