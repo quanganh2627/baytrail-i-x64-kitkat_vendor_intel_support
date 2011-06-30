@@ -154,7 +154,11 @@ make_kernel() {
 make_modules() {
     local custom_board=${1}
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
-    local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
+    if [ "$DIFFCONFIGS" != "kboot" ]; then
+        local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
+    else
+        local MODULE_DEST=${PRODUCT_OUT}/kboot/root/lib/modules
+    fi
 
     echo "  Making driver modules..."
 
