@@ -9,8 +9,16 @@
 
 
 # Default the -j factor to a bit less than the number of CPUs
-_jobs=`grep -c processor /proc/cpuinfo`
-_jobs=$(($_jobs * 8 / 10))
+if [ -e /proc/cpuinfo ] ; then
+    _jobs=`grep -c processor /proc/cpuinfo`
+    _jobs=$(($_jobs * 2 * 8 / 10))
+elif [ -e /usr/sbin/sysctl ] ; then
+    _jobs=`/usr/sbin/sysctl -n hw.ncpu`
+    _jobs=$(($_jobs * 2 * 8 / 10))
+else
+    _jobs=1
+    echo "WARNING: Unavailable to determine the number of CPUs, defaulting to ${_jobs} job."
+fi
 
 # The full build list that this script knows how to build...
 BOARDS=""
@@ -37,10 +45,11 @@ DIRTY_LIST="hardware/intel/PRIVATE/pvr hardware/ti/wlan hardware/intel/linux-2.6
 BUILD_TYPE=eng
 
 usage() {
-    echo >&1 "Usage: $0 [-c <board_list> ] [ -j <jobs> ] [ -h ] [ -n ] [ -N ]"
+    echo >&1 "Usage: $0 [-c <board_list> ] [ -j <jobs> ] [ -w ] [ -h ] [ -n ] [ -N ]"
     echo >&1 "       -c <board_list>:   defaults to $BOARDS"
     echo >&1 "       -j <jobs>:         defaults to $_jobs"
     echo >&1 "       -t:                Build type. Defaults to ${BUILD_TYPE}"
+    echo >&1 "       -w:                Build the Windows version SDK"
     echo >&1 "       -h:                this help message"
     echo >&1 "       -n:                Don't clean up the out/ directory first"
     echo >&1 "       -N:                Don't clean up the (selected) source projects"
@@ -49,6 +58,53 @@ usage() {
     echo >&1 "  $DIRTY_LIST"
     echo >&1
     exit 1
+}
+
+# Rotate a log file
+# If the given log file exist, add a -1 to the end of the file.
+# If older log files exist, rename them to -<n+1>
+# $1: log file
+# $2: maximum version to retain [optional]
+rotate_log ()
+{
+    # Default Maximum versions to retain
+    local MAXVER="5"
+    local LOGFILE="$1"
+    shift;
+    if [ ! -z "$1" ] ; then
+        local tmpmax="$1"
+        shift;
+        tmpmax=`expr $tmpmax + 0`
+        if [ $tmpmax -lt 1 ] ; then
+            panic "Invalid maximum log file versions '$tmpmax' invalid; defaulting to $MAXVER"
+        else
+            MAXVER=$tmpmax;
+        fi
+    fi
+
+    # Do Nothing if the log file does not exist
+    if [ ! -f ${LOGFILE} ] ; then
+        return
+    fi
+
+    # Rename existing older versions
+    ver=$MAXVER
+    while [ $ver -ge 1 ]
+    do
+        local prev=`expr $ver - 1`
+        local old="-$prev"
+
+        # Instead of old version 0; use the original filename
+        if [ $ver -eq 1 ] ; then
+            old=""
+        fi
+
+        if [ -f "${LOGFILE}${old}" ] ; then
+            mv -f ${LOGFILE}${old} ${LOGFILE}-${ver}
+        fi
+
+        ver=$prev
+    done
 }
 
 
@@ -63,7 +119,7 @@ case "$java_version" in
     ;;
 esac
 
-while getopts t:snNhj:c: opt
+while getopts t:snwNhj:c: opt
 do
     case "${opt}" in
     t)
@@ -75,6 +131,15 @@ do
     j)
         if [ ${OPTARG} -gt 0 ]; then
             _jobs=${OPTARG}
+        fi
+        ;;
+    w )
+        chk_host_os=`uname -s`
+        if [ ${chk_host_os} == "Linux" ]; then
+            build_windows_sdk=1
+        else
+            echo >&1 "Error: Build Windows SDK option only valid under Linux"
+            exit 1
         fi
         ;;
     n )
@@ -108,16 +173,26 @@ fi
 
 # Start clean
 if [ -z "$dont_clean" ]; then
+    echo "Removing previous 'out' directory..."
     rm -rf out
+fi
+
+# Add the Windows SDK to the Board list
+# if the option is enable
+if [ -n "$build_windows_sdk" ]; then
+    BOARDS=`echo $BOARDS | sed -e 's/\(sdk\|sdk_x86\)/& win_&/g'`
 fi
 
 echo "Building with j-factor of $_jobs"
 echo "Building for boards: $BOARDS"
 echo
 
+TODAY=`date '+%Y%m%d'`
+SDK_REL_DIR=sdk-release-$TODAY
+
 source build/envsetup.sh
 for i in $BOARDS; do
-  mv $i.log $i.log-1
+  rotate_log "$i.log"
   echo Building $i ....
 
   if [ -d .repo -a -z "$dont_clean_dirty" ]; then
@@ -128,14 +203,28 @@ for i in $BOARDS; do
     done
   fi
 
+  # Get information about this Build Host
+  HOST_OS=`get_build_var HOST_OS`
+  HOST_ARCH=`get_build_var HOST_ARCH`
+
   case "$i" in
   sdk )
     target=sdk
     lunch=sdk
     ;;
 
+  win_sdk )
+    target=win_sdk
+    lunch=sdk
+    ;;
+
   sdk_x86 )
     target=sdk
+    lunch=sdk_x86
+    ;;
+
+  win_sdk_x86 )
+    target=win_sdk
     lunch=sdk_x86
     ;;
 
@@ -182,10 +271,18 @@ for i in $BOARDS; do
 
   case "$i" in
   sdk | sdk_x86 )
-    TODAY=`date '+%Y%m%d'`
-    SDK=sdk-release-$TODAY
-    mkdir -p $SDK
-    bash -c -x "cp out/host/linux-x86/sdk/android-sdk_eng.${LOGNAME}_linux-x86.zip $SDK/$i.zip" >> $i.log 2>&1
+    mkdir -p $SDK_REL_DIR/$i
+    if [ ${HOST_OS} == "darwin" ]; then
+        _host_os="mac"
+    else
+        _host_os=${HOST_OS}
+    fi
+    bash -c -x "cp out/host/${HOST_OS}-${HOST_ARCH}/sdk/android-sdk_eng.${LOGNAME}_${_host_os}-${HOST_ARCH}.zip $SDK_REL_DIR/$i/" >> $i.log 2>&1
+    ;;
+
+  win_sdk | win_sdk_x86 )
+    mkdir -p $SDK_REL_DIR/$i
+    bash -c -x "cp out/host/windows/sdk/android-sdk_eng.${LOGNAME}_windows.zip $SDK_REL_DIR/$i/" >> $i.log 2>&1
     ;;
 
   full | full_x86)
