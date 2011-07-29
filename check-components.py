@@ -120,6 +120,9 @@ def get_info_bug(bug):
     reflist = dom3.getElementsByTagName('bug_status')
     status = reflist[0].childNodes[0].nodeValue
     print "    status:", status
+    if options.states_list and not status in bz_state_list:
+        print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
+        return -1
   except:
     print "BZ:", bug, "doesn't exist"
     return -1
@@ -149,7 +152,7 @@ def check_comment(comment):
         if ask_bz_server:
             for i in bzlist:
                 if get_info_bug(i):
-                    report="\n".join([report,"    Error: Bugzilla id is not correct"])
+                    report="\n".join([report,"    Error: Bugzilla id (%s) is not correct" %(i)])
     else:
         report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
     if change_id=="":
@@ -173,9 +176,17 @@ parser.add_option("-b", "--bugzilla",
                   action="store_true", dest="bugzilla", default=False,
                   help="ask Bugzilla server for status on each bug id")
 
+parser.add_option("-s", "--states-list",
+                  action="store", dest="states_list", default=None,
+                  help="specify the authorized states for the BZ status,"
+                       "         ex: -s 'IMPLEMENTED RESOLVED'")
+
 (options, args) = parser.parse_args()
 ask_before_delete=not options.force
 ask_bz_server = options.bugzilla
+if options.states_list:
+    ask_bz_server=True
+    bz_state_list=options.states_list.split()
 
 # get the reference manifest (.repo/manifest.xml)
 repo=_FindRepo()[1]
@@ -213,8 +224,8 @@ output=p5.communicate()[0]
 patches = [ patch.strip() for patch in output.split('\n') if patch.strip() != '' and not patch.startswith('/') and not patch.startswith('no-clobber')]
 
 if len(patches) == 0:
-	print "Error: no patch to check"
-	sys.exit(errno.ENOENT)
+	print "Warning: no patch to check (Maybe already merged)"
+	sys.exit(0)
 global_status=0
 
 # check patches
