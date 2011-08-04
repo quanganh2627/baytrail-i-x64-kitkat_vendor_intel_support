@@ -18,7 +18,17 @@ function exit_on_error {
 
 # defaults
 TOP=`pwd`
-_jobs="`grep -c processor /proc/cpuinfo`"
+# Default the -j factor to a bit less than the number of CPUs
+if [ -e /proc/cpuinfo ] ; then
+    _jobs=`grep -c processor /proc/cpuinfo`
+    _jobs=$(($_jobs * 2 * 8 / 10))
+elif [ -e /usr/sbin/sysctl ] ; then
+    _jobs=`/usr/sbin/sysctl -n hw.ncpu`
+    _jobs=$(($_jobs * 2 * 8 / 10))
+else
+    _jobs=1
+    echo "WARNING: Unavailable to determine the number of CPUs, defaulting to ${_jobs} job."
+fi
 _kernel_only=0
 _test=0
 _clean=""
@@ -28,17 +38,18 @@ _logfile=""
 _preserve_kernel_config=""
 _menuconfig="false"
 _soc_type="mfld"
+_host_os=`uname -s | tr '[:upper:]' '[:lower:]'`
 
 init_variables() {
     local custom_board=$1
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
-        TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
+        TARGET_TOOLS_PREFIX=$TOP/prebuilt/${_host_os}-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
     fi
     if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set."
-        CCACHE_TOOLS_DIR=$TOP/prebuilt/linux-x86/ccache
+        CCACHE_TOOLS_DIR=$TOP/prebuilt/${_host_os}-x86/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
@@ -274,7 +285,17 @@ main() {
             if [ ${OPTARG} -gt 0 ]; then
                 _jobs=${OPTARG}
             else
-                _jobs=`grep processor /proc/cpuinfo|wc -l`
+                # Default the -j factor to a bit less than the number of CPUs
+                if [ -e /proc/cpuinfo ] ; then
+                    _jobs=`grep -c processor /proc/cpuinfo`
+                    _jobs=$(($_jobs * 2 * 8 / 10))
+                elif [ -e /usr/sbin/sysctl ] ; then
+                    _jobs=`/usr/sbin/sysctl -n hw.ncpu`
+                    _jobs=$(($_jobs * 2 * 8 / 10))
+                else
+                    _jobs=1
+                    echo "WARNING: Unavailable to determine the number of CPUs, defaulting to ${_jobs} job."
+                fi
             fi
             ;;
         k)

@@ -18,7 +18,17 @@ function exit_on_error {
 
 # defaults
 TOP=`pwd`
-_jobs="`grep -c processor /proc/cpuinfo`"
+# Default the -j factor to a bit less than the number of CPUs
+if [ -e /proc/cpuinfo ] ; then
+    _jobs=`grep -c processor /proc/cpuinfo`
+    _jobs=$(($_jobs * 2 * 8 / 10))
+elif [ -e /usr/sbin/sysctl ] ; then
+    _jobs=`/usr/sbin/sysctl -n hw.ncpu`
+    _jobs=$(($_jobs * 2 * 8 / 10))
+else
+    _jobs=1
+    echo "WARNING: Unavailable to determine the number of CPUs, defaulting to ${_jobs} job."
+fi
 _kernel_only=0
 _test=0
 _clean=""
@@ -135,7 +145,16 @@ main() {
             if [ ${OPTARG} -gt 0 ]; then
                 _jobs=${OPTARG}
             else
-                _jobs=`grep processor /proc/cpuinfo|wc -l`
+                if [ -e /proc/cpuinfo ] ; then
+                    _jobs=`grep -c processor /proc/cpuinfo`
+                    _jobs=$(($_jobs * 2 * 8 / 10))
+                elif [ -e /usr/sbin/sysctl ] ; then
+                    _jobs=`/usr/sbin/sysctl -n hw.ncpu`
+                    _jobs=$(($_jobs * 2 * 8 / 10))
+                else
+                    _jobs=1
+                    echo "WARNING: Unavailable to determine the number of CPUs, defaulting to ${_jobs} job."
+                fi
             fi
             ;;
         k)
