@@ -20,6 +20,7 @@ repodir = '.repo'               # name of repo's private directory
 S_repo = 'repo'                 # special repo reposiory
 S_manifests = 'manifests'       # special manifest repository
 REPO_MAIN = S_repo + '/main.py' # main script
+abstract = ""
 
 def _FindRepo():
   """Look for a repo installation, starting at the current directory.
@@ -101,6 +102,7 @@ def get_change_id(lines):
 # out: 0 if the BZ exists
 #      -1 on error
 def get_info_bug(bug):
+  global abstract
   try:
     p = Popen("curl \"http://umgbugzilla.sh.intel.com:41006/show_bug.cgi?id=%s&ctype=xml\" --netrc --silent" %(bug),
       shell=True, bufsize=10000, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -113,7 +115,8 @@ def get_info_bug(bug):
     error = reflist[0].hasAttribute('error')
     if error == True:
         print "BZ:", bug, "doesn't exist"
-        return -1
+        abstract += "BZ: %s doesn't exist\n" % (bug)
+        return 1
     reflist = dom3.getElementsByTagName('bug_id')
     bug_id = reflist[0].childNodes[0].nodeValue
     print "BZ: ", bug_id
@@ -122,10 +125,12 @@ def get_info_bug(bug):
     print "    status:", status
     if options.states_list and not status in bz_state_list:
         print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
-        return -1
+        abstract += "BZ: %s not in the right status; it should be in this list: %s\n" % (bug, str(bz_state_list))
+        return 1
   except:
     print "BZ:", bug, "doesn't exist"
-    return -1
+    abstract += "BZ: %s doesn't exist\n" % (bug)
+    return 1
   return 0
 
 # check_comment verifies if a comment complies with process rules (it can be updated/enriched over time)
@@ -136,6 +141,7 @@ def get_info_bug(bug):
 #	- 3rd line (start of comment body) starts with: BZ nnnn
 #	- last paragraph contains change_id
 def check_comment(comment):
+    global abstract
     paragraphs=split_comment(comment)
     subject=paragraphs[0][0].strip()
     bzline=paragraphs[1][0].strip()
@@ -146,6 +152,7 @@ def check_comment(comment):
     change_id=get_change_id(paragraphs[-1])
     if len(paragraphs[0])!=1:
         report="\n".join([report,"    Error: no blank line between subject line and comment body"])
+        abstract += "    Error: no blank line between subject line and comment body for this patch: %s\n" % (change_id)
     if m:
         bzlist=re.split('\s+',m.group("num"))
 #        print "DEBUG bzlist=",bzlist
@@ -155,8 +162,10 @@ def check_comment(comment):
                     report="\n".join([report,"    Error: Bugzilla id (%s) is not correct" %(i)])
     else:
         report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
+        abstract += "    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn) for this patch: %s\n" % (change_id)
     if change_id=="":
         report="\n".join([report,"    Error: last paragraph of comment body should have gerrit Change-ID"])
+        abstract += "    Error: last paragraph of comment body should have gerrit Change-ID: Find yourself this patch (as there is no Change-Id !)\n"
     if report=="":
         report="    Comment OK"
     else:
@@ -248,8 +257,7 @@ for patch in patches:
 
 print "############## REPORT END ###################"
 print
-print "Please check that all patches in other maintainers' projects are CodeReviewed+2 and Verified+1"
-print "Please check that all patches in the projects you manage are merged"
+print abstract
 print
 
 sys.exit(global_status)
