@@ -114,21 +114,21 @@ def get_info_bug(bug):
     reflist = dom3.getElementsByTagName('bug')
     error = reflist[0].hasAttribute('error')
     if error == True:
-        print "BZ:", bug, "doesn't exist"
+        #print "BZ:", bug, "doesn't exist"
         abstract += "BZ: %s doesn't exist\n" % (bug)
         return 1
     reflist = dom3.getElementsByTagName('bug_id')
     bug_id = reflist[0].childNodes[0].nodeValue
-    print "BZ: ", bug_id
+    #print "BZ: ", bug_id
     reflist = dom3.getElementsByTagName('bug_status')
     status = reflist[0].childNodes[0].nodeValue
-    print "    status:", status
+    #print "    status:", status
     if options.states_list and not status in bz_state_list:
-        print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
-        abstract += "BZ: %s not in the right status; it should be in this list: %s\n" % (bug, str(bz_state_list))
+        #print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
+        abstract += "BZ: %s (%s) not in the right status; it should be in this list: %s\n" % (bug, status, str(bz_state_list))
         return 1
   except:
-    print "BZ:", bug, "doesn't exist"
+    #print "BZ:", bug, "doesn't exist"
     abstract += "BZ: %s doesn't exist\n" % (bug)
     return 1
   return 0
@@ -237,27 +237,43 @@ if len(patches) == 0:
 	sys.exit(0)
 global_status=0
 
+private_file=False
 # check patches
 print "############## REPORT START #################"
 for patch in patches:
-	(comment,file_list)=split_patch(patch)
-	(report,subject,change_id)=check_comment(comment)
-	if report != "    Comment OK":
-		global_status=errno.EAGAIN
-	print "checking patch %s ..." %(subject)
-	print report
-	print
-	print"Change-Id: %s" %(change_id.strip())
-	print
-	print"File list:"
-	for f in file_list:
-		print f
-	print"------------------------------------"
-	print
+    try:
+        private_files="private_files.log"
+        res = os.system("vendor/intel/release/check-modified-makefiles.sh %s %s" % (patch, private_files))
+        if res:
+            private_file=True
+    except:
+        print "exception catched in check-modified-makefiles.sh\n"
+    (comment,file_list)=split_patch(patch)
+    (report,subject,change_id)=check_comment(comment)
+    if report != "    Comment OK":
+        global_status=errno.EAGAIN
+    print "checking patch %s ..." %(subject)
+    print report
+    print
+    print"Change-Id: %s" %(change_id.strip())
+    print
+    print"File list:"
+    for f in file_list:
+        print f
+    print"------------------------------------"
+    print
+
+if private_file:
+    global_status=errno.EAGAIN
+    p = open(private_files)
+    for line in p.readlines():
+        pattern=r'WARNING:(.*)'
+        m = re.match(pattern, line)
+        if m:
+            abstract += "ERROR: %s \n" % m.group(1)
 
 print "############## REPORT END ###################"
 print
 print abstract
-print
 
 sys.exit(global_status)
