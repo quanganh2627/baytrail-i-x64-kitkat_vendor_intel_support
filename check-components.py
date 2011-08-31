@@ -245,11 +245,13 @@ if len(patches) == 0:
 global_status=0
 
 private_file=False
+private_files="private_files.log"
+if os.path.exists(private_files):
+    os.remove(private_files)
 # check patches
 print "############## REPORT START #################"
 for patch in patches:
     try:
-        private_files="private_files.log"
         res = os.system("vendor/intel/release/check-modified-makefiles.sh %s %s" % (patch, private_files))
         if res:
             private_file=True
