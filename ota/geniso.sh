@@ -27,6 +27,9 @@ SYSTEM_BUILD_TAG=${SOURCE_DIR}/system/etc/build_tag
 
 DEST=${SOURCE_DIR}/ota_update-$TARGET_PRODUCT-$DATE.iso
 
+flag=0
+LogFile=/mnt/cache/recovery/schedule
+
 function init () {
     if [[ ! -f $TOP/content.list ]]; then
         echo "The content.list not found under $0"
@@ -59,17 +62,15 @@ function process_build_result () {
     script_append "# Build by `whoami`, `date`"
     script_append ""
     script_append "TOP=\`dirname \$0\`"
-
-    if [[ -f ${BOOT} ]]; then
-        cp ${BOOT} ${ANDROID_DIR}/${BOOT_BIN}
-        cp ${BOOT_BUILD_TAG} `dirname ${ANDROID_DIR}/${BOOT_BIN}`
-
-        if [[ -f ${ANDROID_DIR}/${BOOT_BIN} ]]; then
-            gen_md5sum ${ANDROID_DIR}/${BOOT_BIN}
-            script_append "# update boot partition"
-            script_append "update_osip --update 0 --image \$TOP/${BOOT_BIN}"
-        fi
-    fi
+    script_append "flag=0"
+    script_append "schedule_log() {"
+    script_append "    flag=\`expr \$flag + 1\`"
+    script_append "    echo \"\$flag\" > $LogFile"
+    script_append "    sync"
+    script_append "}"
+    script_append "if [ -f \"$LogFile\" ]; then"
+    script_append "    flag=\`cat $LogFile\`"
+    script_append "fi"
 
     if [[ -d ${SYSTEM} ]]; then
         echo "Generate system.zip, this will take dozens of seconds..."
@@ -79,11 +80,15 @@ function process_build_result () {
 
         if [[ -f ${ANDROID_DIR}/${SYSTEM_ZIP} ]]; then
             gen_md5sum ${ANDROID_DIR}/${SYSTEM_ZIP}
-            script_append "# update system partition"
-            script_append "unzip -o \$TOP/${SYSTEM_ZIP} -d /mnt/system/"
-            script_append "# workaround for the executable privlidge missed"
-            script_append "# during unzip ${SYSTEM_ZIP}"
-            script_append "chmod +x /mnt/system/bin/* /mnt/system/xbin/*"
+            script_append "if [ \"\$flag\" = \"$flag\" ]; then"
+            script_append "	# update system partition"
+            script_append "	unzip -o \$TOP/${SYSTEM_ZIP} -d /mnt/system/"
+            script_append "	# workaround for the executable privlidge missed"
+            script_append "	# during unzip ${SYSTEM_ZIP}"
+            script_append "	chmod +x /mnt/system/bin/* /mnt/system/xbin/*"
+            script_append "	schedule_log"
+            script_append "fi"
+            flag=`expr $flag + 1`
         fi
     fi
 
@@ -95,8 +100,12 @@ function process_build_result () {
                 if [[ -f ${ANDROID_DIR}/${DNX_BIN} ]]; then
                     gen_md5sum ${ANDROID_DIR}/${IFWI_BIN}
                     gen_md5sum ${ANDROID_DIR}/${DNX_BIN}
-                    script_append "# update IFWI(SCU) firmware"
-                    script_append "# loadfw \$TOP/${IFWI_BIN}"
+                    script_append "if [ \"\$flag\" = \"$flag\" ]; then"
+                    script_append "	# update IFWI(SCU) firmware"
+                    script_append "	schedule_log"
+                    script_append "	ifwi-update \$TOP/${DNX_BIN} \$TOP/${IFWI_BIN}"
+                    script_append "fi"
+                    flag=`expr $flag + 1`
                 fi
             fi
         fi
@@ -107,14 +116,33 @@ function process_build_result () {
 
         if [[ -f ${ANDROID_DIR}/${RADIO_BIN} ]]; then
             gen_md5sum ${ANDROID_DIR}/${RADIO_BIN}
-            #script_append "# update radio firmware"
-            #script_append "# TODO: burn \$TOP/${RADIO_BIN}..."
-            script_append "if [ -f /sbin/loadfw_modem.sh ]; then"
-            script_append "    loadfw_modem.sh \$TOP/${RADIO_BIN}"
-	    script_append "fi"
+            script_append "if [ \"\$flag\" = \"$flag\" ]; then"
+            script_append "	if [ -f /sbin/loadfw_modem.sh ]; then"
+            script_append "     	# update radio firmware"
+            script_append "		loadfw_modem.sh \$TOP/${RADIO_BIN}"
+            script_append "		schedule_log"
+            script_append "	fi"
+            script_append "fi"
+            flag=`expr $flag + 1`
         fi
     fi
 
+    if [[ -f ${BOOT} ]]; then
+        cp ${BOOT} ${ANDROID_DIR}/${BOOT_BIN}
+        cp ${BOOT_BUILD_TAG} `dirname ${ANDROID_DIR}/${BOOT_BIN}`
+
+        if [[ -f ${ANDROID_DIR}/${BOOT_BIN} ]]; then
+            gen_md5sum ${ANDROID_DIR}/${BOOT_BIN}
+            script_append "if [ \"\$flag\" = \"$flag\" ]; then"
+            script_append "	# update boot partition"
+            script_append "	update_osip --update 0 --image \$TOP/${BOOT_BIN}"
+            script_append "	schedule_log"
+            script_append "fi"
+            flag=`expr $flag+1`
+        fi
+    fi
+
+    script_append "rm -f $LogFile"
     chmod 544 $setup_script
 }
 
