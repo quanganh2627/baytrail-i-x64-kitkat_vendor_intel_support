@@ -101,8 +101,9 @@ def get_change_id(lines):
 # in: bug number
 # out: 0 if the BZ exists
 #      -1 on error
-def get_info_bug(bug):
+def get_info_bug(bug, bypassbzstatus = False):
   global abstract
+  #print "DEBUG bypassbzstatus %s" % (bypassbzstatus)
   try:
     p = Popen("curl \"http://umgbugzilla.sh.intel.com:41006/show_bug.cgi?id=%s&ctype=xml\" --netrc --silent" %(bug),
       shell=True, bufsize=10000, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -123,7 +124,7 @@ def get_info_bug(bug):
     reflist = dom3.getElementsByTagName('bug_status')
     status = reflist[0].childNodes[0].nodeValue
     #print "    status:", status
-    if options.states_list and not status in bz_state_list:
+    if not bypassbzstatus and options.states_list and not status in bz_state_list:
         #print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
         abstract += "BZ: %s (%s) not in the right status; it should be in this list: %s\n" % (bug, status, str(bz_state_list))
         return 1
@@ -142,8 +143,14 @@ def get_info_bug(bug):
 #	- last paragraph contains change_id
 def check_comment(comment):
     global abstract
+    bypassbzstatus=False
     paragraphs=split_comment(comment)
     subject=paragraphs[0][0].strip()
+    #print "subject %s" % (subject)
+    backportpattern=r'\[PATCH.*\] \[PORT FROM .*\].*'
+    n=re.match(backportpattern,subject)
+    if n:
+      bypassbzstatus=True
     bzline=paragraphs[1][0].strip()
     bzpattern=r'BZ:?\s*(?P<num>.*)'
     m=re.match(bzpattern,bzline)
@@ -158,7 +165,7 @@ def check_comment(comment):
 #        print "DEBUG bzlist=",bzlist
         if ask_bz_server:
             for i in bzlist:
-                if get_info_bug(i):
+                if get_info_bug(i,bypassbzstatus):
                     report="\n".join([report,"    Error: Bugzilla id (%s) is not correct" %(i)])
     else:
         report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
