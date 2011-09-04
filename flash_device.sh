@@ -61,16 +61,17 @@ function do_fastboot {
 }
 
 function usage {
-    echo "Usage: $_cmd [-d nand|sd|usb] [-p] [-c <dir>] [-n]"
+    echo "Usage: $_cmd [-d nand|sd|usb] [-p] [-c <dir>] [-n] [-b]"
     echo "       -d: select boot device. (default $_boot)"
     echo "       -c: find images in <dir>"
     echo "       -p: don't remake the partition table or erase the /media partition"
     echo "       -a: auto-select the image directory"
     echo "       -n: don't continue the boot after flashing the image"
+    echo "       -b: flash boot only"
 }
 
 function main {
-    while getopts napc:xd: opt
+    while getopts bnapc:xd: opt
     do
         case "${opt}" in
         p )
@@ -90,6 +91,9 @@ function main {
             ;;
         n )
             _dont_reboot=1
+            ;;
+        b )
+            _bootflash=1
             ;;
         x )
             _debug=1
@@ -136,7 +140,7 @@ function main {
         _product=`fastboot getvar product 2>&1 | tail -1 |
             sed 's/<.*>//
                  s/product://
-                 s/[ 	]//g'`
+                 s/[[:blank:]]//g'`
         _product_dir="out/target/product/$_product"
         if [ ! -d "$_product_dir" ]; then
             echo >&2 $_product_dir not found.
@@ -174,18 +178,23 @@ function main {
         echo -n /sbin/PartitionDisk.sh $_device
         exit_on_failure do_fastboot oem system /sbin/PartitionDisk.sh $_device
 
-        exit_on_failure do_fastboot erase sdcard
+        if [ -z "$_bootflash" ]; then
+            exit_on_failure do_fastboot erase sdcard
+        fi
     fi
 
-    exit_on_failure do_fastboot erase recovery
-    exit_on_failure do_fastboot erase cache
-    exit_on_failure do_fastboot erase data
-    exit_on_failure do_fastboot erase factory
-    warning_on_failure do_fastboot erase config
-    exit_on_failure do_fastboot erase system
+    if [ -z "$_bootflash" ]; then
+        exit_on_failure do_fastboot erase recovery
+        exit_on_failure do_fastboot erase cache
+        exit_on_failure do_fastboot erase data
+        exit_on_failure do_fastboot erase factory
+        warning_on_failure do_fastboot erase config
+        exit_on_failure do_fastboot erase system
 
-    echo "Flashing system image: $_system_gz"
-    exit_on_failure do_fastboot flash system $_system_gz
+        echo "Flashing system image: $_system_gz"
+        exit_on_failure do_fastboot flash system $_system_gz
+    fi
+
     echo "Flashing boot image: $_boot_gz"
     exit_on_failure do_fastboot flash boot $_boot_gz
 
