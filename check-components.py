@@ -273,13 +273,14 @@ for patch in patches:
     print
 
 if private_file:
-    global_status=errno.EAGAIN
+    #global_status=errno.EAGAIN
     p = open(private_files)
     for line in p.readlines():
         pattern=r'WARNING:(.*)'
         m = re.match(pattern, line)
         if m:
-            abstract += "ERROR: %s \n" % m.group(1)
+            #abstract += "ERROR: %s \n" % m.group(1)
+            abstract += "WARNING: %s \n" % m.group(1)
 
 print "############## REPORT END ###################"
 print
