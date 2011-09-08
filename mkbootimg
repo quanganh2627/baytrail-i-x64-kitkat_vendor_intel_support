@@ -1,0 +1,69 @@
+#!/bin/bash
+# build nand boot recovery image for android
+
+TARG=`dirname $2`
+BOARD=`basename $TARG`
+BZIMAGE=$2
+INITRD=$4
+CMDLINE=$TARG/recovery_cmdline
+echo $6 > $CMDLINE
+TEMP=$TARG/tmp
+BOOTSTUB=vendor/intel/support/bootstub
+OUT=$8
+
+if [ "$BOARD" == "mfld_cdk" ] || [ "$BOARD" == "mfld_pr1" ] || [ "$BOARD" == "mfld_pr2" ] ;then
+            SILICON=1;
+    else
+            SILICON=0;
+    fi
+
+if [ ! -e ${BZIMAGE} ]; then
+    echo "error: bzImage file ${BZIMAGE} does not exist"
+    exit 1
+fi
+
+if [ ! -e ${INTIRD} ]; then
+    echo "error: ramdisk.img file ${INTRD} does not exist"
+    exit 1
+fi
+
+if [ ! -e ${CMDLINE} ]; then
+    echo "error: cmdline file ${CMDLINE} does not exist"
+    exit 1
+fi
+
+if [ ! -e ${BOOTSTUB} ]; then
+    echo "error: bootstub file ${BOOTSTUB} does not exist"
+    exit 1
+fi
+
+if [ -e "${OUT}" ]; then
+    echo "${OUT} exists, remove the old one"
+    rm -f ${OUT}
+fi
+
+if [ ! -e "${TEMP}" ]; then
+    mkdir ${TEMP}
+fi
+
+echo "Creating image \`${OUT}'for FSTK stitching..."
+
+rm -f ${TEMP}/boot.unsigned
+./vendor/intel/support/stitch.sh ${CMDLINE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} 0 ${SILICON} ${TEMP}/boot.unsigned
+cp -f ${TEMP}/boot.unsigned ${TARG}
+
+if [ "0" -ne "$?" ]; then
+    echo "error running nand.sh"
+    exit 1
+fi
+TOP=`pwd`
+# stitch kboot
+cd device/intel/PRIVATE/lfstk
+# generate the PAYLOADOS verion of this image
+./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} PAYLOADOS.XML
+# generate the POS version of this image
+./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT}.POS.bin POS.XML
+cd  $TOP
+
+# clean up
+echo "Done."
