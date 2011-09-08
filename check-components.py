@@ -157,9 +157,6 @@ def check_comment(comment):
     check_ok=True
     report=""
     change_id=get_change_id(paragraphs[-1])
-    if len(paragraphs[0])!=1:
-        report="\n".join([report,"    Error: no blank line between subject line and comment body"])
-        abstract += "    Error: no blank line between subject line and comment body for this patch: %s\n" % (change_id)
     if m:
         bzlist=re.split('\s+',m.group("num"))
 #        print "DEBUG bzlist=",bzlist
