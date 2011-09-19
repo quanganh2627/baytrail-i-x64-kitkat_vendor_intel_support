@@ -21,6 +21,7 @@ S_repo = 'repo'                 # special repo reposiory
 S_manifests = 'manifests'       # special manifest repository
 REPO_MAIN = S_repo + '/main.py' # main script
 abstract = ""
+BZ_product = ""
 
 def _FindRepo():
   """Look for a repo installation, starting at the current directory.
@@ -104,6 +105,8 @@ def get_change_id(lines):
 def get_info_bug(bug, bypassbzstatus = False):
   global abstract
   #print "DEBUG bypassbzstatus %s" % (bypassbzstatus)
+  global BZ_product
+  result = 0
   try:
     p = Popen("curl \"http://umgbugzilla.sh.intel.com:41006/show_bug.cgi?id=%s&ctype=xml\" --netrc --silent" %(bug),
       shell=True, bufsize=10000, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -124,15 +127,22 @@ def get_info_bug(bug, bypassbzstatus = False):
     reflist = dom3.getElementsByTagName('bug_status')
     status = reflist[0].childNodes[0].nodeValue
     #print "    status:", status
+    reflist = dom3.getElementsByTagName('product')
+    product = reflist[0].childNodes[0].nodeValue
+    #print "    product:", product
+    if options.product and product != BZ_product:
+        #print "    BZ_product:", BZ_product
+        abstract += "BZ: %s (%s) not in the right product; it should be in %s product\n" % (bug, product, BZ_product)
+        result = 1
     if not bypassbzstatus and options.states_list and not status in bz_state_list:
         #print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
         abstract += "BZ: %s (%s) not in the right status; it should be in this list: %s\n" % (bug, status, str(bz_state_list))
-        return 1
+        result = 1
   except:
     #print "BZ:", bug, "doesn't exist"
     abstract += "BZ: %s doesn't exist\n" % (bug)
     return 1
-  return 0
+  return result
 
 # check_comment verifies if a comment complies with process rules (it can be updated/enriched over time)
 # in: string
@@ -166,10 +176,10 @@ def check_comment(comment):
                     report="\n".join([report,"    Error: Bugzilla id (%s) is not correct" %(i)])
     else:
         report="\n".join([report,"    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn)"])
-        abstract += "    Error: first line of comment body is not a Bugzilla ID (BZ: nnnn) for this patch: %s\n" % (change_id)
+        abstract += "Error: first line of comment body is not a Bugzilla ID (BZ: nnnn) for this patch: %s\n" % (change_id)
     if change_id=="":
         report="\n".join([report,"    Error: last paragraph of comment body should have gerrit Change-ID"])
-        abstract += "    Error: last paragraph of comment body should have gerrit Change-ID: Find yourself this patch (as there is no Change-Id !)\n"
+        abstract += "Error: last paragraph of comment body should have gerrit Change-ID: Find yourself this patch (as there is no Change-Id !)\n"
     if report=="":
         report="    Comment OK"
     else:
@@ -194,12 +204,31 @@ parser.add_option("-s", "--states-list",
                   help="specify the authorized states for the BZ status,"
                        "         ex: -s 'IMPLEMENTED RESOLVED'")
 
+parser.add_option("-p", "--product",
+                  action="store", dest="product", default=None,
+                  help="specify the wanted value for the BZ product field")
+
 (options, args) = parser.parse_args()
 ask_before_delete=not options.force
 ask_bz_server = options.bugzilla
 if options.states_list:
     ask_bz_server=True
     bz_state_list=options.states_list.split()
+
+product_names = { "r1": "Blackbay-1.5 (MFLD)",
+                  "r2": "MFLD R2"
+                }
+if options.product:
+    ask_bz_server=True
+    product = options.product
+    s=re.match(r'(r\d)-.*', product)
+    if s:
+        try:
+            BZ_product = product_names[s.group(1)]
+            #print "DEBUG: BZ_product=%s" % (BZ_product)
+        except KeyError:
+            print "Error: BZ product not defined"
+            sys.exit(errno.ENOENT)
 
 # get the reference manifest (.repo/manifest.xml)
 repo=_FindRepo()[1]
