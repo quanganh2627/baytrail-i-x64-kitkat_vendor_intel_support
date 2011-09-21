@@ -53,13 +53,13 @@ cat $3 $4 | dd of=$7 bs=4096 seek=2
 
 # fill bzImage_size and initrd_size
 binstring `stat -L -c %s $3`
-printf $binstr | dd of=$7 bs=1 seek=256 conv=notrunc
+printf $binstr | dd of=$7 bs=1 seek=1024 conv=notrunc
 binstring `stat -L -c %s $4`
-printf $binstr | dd of=$7 bs=1 seek=260 conv=notrunc
+printf $binstr | dd of=$7 bs=1 seek=1028 conv=notrunc
 binstring "$5"
-printf $binstr | dd of=$7 bs=1 seek=264 conv=notrunc
+printf $binstr | dd of=$7 bs=1 seek=1032 conv=notrunc # 
 binstring "$6"
-printf $binstr | dd of=$7 bs=1 seek=268 conv=notrunc
+printf $binstr | dd of=$7 bs=1 seek=1036 conv=notrunc
 
 # done
 echo 'Image stitch done'
