@@ -91,6 +91,7 @@ make_compat() {
     make ARCH=${ARCH} KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} 
     exit_on_error $? quiet
 
+    rm -rf ${MODULE_DEST_TMP}
     mkdir -p ${MODULE_DEST_TMP};
     make ARCH=${ARCH} INSTALL_MOD_STRIP=--strip-unneeded KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} install-modules
     exit_on_error $? quiet
