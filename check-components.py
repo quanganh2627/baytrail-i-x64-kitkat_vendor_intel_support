@@ -12,6 +12,8 @@ from optparse import OptionParser
 from subprocess import *
 import sys,os,re,errno
 
+from xml.parsers.expat import ExpatError # for handling 401 from curl
+
 # _FindRepo() is from repo script
 # used to find the root a the repo we are currently in
 GIT = 'git'                     # our git command
@@ -114,6 +116,8 @@ def get_info_bug(bug, bypassbzstatus = False):
     tmp = ""
     for i in child_stdout.readlines():
       tmp += i
+    # if curl catches 401 Authorization required the next line will raise
+    # exception (ExpatError) which is handled
     dom3 = parseString(tmp)
     reflist = dom3.getElementsByTagName('bug')
     error = reflist[0].hasAttribute('error')
@@ -138,6 +142,9 @@ def get_info_bug(bug, bypassbzstatus = False):
         #print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
         abstract += "BZ: %s (%s) not in the right status; it should be in this list: %s\n" % (bug, status, str(bz_state_list))
         result = 1
+  except ExpatError:
+    abstract += "Cannot authorize connection to bugzilla. Please check netrc.\n"
+    return 1
   except:
     #print "BZ:", bug, "doesn't exist"
     abstract += "BZ: %s doesn't exist\n" % (bug)
