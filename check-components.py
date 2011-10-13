@@ -10,8 +10,7 @@ from xml.dom import minidom
 from xml.dom.minidom import parseString
 from optparse import OptionParser
 from subprocess import *
-from email.mime.text import MIMEText
-import sys,os,re,errno,smtplib
+import sys,os,re,errno
 
 # _FindRepo() is from repo script
 # used to find the root a the repo we are currently in
@@ -23,8 +22,6 @@ S_manifests = 'manifests'       # special manifest repository
 REPO_MAIN = S_repo + '/main.py' # main script
 abstract = ""
 BZ_product = ""
-Mail_receiver="Dutta, Ranjan<ranjan.dutta@intel.com>"
-Mail_sender="check component<ranjan.dutta@intel.com>"
 
 def _FindRepo():
   """Look for a repo installation, starting at the current directory.
@@ -310,15 +307,6 @@ if private_file:
         if m:
             #abstract += "ERROR: %s \n" % m.group(1)
             abstract += "WARNING: %s \n" % m.group(1)
-    #send mail
-    msg = MIMEText(abstract);
-    msg['Subject'] = 'PRIVATE includes errors'
-    msg['From'] = Mail_sender
-    msg['To'] = Mail_receiver
-    mail = smtplib.SMTP('localhost')
-    mail.sendmail(Mail_sender,[Mail_receiver],msg.as_string())
-    mail.quit()
-
 
 print "############## REPORT END ###################"
 print
