@@ -190,7 +190,9 @@ function main {
         exit_on_failure do_fastboot erase factory
         warning_on_failure do_fastboot erase config
         exit_on_failure do_fastboot erase system
-        exit_on_failure do_fastboot erase ilog
+        # We need to kill the syslogd and umount ilog partition first.
+        # Otherwise we will get a warning here.
+        warning_on_failure do_fastboot erase ilog
 
         echo "Flashing system image: $_system_gz"
         exit_on_failure do_fastboot flash system $_system_gz
