@@ -7,7 +7,7 @@ BZIMAGE=$2
 INITRD=$4
 CMDLINE=$TARG/recovery_cmdline
 echo $6 > $CMDLINE
-TEMP=$TARG/tmp
+TEMP=$TARG/tmp_recovery
 BOOTSTUB=vendor/intel/support/bootstub
 OUT=$8
 
