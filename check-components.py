@@ -134,9 +134,16 @@ def get_info_bug(bug, bypassbzstatus = False):
     reflist = dom3.getElementsByTagName('product')
     product = reflist[0].childNodes[0].nodeValue
     #print "    product:", product
+    reflist = dom3.getElementsByTagName('version')
+    version = reflist[0].childNodes[0].nodeValue
+    #print "    version:", version
     if options.product and product != BZ_product:
         #print "    BZ_product:", BZ_product
         abstract += "BZ: %s (%s) not in the right product; it should be in %s product\n" % (bug, product, BZ_product)
+        result = 1
+    if options.version and version != BZ_version:
+        #print "    BZ_version:", BZ_version
+        abstract += "BZ: %s (%s) not in the right version; it should be in %s version\n" % (bug, version, BZ_version)
         result = 1
     if not bypassbzstatus and options.states_list and not status in bz_state_list:
         #print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
@@ -215,6 +222,10 @@ parser.add_option("-p", "--product",
                   action="store", dest="product", default=None,
                   help="specify the wanted value for the BZ product field")
 
+parser.add_option("-v", "--version",
+                  action="store", dest="version", default=None,
+                  help="specify the wanted value for the BZ version field")
+
 (options, args) = parser.parse_args()
 ask_before_delete=not options.force
 ask_bz_server = options.bugzilla
@@ -222,20 +233,15 @@ if options.states_list:
     ask_bz_server=True
     bz_state_list=options.states_list.split()
 
-product_names = { "r1": "Blackbay-1.5 (MFLD)",
-                  "r2": "MFLD R2"
-                }
 if options.product:
     ask_bz_server=True
-    product = options.product
-    s=re.match(r'(r\d)-.*', product)
-    if s:
-        try:
-            BZ_product = product_names[s.group(1)]
-            #print "DEBUG: BZ_product=%s" % (BZ_product)
-        except KeyError:
-            print "Error: BZ product not defined"
-            sys.exit(errno.ENOENT)
+    BZ_product = options.product
+    #print "DEBUG: BZ_product=%s" % (BZ_product)
+
+if options.version:
+    ask_bz_server=True
+    BZ_version = options.version
+    #print "DEBUG: BZ_version=%s" % (BZ_version)
 
 # get the reference manifest (.repo/manifest.xml)
 repo=_FindRepo()[1]
