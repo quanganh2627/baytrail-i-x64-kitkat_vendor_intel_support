@@ -99,7 +99,7 @@ init_variables() {
 
 make_kernel() {
     local custom_board=${1}
-    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR}"
+    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR} ANDROID_TOOLCHAIN_FLAGS=-mno-android"
     mkdir -p ${KERNEL_BUILD_DIR}
 
     cd $KERNEL_SRC_DIR
@@ -198,7 +198,7 @@ make_modules() {
 # Build a kernel module from source that is not in the kernel build directory
 make_module_external() {
     local custom_board=${1}
-    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR}"
+    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR} ANDROID_TOOLCHAIN_FLAGS=-mno-android"
 
     cd $KERNEL_SRC_DIR
 
@@ -223,6 +223,7 @@ make_module_external_fcn() {
     local custom_board=${1}
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
+    local KMAKEFLAGS="ARCH=${ARCH} O=${KERNEL_BUILD_DIR} ANDROID_TOOLCHAIN_FLAGS=-mno-android"
     local modules_name=""
     local modules_file=""
     echo "  Making driver modules from external source directory..."
