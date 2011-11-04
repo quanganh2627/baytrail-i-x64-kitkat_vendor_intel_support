@@ -237,7 +237,7 @@ make_module_external_fcn() {
     make $KMAKEFLAGS -j${_jobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules
     exit_on_error $? quiet
 
-    modules_file=`basename ${EXTERNAL_MODULE_DIRECTORY}`.list
+    modules_file=${TOP}/${EXTERNAL_MODULE_DIRECTORY}/`basename ${EXTERNAL_MODULE_DIRECTORY}`.list
 
     make $KMAKEFLAGS -j${_jobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules_install \
         INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC} \
