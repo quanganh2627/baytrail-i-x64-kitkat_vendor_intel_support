@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# this script is for Ubuntu 10.04 LTS 64-bit
+# it may not work for other Linux versions 
+
+MY_BIN_DIR=`dirname $0`
+if [ "x" == "x${MY_BIN_DIR}" ]; then
+    MY_BIN_DIR=.
+fi
+
+TODAY=`date +"%Y%m%d"`
+TIME=`date +"%H%M"`
+
+mkdir -p ~/save/$TODAY-$TIME
+cp -f ~/.bashrc ~/save/$TODAY-$TIME/bashrc
+
+if [ ! -d ~/bin ]; then
+    mkdir ~/bin
+fi
+
+echo "" >> ~/.bashrc
+echo "# added to build Android" >> ~/.bashrc
+echo "export PATH=\${HOME}/bin:\$PATH" >> ~/.bashrc
+echo "export SAVE_PATH=\$PATH" >> ~/.bashrc
+ 
+# steps listed are from the umgwiki page "Development Host System Setup"
+
+# step 1 - install standard packages
+
+sudo apt-get install git-core gnupg flex bison gperf build-essential \
+ zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 \
+ lib32ncurses5-dev ia32-libs x11proto-core-dev libx11-dev \
+ lib32readline5-dev lib32z-dev eclipse tofrodos
+
+sudo ln -s /usr/bin/fromdos /usr/local/bin/dos2unix
+
+# step 2 - install valgrind - skipped
+
+# step 3 - download java 6 jdk
+# step 4 - change permission on jdk
+# step 5 - install jdk
+
+sudo add-apt-repository "deb http://archive.canonical.com/ lucid partner"
+sudo add-apt-repository "deb-src http://archive.canonical.com/ubuntu lucid partner"
+sudo apt-get update
+sudo apt-get install sun-java6-jdk
+sudo update-java-alternatives -s java-6-sun
+
+# step 6 - setenvironment variables for java
+
+JAVA_HOME=/usr/lib/jvm/java-6-sun
+ANT_HOME=/usr/share/ant
+
+echo " ">>~/.bashrc 
+echo "# java added for Android build">>~/.bashrc
+echo "JAVA_HOME=${JAVA_HOME}">>~/.bashrc
+echo "JAVA_FONTS=/usr/share/fonts/truetype">>~/.bashrc
+echo "ANT_HOME=${ANT_HOME}">>~/.bashrc
+echo " ">>~/.bashrc 
+echo "PATH=\${JAVA_HOME}/bin:\${ANT_HOME}/bin:\$PATH">>~/.bashrc
+echo " ">>~/.bashrc
+echo "export PATH JAVA_HOME JAVA_FONTS ANT_HOME">>~/.bashrc
+echo "export CLASSPATH=.">>~/.bashrc
+
+# step 7 - relink dash as bash - not needed - skipped
+
+# end of script
