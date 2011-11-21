@@ -59,6 +59,7 @@ init_variables() {
         export CROSS_COMPILE="ccache $CROSS_COMPILE"
     fi
     export ARCH=i386
+    export CFLAGS=-mno-android
     echo >&3 "ARCH: $ARCH"
     echo >&3 "CROSS_COMPILE: $CROSS_COMPILE"
     echo >&3 "PATH: $PATH"
