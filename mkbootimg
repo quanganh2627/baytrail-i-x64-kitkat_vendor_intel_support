@@ -1,38 +1,63 @@
 #!/bin/bash
 # build nand boot recovery image for android
 
-TARG=`dirname $2`
-BOARD=`basename $TARG`
-BZIMAGE=$2
-INITRD=$4
-CMDLINE=$TARG/recovery_cmdline
-echo $6 > $CMDLINE
-TEMP=$TARG/tmp_recovery
-BOOTSTUB=vendor/intel/support/bootstub
-OUT=$8
+TEMP=`getopt \
+         -o c:r:k:o:p:t: \
+         --long cmdline:,ramdisk:,kernel:,output:,product:,type: \
+         -n '$0' \
+         --  "$@"`
 
-if [[   "$BOARD" == "mfld_cdk" /
-     || "$BOARD" == "mfld_pr1" /
-     || "$BOARD" == "mfld_pr2" /
-     || "$BOARD" == "mfld_gi" /
-     || "$BOARD" == "ctp_pr0" /
+eval set -- "$TEMP"
+while true ; do
+    echo "+++++ case $1 +++++"
+    case "$1" in
+        --cmdline) CMDLINE="$2"; shift 2;;
+        --ramdisk) INITRD=$2; shift 2;;
+        --kernel) BZIMAGE=$2; shift 2;;
+        --output) OUT=$2; shift 2;;
+        --product) BOARD=$2; shift 2;;
+        --type) TYPE=$2; shift 2;;
+        --) shift ; break ;;
+    esac
+done
+
+TARG=`dirname $OUT`
+case "$TYPE" in
+    mos) IMGNAME="boot";;
+    recovery) IMGNAME="recovery";;
+esac
+if [ -z $IMGNAME ]; then
+    echo "error: image type is not one of [mos|recovery]"
+    exit 1
+fi
+
+UNSIGNED_OUT=${TARG}/${IMGNAME}.unsigned
+CMDLINE_FILE=${TARG}/${IMGNAME}_cmdline
+echo $CMDLINE > $CMDLINE_FILE
+BOOTSTUB=vendor/intel/support/bootstub
+
+if [[   "$BOARD" == "mfld_cdk" \
+     || "$BOARD" == "mfld_pr1" \
+     || "$BOARD" == "mfld_pr2" \
+     || "$BOARD" == "mfld_gi" \
+     || "$BOARD" == "ctp_pr0" \
    ]]; then
             SILICON=1;
     else
             SILICON=0;
     fi
 
-if [ ! -e ${BZIMAGE} ]; then
+if [ ! -e "${BZIMAGE}" ]; then
     echo "error: bzImage file ${BZIMAGE} does not exist"
     exit 1
 fi
 
-if [ ! -e ${INTIRD} ]; then
+if [ ! -e "${INITRD}" ]; then
     echo "error: ramdisk.img file ${INTRD} does not exist"
     exit 1
 fi
 
-if [ ! -e ${CMDLINE} ]; then
+if [ ! -e "${CMDLINE_FILE}" ]; then
     echo "error: cmdline file ${CMDLINE} does not exist"
     exit 1
 fi
@@ -47,35 +72,42 @@ if [ -e "${OUT}" ]; then
     rm -f ${OUT}
 fi
 
-if [ ! -e "${TEMP}" ]; then
-    mkdir ${TEMP}
-fi
-
 echo "Creating image \`${OUT}'for FSTK stitching..."
 
-rm -f ${TEMP}/boot.unsigned
-./vendor/intel/support/stitch.sh ${CMDLINE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} 0 ${SILICON} ${TEMP}/boot.unsigned
-cp -f ${TEMP}/boot.unsigned ${TARG}
+rm -f ${UNSIGNED_OUT}
+./vendor/intel/support/stitch.sh ${CMDLINE_FILE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} 0 ${SILICON} ${UNSIGNED_OUT}
 
 if [ "0" -ne "$?" ]; then
-    echo "error running nand.sh"
+    echo "error running stitch.sh for generating ${UNSIGNED_OUT}"
     exit 1
 fi
 TOP=`pwd`
-# stitch kboot
+# stitch binary
 readlink -e device/intel/PRIVATE/xfstk-stitcher
 if [ $? -eq 0 ]; then
-    cd device/intel/PRIVATE/xfstk-stitcher
-    # generate the MOS version of this image
-    ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} MOS.XML
+    # use new xfstk-stitcher tool
+    if [ $TYPE == "mos" ]; then
+        # generate the MAIN OS version of this image
+        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml MOS.XML
+    else
+        # generate the POS OTA version of this image
+        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml POSOTA.XML
+        # generate the POS version of this image
+        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml POS.XML
+    fi
 else
-    cd device/intel/PRIVATE/lfstk
-    # generate the PAYLOADOS version of this image
-    ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} PAYLOADOS.XML
+    # use legacy lfstk
+    if [ $TYPE == "mos" ]; then
+        # generate the MAIN OS version of this image
+        ./device/intel/PRIVATE/lfstk/gen-os.sh ${TOP}/${UNSIGNED_OUT} ${TOP}/${OUT} PAYLOADOS.XML
+    else
+        # generate the POS OTA version of this image
+        ./device/intel/PRIVATE/lfstk/gen-os.sh ${TOP}/${UNSIGNED_OUT} ${TOP}/${OUT} POSOTA.XML
+        # generate the POS version of this image
+        ./device/intel/PRIVATE/lfstk/gen-os.sh ${TOP}/${UNSIGNED_OUT} ${TOP}/${OUT}.POS.bin POS.XML
+    fi
 fi
-# generate the POS version of this image
-./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT}.POS.bin POS.XML
-cd  $TOP
 
 # clean up
+cd  $TOP
 echo "Done."
