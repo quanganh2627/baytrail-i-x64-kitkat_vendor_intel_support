@@ -137,6 +137,11 @@ def get_info_bug(bug, bypassbzstatus = False):
     reflist = dom3.getElementsByTagName('version')
     version = reflist[0].childNodes[0].nodeValue
     #print "    version:", version
+    flags = dom3.getElementsByTagName('flag')
+    approved = False
+    for i in flags:
+      if i.getAttribute("name")=="Integration_Approved" and i.getAttribute("status")=="+":
+        approved = True
     if options.product and product != BZ_product:
         #print "    BZ_product:", BZ_product
         abstract += "BZ: %s (%s) not in the right product; it should be in %s product\n" % (bug, product, BZ_product)
@@ -149,12 +154,20 @@ def get_info_bug(bug, bypassbzstatus = False):
         #print "BZ:", bug, "not in the right status; it should be in this list:", bz_state_list
         abstract += "BZ: %s (%s) not in the right status; it should be in this list: %s\n" % (bug, status, str(bz_state_list))
         result = 1
+    if not approved:
+        abstract += "BZ: %s not approved by Program Management for main\nNeed to have the Integration_Approved flag set\n" % (bug)
+        result = 1
+    else:
+        print "BZ: %s approved..." % (bug)
+
   except ExpatError:
     abstract += "Cannot authorize connection to bugzilla. Please check netrc.\n"
     return 1
   except:
     #print "BZ:", bug, "doesn't exist"
     abstract += "BZ: %s doesn't exist\n" % (bug)
+    import traceback
+    traceback.print_exc()
     return 1
   return result
 
@@ -314,7 +327,7 @@ for patch in patches:
     if report != "    Comment OK":
         global_status=errno.EAGAIN
     print "checking patch %s ..." %(subject)
-    print report
+    print >>sys.stderr, report
     print
     print"Change-Id: %s" %(change_id.strip())
     print
@@ -336,6 +349,6 @@ if private_file:
 
 print "############## REPORT END ###################"
 print
-print abstract
+print >>sys.stderr, abstract
 
 sys.exit(global_status)
