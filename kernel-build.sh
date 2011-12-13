@@ -103,7 +103,7 @@ init_variables() {
     BOARD_CONFIG_DIR=${TOP}/vendor/intel/${BOARD}
 
     PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
-    KERNEL_FILE=${PRODUCT_OUT}/bzImage
+    KERNEL_FILE=${PRODUCT_OUT}/kernel
     KERNEL_SRC_DIR=${TOP}/hardware/intel/linux-2.6
     if [ "$DIFFCONFIGS" != "kboot" ]; then
         KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
