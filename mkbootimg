@@ -11,7 +11,12 @@ TEMP=$TARG/tmp_recovery
 BOOTSTUB=vendor/intel/support/bootstub
 OUT=$8
 
-if [ "$BOARD" == "mfld_cdk" ] || [ "$BOARD" == "mfld_pr1" ] || [ "$BOARD" == "mfld_pr2" ] || [ "$BOARD" == "ctp_pr0" ];then
+if [[   "$BOARD" == "mfld_cdk" /
+     || "$BOARD" == "mfld_pr1" /
+     || "$BOARD" == "mfld_pr2" /
+     || "$BOARD" == "mfld_gi" /
+     || "$BOARD" == "ctp_pr0" /
+   ]]; then
             SILICON=1;
     else
             SILICON=0;

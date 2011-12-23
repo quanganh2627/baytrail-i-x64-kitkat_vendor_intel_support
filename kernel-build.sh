@@ -75,7 +75,7 @@ init_variables() {
         BOARD=generic_x86
         _soc_type="vbox"
         ;;
-    mfld_cdk | mfld_pr2)
+    mfld_cdk | mfld_pr2 | mfld_gi)
         VENDOR=intel
         BOARD=${custom_board}
        _soc_type="mfld"
@@ -157,7 +157,7 @@ make_kernel() {
     exit_on_error $? quiet
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | ctp_pr0)
+    mfld_cdk | mfld_pr2 | mfld_gi | ctp_pr0)
         make_modules ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -214,7 +214,7 @@ make_module_external() {
     fi
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | ctp_pr0)
+    mfld_cdk | mfld_pr2 | mfld_gi | ctp_pr0)
         make_module_external_fcn ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -259,7 +259,7 @@ make_module_external_fcn() {
 usage() {
     echo "Usage: $0 <options>..."
     echo ""
-    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|ctp_pr0]"
+    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|ctp_pr0]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -270,7 +270,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mfld_cdk mfld_pr2 ctp_pr0"
+    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi ctp_pr0"
 
     while getopts M:Kc:j:kthCmo: opt
     do

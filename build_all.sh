@@ -31,6 +31,7 @@ BOARDS="$BOARDS android_disk"		# Bootable disk for virtualbox
 # MFLD targets
 BOARDS="$BOARDS mfld_cdk"
 BOARDS="$BOARDS mfld_pr2"
+BOARDS="$BOARDS mfld_gi"
 
 # CTP targets
 BOARDS="$BOARDS ctp_pr0"
@@ -251,7 +252,7 @@ for i in $BOARDS; do
     lunch=full_x86
     ;;
 
-  mfld_pr2 | mfld_cdk | ctp_pr0)
+  mfld_pr2 | mfld_cdk | ctp_pr0 | mfld_gi )
     target="$i"
     lunch=$target
     ;;

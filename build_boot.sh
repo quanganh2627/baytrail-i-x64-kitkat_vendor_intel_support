@@ -16,7 +16,11 @@ TEMP=out/target/product/$1/tmp
 TARG=out/target/product/$1
 OUT=$2
 
-if [ "$1" == "mfld_cdk" ] || [ "$1" == "mfld_pr2" ] || [ "$1" == "ctp_pr0" ];then
+if [[   "$1" == "mfld_cdk" \
+     || "$1" == "mfld_pr2" \
+     || "$1" == "mfld_gi" \
+     || "$1" == "ctp_pr0" \
+   ]]; then
             SILICON=1;
     else
             SILICON=0;
