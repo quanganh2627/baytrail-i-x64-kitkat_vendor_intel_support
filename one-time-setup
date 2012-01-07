@@ -32,21 +32,53 @@ sudo apt-get install git-core gnupg flex bison gperf build-essential \
  lib32ncurses5-dev ia32-libs x11proto-core-dev libx11-dev \
  lib32readline5-dev lib32z-dev eclipse tofrodos
 
+sudo apt-get install libxml-simple-perl
+
 sudo ln -s /usr/bin/fromdos /usr/local/bin/dos2unix
 
 # step 2 - install valgrind - skipped
 
 # step 3 - download java 6 jdk
+TMP_DIR=/tmp/java_install
+JAVA_URL="http://download.oracle.com/otn-pub/java/jdk/6u30-b12"
+JAVA_BIN="jdk-6u30-linux-x64.bin"
+
+if [ ! -d ${TMP_DIR} ]; then
+    mkdir ${TMP_DIR}
+fi
+
+wget -t 10 -P ${TMP_DIR} ${JAVA_URL}/${JAVA_BIN}
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: wget failure"
+    echo "   this script should be executed as root"
+    echo "   please check wget proxy settings and retry"
+    exit -1
+fi
+
 # step 4 - change permission on jdk
+chmod 755 ${TMP_DIR}/${JAVA_BIN}
+
 # step 5 - install jdk
+JAVA_BASE=/usr/lib/jvm
+JAVA_DIR=jdk1.6.0_30
+JAVA_LINK=java-6-sun
+if [ ! -d ${JAVA_BASE} ]; then
+    mkdir -p ${JAVA_BASE}
+fi
+cd ${JAVA_BASE}
 
-sudo add-apt-repository "deb http://archive.canonical.com/ lucid partner"
-sudo add-apt-repository "deb-src http://archive.canonical.com/ubuntu lucid partner"
-sudo apt-get update
-sudo apt-get install sun-java6-jdk
-sudo update-java-alternatives -s java-6-sun
+sh ${TMP_DIR}/${JAVA_BIN} -noregister
 
-# step 6 - setenvironment variables for java
+if [ -h ${JAVA_BASE}/${JAVA_LINK} ]; then
+    rm ${JAVA_BASE}/${JAVA_LINK}
+fi
+
+ln -s ${JAVA_BASE}/${JAVA_DIR} ${JAVA_BASE}/${JAVA_LINK}
+
+rm -rf ${TMP_DIR}
+
+# step 6 - set environment variables for java
 
 JAVA_HOME=/usr/lib/jvm/java-6-sun
 ANT_HOME=/usr/share/ant
