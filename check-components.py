@@ -141,7 +141,7 @@ def get_info_bug(bug, bypassbzstatus = False):
         #print "    BZ_product:", BZ_product
         abstract += "BZ: %s (%s) not in the right product; it should be in %s product\n" % (bug, product, BZ_product)
         result = 1
-    if options.version and version != BZ_version:
+    if not bypassbzstatus and options.version and version != BZ_version:
         #print "    BZ_version:", BZ_version
         abstract += "BZ: %s (%s) not in the right version; it should be in %s version\n" % (bug, version, BZ_version)
         result = 1
