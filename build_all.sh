@@ -252,7 +252,7 @@ for i in $BOARDS; do
     lunch=full_x86
     ;;
 
-  mfld_pr2 | mfld_cdk | ctp_pr0 | mfld_gi )
+  mfld_pr2 | mfld_cdk | ctp_pr0 | mfld_gi | mfld_dv10)
     target="$i"
     lunch=$target
     ;;
