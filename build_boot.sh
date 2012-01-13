@@ -31,7 +31,7 @@ if [ ! -e ${BZIMAGE} ]; then
     exit 1
 fi
 
-if [ ! -e ${INTIRD} ]; then
+if [ ! -e ${INITRD} ]; then
     echo "error: ramdisk.img file ${INTRD} does not exist"
     exit 1
 fi
@@ -67,8 +67,14 @@ if [ "0" -ne "$?" ]; then
 fi
 TOP=`pwd`
 # stitch kboot
-cd device/intel/PRIVATE/lfstk
-./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} PAYLOADOS.XML
+readlink -e device/intel/PRIVATE/xfstk-stitcher
+if [ $? -eq 0 ]; then
+    cd device/intel/PRIVATE/xfstk-stitcher
+    ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} MOS.XML
+else
+    cd device/intel/PRIVATE/lfstk
+    ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} PAYLOADOS.XML
+fi
 cd  $TOP
 
 # clean up

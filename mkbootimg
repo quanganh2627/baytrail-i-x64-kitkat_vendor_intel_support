@@ -63,9 +63,16 @@ if [ "0" -ne "$?" ]; then
 fi
 TOP=`pwd`
 # stitch kboot
-cd device/intel/PRIVATE/lfstk
-# generate the PAYLOADOS verion of this image
-./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} PAYLOADOS.XML
+readlink -e device/intel/PRIVATE/xfstk-stitcher
+if [ $? -eq 0 ]; then
+    cd device/intel/PRIVATE/xfstk-stitcher
+    # generate the MOS version of this image
+    ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} MOS.XML
+else
+    cd device/intel/PRIVATE/lfstk
+    # generate the PAYLOADOS version of this image
+    ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT} PAYLOADOS.XML
+fi
 # generate the POS version of this image
 ./gen-os.sh ${TOP}/${TEMP}/boot.unsigned ${TOP}/${OUT}.POS.bin POS.XML
 cd  $TOP
