@@ -89,6 +89,11 @@ init_variables() {
         BOARD=${custom_board}
         _soc_type="ctp"
         ;;
+    mrfl_vp | mrfl_hvp | mrfl_sle )
+        VENDOR=intel
+        BOARD=${custom_board}
+        _soc_type="mrfl"
+        ;;
     *)
         echo "Unknown board specified \"${custom_board}\""
         exit_on_error 2
@@ -161,7 +166,7 @@ make_kernel() {
     exit_on_error $? quiet
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | ctp_pr0 | ctp_pr1)
+    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | ctp_pr0 | ctp_pr1 | mrfl_vp | mrfl_hvp | mrfl_sle)
         make_modules ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -218,7 +223,7 @@ make_module_external() {
     fi
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | ctp_pr0 | ctp_pr1)
+    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | ctp_pr0 | ctp_pr1 | mrfl_vp | mrfl_hvp | mrfl_sle)
         make_module_external_fcn ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -263,7 +268,7 @@ make_module_external_fcn() {
 usage() {
     echo "Usage: $0 <options>..."
     echo ""
-    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|mfld_dv10|ctp_pr0|ctp_pr1]"
+    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|mfld_dv10|ctp_pr0|ctp_pr1|mrfl_vp|mrfl_hvp|mrfl_sle]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -274,7 +279,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 ctp_pr0 ctp_pr1"
+    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 ctp_pr0 ctp_pr1 mrfl_vp mrfl_hvp mrfl_sle"
 
     while getopts M:Kc:j:kthCmo: opt
     do

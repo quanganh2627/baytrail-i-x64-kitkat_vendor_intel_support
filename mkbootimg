@@ -46,13 +46,26 @@ if [[   "$BOARD" == "mfld_cdk" \
      || "$BOARD" == "mfld_dv10" \
      || "$BOARD" == "ctp_pr0" \
      || "$BOARD" == "ctp_pr1" \
+     || "$BOARD" == "mrfl_vp" \
+     || "$BOARD" == "mrfl_hvp" \
+     || "$BOARD" == "mrfl_sle" \
    ]]; then
             SILICON=1;
     else
             SILICON=0;
     fi
 
-if [ ! -e "${BZIMAGE}" ]; then
+if [[   "$BOARD" == "mrfl_vp" \
+     || "$BOARD" == "mrfl_hvp" \
+     || "$BOARD" == "mrfl_sle"
+   ]]; then
+            SPI_FLAG=1;
+            BOOTSTUB=${BOOTSTUB}_mrfl
+    else
+            SPI_FLAG=0;
+    fi
+
+if [ ! -e ${BZIMAGE} ]; then
     echo "error: bzImage file ${BZIMAGE} does not exist"
     exit 1
 fi
@@ -80,7 +93,7 @@ fi
 echo "Creating image \`${OUT}'for FSTK stitching..."
 
 rm -f ${UNSIGNED_OUT}
-./vendor/intel/support/stitch.sh ${CMDLINE_FILE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} 0 ${SILICON} ${UNSIGNED_OUT}
+./vendor/intel/support/stitch.sh ${CMDLINE_FILE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} ${SPI_FLAG} ${SILICON} ${UNSIGNED_OUT}
 
 if [ "0" -ne "$?" ]; then
     echo "error running stitch.sh for generating ${UNSIGNED_OUT}"
