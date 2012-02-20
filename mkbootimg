@@ -26,6 +26,7 @@ case "$TYPE" in
     mos) IMGNAME="boot";;
     recovery) IMGNAME="recovery";;
     fastboot) IMGNAME="fastboot";;
+    droidboot) IMGNAME="droidboot";;
 esac
 if [ -z $IMGNAME ]; then
     echo "error: image type is not one of [mos|recovery]"
@@ -89,17 +90,26 @@ TOP=`pwd`
 readlink -e device/intel/PRIVATE/xfstk-stitcher
 if [ $? -eq 0 ]; then
     # use new xfstk-stitcher tool
-    if [ $TYPE == "mos" ]; then
+case "$TYPE" in
+    mos)
         # generate the MAIN OS version of this image
         ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml MOS.XML
-    elif [ $TYPE == "recovery" ]; then
+            ;;
+    recovery)
         # generate the POS OTA version of this image
-        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml POSOTA.XML
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml POSOTA.XML
         # generate the POS version of this image
-        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml POS.XML
-    else
-        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml FASTBOOT.XML
-    fi
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml POS.XML
+            ;;
+    fastboot)
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml FASTBOOT.XML
+            ;;
+    droidboot)
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml POSOTA.XML
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml FASTBOOT.XML
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.lightPOS.bin --xml POSDROIDBOOT.XML
+            ;;
+esac
 else
     # use legacy lfstk
     if [ $TYPE == "mos" ]; then
