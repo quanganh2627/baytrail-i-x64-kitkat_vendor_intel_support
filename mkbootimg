@@ -42,6 +42,7 @@ if [[   "$BOARD" == "mfld_cdk" \
      || "$BOARD" == "mfld_gi" \
      || "$BOARD" == "mfld_dv10" \
      || "$BOARD" == "ctp_pr0" \
+     || "$BOARD" == "ctp_pr1" \
    ]]; then
             SILICON=1;
     else

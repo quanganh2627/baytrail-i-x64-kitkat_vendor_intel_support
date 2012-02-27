@@ -35,6 +35,7 @@ BOARDS="$BOARDS mfld_gi"
 
 # CTP targets
 BOARDS="$BOARDS ctp_pr0"
+BOARDS="$BOARDS ctp_pr1"
 
 # ARM builds (keep us honest)
 BOARDS="$BOARDS full"
@@ -252,7 +253,7 @@ for i in $BOARDS; do
     lunch=full_x86
     ;;
 
-  mfld_pr2 | mfld_cdk | ctp_pr0 | mfld_gi | mfld_dv10)
+  mfld_pr2 | mfld_cdk | ctp_pr0 | ctp_pr1 | mfld_gi | mfld_dv10)
     target="$i"
     lunch=$target
     ;;
