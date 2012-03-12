@@ -52,6 +52,10 @@ init_variables() {
         CCACHE_TOOLS_DIR=$TOP/prebuilt/${_host_os}-x86/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
+
+    # force using minigzip instead of gzip to build bzimage
+    export PATH="$TOP/vendor/intel/support:$PATH"
+
     if [ -z "$CROSS_COMPILE" ];then
         export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
     fi
