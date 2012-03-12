@@ -25,6 +25,7 @@ TARG=`dirname $OUT`
 case "$TYPE" in
     mos) IMGNAME="boot";;
     recovery) IMGNAME="recovery";;
+    combined) IMGNAME="recovery";;
     fastboot) IMGNAME="fastboot";;
     droidboot) IMGNAME="droidboot";;
 esac
@@ -86,42 +87,15 @@ if [ "0" -ne "$?" ]; then
     exit 1
 fi
 TOP=`pwd`
-# stitch binary
-readlink -e device/intel/PRIVATE/xfstk-stitcher
-if [ $? -eq 0 ]; then
-    # use new xfstk-stitcher tool
+
+UPPER_TYPE=`echo $TYPE|tr '[:lower:]' '[:upper:]'`
+./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML
+# only generate POS version for those types of images
 case "$TYPE" in
-    mos)
-        # generate the MAIN OS version of this image
-        ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml MOS.XML
-            ;;
-    recovery)
-        # generate the POS OTA version of this image
-            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml POSOTA.XML
-        # generate the POS version of this image
-            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml POS.XML
-            ;;
-    fastboot)
-            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml FASTBOOT.XML
-            ;;
-    droidboot)
-            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml POSOTA.XML
-            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml FASTBOOT.XML
-            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.lightPOS.bin --xml POSDROIDBOOT.XML
+    combined|fastboot|droidboot)
+            ./device/intel/PRIVATE/xfstk-stitcher/gen-os.sh --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML
             ;;
 esac
-else
-    # use legacy lfstk
-    if [ $TYPE == "mos" ]; then
-        # generate the MAIN OS version of this image
-        ./device/intel/PRIVATE/lfstk/gen-os.sh ${TOP}/${UNSIGNED_OUT} ${TOP}/${OUT} PAYLOADOS.XML
-    else
-        # generate the POS OTA version of this image
-        ./device/intel/PRIVATE/lfstk/gen-os.sh ${TOP}/${UNSIGNED_OUT} ${TOP}/${OUT} POSOTA.XML
-        # generate the POS version of this image
-        ./device/intel/PRIVATE/lfstk/gen-os.sh ${TOP}/${UNSIGNED_OUT} ${TOP}/${OUT}.POS.bin POS.XML
-    fi
-fi
 
 # clean up
 cd  $TOP
