@@ -288,6 +288,7 @@ private_files="private_files.log"
 if os.path.exists(private_files):
     os.remove(private_files)
 # check patches
+print patches
 print "############## REPORT START #################"
 for patch in patches:
     try:
@@ -296,7 +297,10 @@ for patch in patches:
             private_file=True
     except:
         print "exception catched in check-modified-makefiles.sh\n"
-    (comment,file_list)=split_patch(patch)
+    try:
+        (comment,file_list)=split_patch(patch)
+    except:
+        continue
     (report,subject,change_id)=check_comment(comment)
     if report != "    Comment OK":
         global_status=errno.EAGAIN
