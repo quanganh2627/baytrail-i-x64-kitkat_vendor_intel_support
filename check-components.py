@@ -175,12 +175,17 @@ def check_comment(comment):
     n=re.match(backportpattern,subject)
     if n:
       bypassbzstatus=True
-    bzline=paragraphs[1][0].strip()
-    bzpattern=r'BZ:?\s*(?P<num>.*)'
-    m=re.match(bzpattern,bzline)
+    m = None
     check_ok=True
     report=""
-    change_id=get_change_id(paragraphs[-1])
+    change_id=""
+    try:
+        bzline=paragraphs[1][0].strip()
+        bzpattern=r'BZ:?\s*(?P<num>.*)'
+        m=re.match(bzpattern,bzline)
+        change_id=get_change_id(paragraphs[-1])
+    except:
+        pass
     if m:
         bzlist=re.split('\s+',m.group("num"))
 #        print "DEBUG bzlist=",bzlist
@@ -276,8 +281,12 @@ if len(old_patches) != 0:
 # list patches to be checked
 p5 = Popen(["repo", "format-patch", manifest], stdout=PIPE)
 output=p5.communicate()[0]
-patches = [ patch.strip() for patch in output.split('\n') if patch.strip() != '' and not patch.startswith('/') and not patch.startswith('no-clobber')]
-
+print output
+patches = []
+for l in output.split('\n'):
+    l = l.strip()
+    if l.endswith(".patch") and os.path.isfile(l):
+        patches.append(l)
 if len(patches) == 0:
 	print "Warning: no patch to check (Maybe already merged)"
 	sys.exit(0)
