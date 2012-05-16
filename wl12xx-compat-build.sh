@@ -56,15 +56,26 @@ init_variables() {
 	CCACHE_TOOLS_DIR=$TOP/prebuilts/misc/${_host_os}-x86/ccache/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
-    if [ -z "$CROSS_COMPILE" ];then
-        export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
+
+    # 64bit kernel check
+    if [ -z "$BOARD_USE_64BIT_KERNEL" ]; then
+	if [ -z "$CROSS_COMPILE" ]; then
+	    export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
+	fi
+
+	if [ ! -z ${USE_CCACHE} ]; then
+	    export PATH="${CCACHE_TOOLS_DIR}:$PATH"
+	    export CROSS_COMPILE="$TOP/prebuilts/misc/linux-x86/ccache/ccache $CROSS_COMPILE"
+	fi
+
+	export ARCH=i386
+	export CFLAGS=-mno-android
+    else
+	echo >&6 "Building wifi driver for 64bit kernel"
+	export ARCH=x86_64
+	export CFLAGS=""
     fi
-    if [ ! -z ${USE_CCACHE} ]; then
-	export PATH="${CCACHE_TOOLS_DIR}:$PATH"
-	export CROSS_COMPILE="$TOP/prebuilts/misc/linux-x86/ccache/ccache $CROSS_COMPILE"
-    fi
-    export ARCH=i386
-    export CFLAGS=-mno-android
+
     echo >&6 "ARCH: $ARCH"
     echo >&6 "CROSS_COMPILE: $CROSS_COMPILE"
     echo >&6 "PATH: $PATH"
@@ -109,6 +120,7 @@ make_compat() {
 
     rm -rf ${MODULE_DEST_TMP}
     mkdir -p ${MODULE_DEST_TMP};
+
     make ARCH=${ARCH} INSTALL_MOD_STRIP=--strip-unneeded KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} install-modules
     exit_on_error $? quiet
 

@@ -65,14 +65,22 @@ init_variables() {
     # force using minigzip instead of gzip to build bzimage
     export PATH="$TOP/vendor/intel/support:$PATH"
 
-    if [ -z "$CROSS_COMPILE" ];then
+    if [ -z "$kernel_build_64bit" -a -z "$CROSS_COMPILE" ];then
         export CROSS_COMPILE="`basename ${TARGET_TOOLS_PREFIX}`"
+        if [ ! -z ${USE_CCACHE} ]; then
+            export PATH="${CCACHE_TOOLS_DIR}:$PATH"
+            export CROSS_COMPILE="ccache $CROSS_COMPILE"
+        fi
     fi
-    if [ ! -z ${USE_CCACHE} ]; then
-        export PATH="${CCACHE_TOOLS_DIR}:$PATH"
-        export CROSS_COMPILE="ccache $CROSS_COMPILE"
+
+    if [ -z "$kernel_build_64bit" ]; then
+        export ARCH=i386
+	KERNEL_BUILD_FLAGS="ANDROID_TOOLCHAIN_FLAGS=-mno-android"
+    else
+        export ARCH=x86_64
+	KERNEL_BUILD_FLAGS="ANDROID_TOOLCHAIN_FLAGS="
     fi
-    export ARCH=i386
+
     echo >&6 "ARCH: $ARCH"
     echo >&6 "CROSS_COMPILE: $CROSS_COMPILE"
     echo >&6 "PATH: $PATH"
@@ -123,11 +131,12 @@ init_variables() {
 
 make_kernel() {
     local custom_board=${1}
-    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "ANDROID_TOOLCHAIN_FLAGS=-mno-android")
+    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "${KERNEL_BUILD_FLAGS}")
     local njobs=""
     if [ "${_jobs}" != 0 ] ; then
       njobs="-j${_jobs}"
     fi
+
     mkdir -p ${KERNEL_BUILD_DIR}
 
     cd $KERNEL_SRC_DIR
@@ -139,8 +148,9 @@ make_kernel() {
         make "${KMAKEFLAGS[@]}" mrproper
     fi
     if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
+set -x
         echo "making kernel ${KERNEL_BUILD_DIR}/.config file"
-        cp arch/x86/configs/i386_${_soc_type}_defconfig ${KERNEL_BUILD_DIR}/.config
+        cp arch/x86/configs/${ARCH}_${_soc_type}_defconfig ${KERNEL_BUILD_DIR}/.config
         diffconfigs="${custom_board} ${DIFFCONFIGS}"
         echo ${diffconfigs}
         for diffconfig in ${diffconfigs}
@@ -172,6 +182,8 @@ make_kernel() {
     fi
 
     make "${KMAKEFLAGS[@]}" ${njobs} bzImage
+set +x
+
     exit_on_error $? quiet
 
     mkdir -p `dirname ${KERNEL_FILE}`
@@ -226,7 +238,7 @@ make_modules() {
 # Build a kernel module from source that is not in the kernel build directory
 make_module_external() {
     local custom_board=${1}
-    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "ANDROID_TOOLCHAIN_FLAGS=-mno-android")
+    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "${KERNEL_BUILD_FLAGS}")
 
     cd $KERNEL_SRC_DIR
 
@@ -251,7 +263,7 @@ make_module_external_fcn() {
     local custom_board=${1}
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
-    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "ANDROID_TOOLCHAIN_FLAGS=-mno-android")
+    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "${KERNEL_BUILD_FLAGS}")
     local modules_name=""
     local modules_file=""
     local njobs=""
@@ -294,16 +306,20 @@ usage() {
     echo " -v                       verbose (V=1) build"
     echo " -C                       clean first"
     echo " -M                       external module source directory"
+    echo " -B                       Build a 64bit kernel"
 }
 
 main() {
     local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 mfld_tablet_evx ctp_pr0 ctp_pr1 mrfl_vp mrfl_hvp mrfl_sle"
 
-    while getopts vM:Kc:j:kthCmo: opt
+    while getopts vBM:Kc:j:kthCmo: opt
     do
         case "${opt}" in
         v)
             VERBOSE="V=1"
+            ;;
+        B)
+            kernel_build_64bit=1
             ;;
         K)
             DIFFCONFIGS="kboot"
