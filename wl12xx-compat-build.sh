@@ -38,7 +38,6 @@ _logfile=""
 _preserve_kernel_config=""
 _menuconfig="false"
 _config_file_type=android
-_regdom="00"
 
 init_variables() {
     local custom_board=$1
@@ -94,11 +93,8 @@ make_compat() {
     local COMPAT_SRC_DIR=$TOP/hardware/ti/wlan/wl12xx-compat/
     local MODULE_DEST_TMP=${PRODUCT_OUT}/compat_modules
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
-    local MODULE_REGDOM=$2
 
     cd ${COMPAT_SRC_DIR}
-
-    echo "$MODULE_REGDOM" > compat_regdom
 
     make ARCH=${ARCH} KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} clean
     exit_on_error $? quiet
@@ -128,13 +124,12 @@ usage() {
     echo " -k                       build kernel only"
     echo " -t                       testtool build"
     echo " -C                       clean first"
-    echo " -r                       default regulatory domain"
 }
 
 main() {
     local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 mfld_tablet_evx ctp_pr0 ctp_pr1 mrfl_vp mrfl_hvp mrfl_sle"
 
-    while getopts Kc:j:kthCmr: opt
+    while getopts Kc:j:kthCm opt
     do
         case "${opt}" in
         K)
@@ -177,9 +172,6 @@ main() {
         m)
             _menuconfig=true
             ;;
-        r)
-            _regdom=$OPTARG
-            ;;
         ?)
             echo "Unknown option"
             usage
@@ -194,7 +186,7 @@ main() {
         echo >&3 "Building kernel for $custom_board"
         echo >&3 "---------------------------------"
         init_variables "$custom_board"
-        make_compat ${custom_board} $_regdom
+        make_compat ${custom_board}
         exit_on_error $?
     done
     exit 0
