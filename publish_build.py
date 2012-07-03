@@ -90,7 +90,10 @@ def find_ifwis(basedir):
 def publish_build(basedir, bld, bld_variant, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
+    bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
+
+    bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out=os.path.join(basedir,"out/target/product",bld)
     fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
@@ -116,14 +119,25 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         publish_file(locals(), "%(product_out)s/obj/PACKAGING/target_files_intermediates/%(targetfile)s", ota_inputs_dir, enforce=False)
     ifwis = find_ifwis(basedir)
 
-    f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()))
+    f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"flash-no-modem.xml")
     if bld_flash_modem:
-        f.add_xml_file("flash-nomodem.xml")
+        if bldx == "ctp_pr1":
+             for board, modem in bldModemDico.iteritems():
+                 xmlFileName="flash-%s-%s.xml" %(board,modem)
+                 f.add_xml_file(xmlFileName)
+        else:
+             f.add_xml_file("flash.xml")
     f.xml_header("fastboot", bld, "1")
     f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.bin"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
     if bld_flash_modem:
-        f.add_file("MODEM", "%(product_out)s/radio_firmware.bin" %locals(), buildnumber,xml_filter=["flash-nomodem.xml"])
+        for board, modem in bldModemDico.iteritems():
+            # CTP can have different flash.xml files
+            if bldx == "ctp_pr1":
+                f.add_file("MODEM", "%(product_out)s/modem/radio_firmware_%(modem)s.bin" %locals(), buildnumber,xml_filter=["flash-%s-%s.xml"%(board,modem)])
+            else:
+                f.add_file("MODEM", "%(product_out)s/modem/radio_firmware_%(modem)s.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
+
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir,"droidboot.img"), buildnumber)
     f.add_file("SYSTEM", os.path.join(fastboot_dir,"system.img.gz"), buildnumber)
@@ -134,7 +148,11 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
     f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
     if bld_flash_modem:
-        f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-nomodem.xml"])
+        if bldx == "ctp_pr1":
+            for board, modem in bldModemDico.iteritems():
+                f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-%s-%s.xml"%(board,modem)])
+        else:
+            f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"])
 
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
@@ -149,7 +167,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.finish()
 
     # build the ota flashfile
-    f = FlashFile(os.path.join(flashfile_dir, "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" %locals()))
+    f = FlashFile(os.path.join(flashfile_dir, "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" %locals()), "flash.xml")
     f.xml_header("ota", bld, "1")
     f.add_file("OTA", os.path.join(fastboot_dir,otafile), buildnumber)
     f.add_command("adb root", "As root user")
@@ -168,7 +186,7 @@ def publish_blankphone(basedir, bld, buildnumber):
     ifwis = find_ifwis(basedir)
     for board, args in ifwis.items():
         # build the blankphone flashfile
-        f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()))
+        f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
         f.xml_header("system", bld, "1")
         f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                  ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),

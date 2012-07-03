@@ -3,10 +3,9 @@ import os,sys
 class FlashFile:
     """a class to generate a flashfile zip
     """
-    default_flash_file="flash.xml"
-    def __init__(self, filename):
+    def __init__(self, filename, default_flash_file):
         self.filename = filename
-        self.xml = {FlashFile.default_flash_file:""}
+        self.xml = {default_flash_file:""}
         self.filenames = []
         self.filenames_dict = {}
 
@@ -24,8 +23,11 @@ class FlashFile:
 
     def apply_f_to_all_valid_xml(self,f,xml_filter):
         for filename,xmls in self.xml.items():
-            if filename not in xml_filter:
+            if not len(xml_filter) :
                 self.xml[filename]=f(xmls)
+            else:
+                if filename in xml_filter:
+                    self.xml[filename]=f(xmls)
 
     def xml_header(self, flashtype, platform, flashversion, xml_filter=[]):
         def f(xml):
@@ -53,7 +55,7 @@ class FlashFile:
             return self.add_code_group_in_xml(type, files, xml)
         self.apply_f_to_all_valid_xml(f,xml_filter)
 
-    def add_file(self,  filetype, filename, version,xml_filter=[]):
+    def add_file(self, filetype, filename, version,xml_filter=[]):
         self.add_codegroup(filetype, ((filetype, filename, version),),xml_filter=xml_filter)
 
     def add_command_in_xml(self, command, description, xml, timeout=400000, retry=2):
