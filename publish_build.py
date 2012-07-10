@@ -61,7 +61,10 @@ def find_ifwis(basedir):
     """ walk the ifwi directory for matching ifwi
     return a dict indexed by boardname, with all the information in ir
     """
-    ifwiglob = {"mfld_pr2":"mfld_pr*",
+    ifwis = {}
+    # IFWI for Merrifield VP and HVP are not published
+    if bld not in ["mrfl_vp","mrfl_hvp"]:
+        ifwiglob = {"mfld_pr2":"mfld_pr*",
                 "mfld_gi":"mfld_gi",
                 "mfld_dv10":"mfld_dv*",
                 "mfld_tablet_evx":"mfld_tablet_ev*",
@@ -69,22 +72,22 @@ def find_ifwis(basedir):
                 "ctp_pr1":"ctp_[pv][rv]1",
                 "mfld_cdk":"mfld_cdk"}[bld]
 
-    print "look for ifwis in the tree"
-    ifwis = {}
-    gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
-    for ifwidir in glob.glob(gl):
-        board = ifwidir.split("/")[-1]
-        fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
-        osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
-        ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
-        ifwiversion = os.path.basename(ifwi)
-        ifwiversion = os.path.splitext(ifwiversion)[0]
-        print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
-        if ifwiversion != "None":
-            ifwis[board] = dict(ifwiversion = ifwiversion,
-                                ifwi = ifwi,
-                                fwdnx = fwdnx,
-                                osdnx = osdnx)
+        print "look for ifwis in the tree"
+        gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
+        for ifwidir in glob.glob(gl):
+            board = ifwidir.split("/")[-1]
+            fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
+            osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
+            ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
+            ifwiversion = os.path.basename(ifwi)
+            ifwiversion = os.path.splitext(ifwiversion)[0]
+            print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
+            if ifwiversion != "None":
+                ifwis[board] = dict(ifwiversion = ifwiversion,
+                                    ifwi = ifwi,
+                                    fwdnx = fwdnx,
+                                    osdnx = osdnx)
+
     return ifwis
 
 def publish_build(basedir, bld, bld_variant, buildnumber):
