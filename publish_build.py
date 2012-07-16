@@ -88,7 +88,7 @@ def find_ifwis(basedir):
     return ifwis
 
 def publish_build(basedir, bld, bld_variant, buildnumber):
-    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bld_supports_droidboot = True # Force to true for jb boot camp (use prebuilt ics droidboot binary)
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
 
@@ -121,43 +121,27 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         f.add_xml_file("flash-nomodem.xml")
     f.xml_header("fastboot", bld, "1")
     f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.bin"), buildnumber)
-    f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
     if bld_flash_modem:
         f.add_file("MODEM", "%(product_out)s/radio_firmware.bin" %locals(), buildnumber,xml_filter=["flash-nomodem.xml"])
-    if bld_supports_droidboot:
-        f.add_file("FASTBOOT", os.path.join(fastboot_dir,"droidboot.img"), buildnumber)
-    f.add_file("SYSTEM", os.path.join(fastboot_dir,otafile), buildnumber)
+    f.add_file("SYSTEM", os.path.join(fastboot_dir,"system.img.gz"), buildnumber)
 
     for board, args in ifwis.items():
         f.add_codegroup("FIRWMARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
                                  ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
-    f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
     if bld_flash_modem:
         f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-nomodem.xml"])
-
-    if bld_supports_droidboot:
-        #f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
-        f.add_command("fastboot flash boot $recovery_file", "Flashing recovery in kboot")
 
     f.add_command("fastboot erase system", "Erasing system")
     for board, args in ifwis.items():
         f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
         f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
-    f.add_command("fastboot flash update $system_file", "Flashing system")
-    f.finish()
-
-    # build the ota flashfile
-    f = FlashFile(os.path.join(flashfile_dir, "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" %locals()))
-    f.xml_header("ota", bld, "1")
-    f.add_file("OTA", os.path.join(fastboot_dir,otafile), buildnumber)
-    f.add_command("adb root", "As root user")
-    f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update")
-    f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
+    f.add_command("fastboot flash system $system_file", "Flashing system")
+    f.add_command("fastboot continue", "Reboot system")
     f.finish()
 
 def publish_blankphone(basedir, bld, buildnumber):
-    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bld_supports_droidboot = True # Force to true for jb boot camp (use prebuilt ics droidboot binary)
     product_out=os.path.join(basedir,"out/target/product",bld)
     blankphone_dir=os.path.join(basedir,bldpub,"flash_files/blankphone")
     if bld_supports_droidboot:
