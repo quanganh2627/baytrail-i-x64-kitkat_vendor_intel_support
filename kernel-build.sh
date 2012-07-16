@@ -49,7 +49,7 @@ init_variables() {
     fi
     if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set."
-        CCACHE_TOOLS_DIR=$TOP/prebuilt/${_host_os}-x86/ccache
+        CCACHE_TOOLS_DIR=$TOP/prebuilts/misc/${_host_os}-x86/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
 
