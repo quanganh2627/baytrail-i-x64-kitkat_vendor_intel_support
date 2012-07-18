@@ -158,7 +158,7 @@ make_kernel() {
         echo =========
     fi
 
-    make $KMAKEFLAGS -j${_jobs} bzImage
+    make $KMAKEFLAGS -j${_jobs} ${VERBOSE} bzImage
     exit_on_error $? quiet
 
     mkdir -p `dirname ${KERNEL_FILE}`
@@ -274,6 +274,7 @@ usage() {
     echo " -K                       Build a kboot kernel"
     echo " -k                       build kernel only"
     echo " -t                       testtool build"
+    echo " -v                       verbose (V=1) build"
     echo " -C                       clean first"
     echo " -M                       external module source directory"
 }
@@ -281,9 +282,12 @@ usage() {
 main() {
     local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 mfld_tablet_evx ctp_pr0 ctp_pr1 mrfl_vp mrfl_hvp mrfl_sle"
 
-    while getopts M:Kc:j:kthCmo: opt
+    while getopts vM:Kc:j:kthCmo: opt
     do
         case "${opt}" in
+        v)
+            VERBOSE="V=1"
+            ;;
         K)
             DIFFCONFIGS="kboot"
             ;;
