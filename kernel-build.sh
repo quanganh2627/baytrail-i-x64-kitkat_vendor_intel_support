@@ -45,7 +45,8 @@ init_variables() {
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
-        TARGET_TOOLS_PREFIX=$TOP/prebuilt/${_host_os}-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
+        TARGET_TOOLS_PREFIX="$TOP/prebuilts/gcc/${_host_os}/x86/i686-linux-android-4.6/bin/i686-linux-android-"
+
     fi
     if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set."
