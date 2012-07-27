@@ -44,11 +44,11 @@ init_variables() {
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
         echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
-	TARGET_TOOLS_PREFIX=$TOP/prebuilt/linux-x86/toolchain/i686-android-linux-4.4.3/bin/i686-android-linux-
+	TARGET_TOOLS_PREFIX="$TOP/prebuilts/gcc/x86/i686-linux-android-4.6/bin/i686-linux-android-"
     fi
     if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
-        echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set."
-	CCACHE_TOOLS_DIR=$TOP/prebuilt/linux-x86/ccache
+        echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set when calling compat build."
+	CCACHE_TOOLS_DIR=$TOP/prebuilts/misc/${_host_os}-x86/ccache/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
     if [ -z "$CROSS_COMPILE" ];then
@@ -56,7 +56,7 @@ init_variables() {
     fi
     if [ ! -z ${USE_CCACHE} ]; then
 	export PATH="${CCACHE_TOOLS_DIR}:$PATH"
-        export CROSS_COMPILE="ccache $CROSS_COMPILE"
+	export CROSS_COMPILE="$TOP/prebuilts/misc/linux-x86/ccache/ccache $CROSS_COMPILE"
     fi
     export ARCH=i386
     export CFLAGS=-mno-android
