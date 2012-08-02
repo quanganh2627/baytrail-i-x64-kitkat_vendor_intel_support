@@ -88,7 +88,7 @@ def find_ifwis(basedir):
     return ifwis
 
 def publish_build(basedir, bld, bld_variant, buildnumber):
-    bld_supports_droidboot = True # Force to true for jb boot camp (use prebuilt ics droidboot binary)
+    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
 
@@ -158,7 +158,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.finish()
 
 def publish_blankphone(basedir, bld, buildnumber):
-    bld_supports_droidboot = True # Force to true for jb boot camp (use prebuilt ics droidboot binary)
+    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     product_out=os.path.join(basedir,"out/target/product",bld)
     blankphone_dir=os.path.join(basedir,bldpub,"flash_files/blankphone")
     if bld_supports_droidboot:
