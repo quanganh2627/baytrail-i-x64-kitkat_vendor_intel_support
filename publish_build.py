@@ -199,14 +199,23 @@ def publish_blankphone(basedir, bld, buildnumber):
 def publish_modem(basedir, bld):
     # environment variables
     board_have_modem=get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
+    bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
+    bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
+
     if not board_have_modem:
         print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld)
         return 0
-    modem_src_dir=os.path.join(basedir, get_build_options(key='RADIO_FIRMWARE_DIR'))
+
     modem_dest_dir=os.path.join(basedir, bldpub, "MODEM")
     shutil.rmtree(modem_dest_dir,ignore_errors=True)
     ignore_files = shutil.ignore_patterns('Android.mk')
-    shutil.copytree(modem_src_dir, modem_dest_dir, ignore=ignore_files)
+    modem_src_dir=os.path.join(basedir, get_build_options(key='RADIO_FIRMWARE_DIR'))
+
+    if bld == "ctp_pr1":
+        for board, modem in bldModemDico.iteritems():
+          shutil.copytree(modem_src_dir + modem , modem_dest_dir +"/"+ modem, ignore=ignore_files)
+    else:
+        shutil.copytree(modem_src_dir, modem_dest_dir, ignore=ignore_files)
 
 def publish_kernel(basedir, bld, bld_variant):
     product_out=os.path.join(basedir,"out/target/product",bld)
