@@ -158,10 +158,11 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
         #f.add_command("fastboot flash boot $recovery_file", "Flashing recovery in kboot")
 
-    f.add_command("fastboot erase system", "Erasing system")
     for board, args in ifwis.items():
         f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
         f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+    f.add_command("fastboot erase cache", "Erasing cache")
+    f.add_command("fastboot erase system", "Erasing system")
     f.add_command("fastboot flash system $system_file", "Flashing system")
     f.add_command("fastboot continue", "Reboot system")
     f.finish()
@@ -171,6 +172,8 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.xml_header("ota", bld, "1")
     f.add_file("OTA", os.path.join(fastboot_dir,otafile), buildnumber)
     f.add_command("adb root", "As root user")
+    f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
+    f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
     f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update")
     f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
     f.finish()
