@@ -89,6 +89,7 @@ def find_ifwis(basedir):
 
 def publish_build(basedir, bld, bld_variant, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bld_supports_ota = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
@@ -168,15 +169,16 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.finish()
 
     # build the ota flashfile
-    f = FlashFile(os.path.join(flashfile_dir, "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" %locals()), "flash.xml")
-    f.xml_header("ota", bld, "1")
-    f.add_file("OTA", os.path.join(fastboot_dir,otafile), buildnumber)
-    f.add_command("adb root", "As root user")
-    f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
-    f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
-    f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update")
-    f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
-    f.finish()
+    if bld_supports_ota:
+        f = FlashFile(os.path.join(flashfile_dir, "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" %locals()), "flash.xml")
+        f.xml_header("ota", bld, "1")
+        f.add_file("OTA", os.path.join(fastboot_dir,otafile), buildnumber)
+        f.add_command("adb root", "As root user")
+        f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
+        f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
+        f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update")
+        f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
+        f.finish()
 
 def publish_blankphone(basedir, bld, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
