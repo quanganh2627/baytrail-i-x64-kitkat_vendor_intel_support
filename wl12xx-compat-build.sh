@@ -1,10 +1,15 @@
 #!/bin/bash
 
 #
-# File descriptor 3 will output the the original stderr of the
+# File descriptor 6 will output the original stderr of the
 # invoked shell. We do this so that a function can directly exit on failure...
 # but still output its failure message.
-exec 3>&2
+if [ -e /proc/self/fd/6 ] ; then
+    echo "The 6th file descriptor is already open"
+    echo "Change redirections in (readlink -f $0)"
+    exit 1
+fi
+exec 6>&2
 exec 2>&1
 
 
@@ -43,11 +48,11 @@ init_variables() {
     local custom_board=$1
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
-        echo >&3 "Warning: TARGET_TOOLS_PREFIX was not set."
+        echo >&6 "Warning: TARGET_TOOLS_PREFIX was not set."
 	TARGET_TOOLS_PREFIX="$TOP/prebuilts/gcc/x86/i686-linux-android-4.6/bin/i686-linux-android-"
     fi
     if [ -z "${CCACHE_TOOLS_PREFIX}" ]; then
-        echo >&3 "Warning: CCACHE_TOOLS_PREFIX was not set when calling compat build."
+        echo >&6 "Warning: CCACHE_TOOLS_PREFIX was not set when calling compat build."
 	CCACHE_TOOLS_DIR=$TOP/prebuilts/misc/${_host_os}-x86/ccache/ccache
     fi
     export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
@@ -60,9 +65,9 @@ init_variables() {
     fi
     export ARCH=i386
     export CFLAGS=-mno-android
-    echo >&3 "ARCH: $ARCH"
-    echo >&3 "CROSS_COMPILE: $CROSS_COMPILE"
-    echo >&3 "PATH: $PATH"
+    echo >&6 "ARCH: $ARCH"
+    echo >&6 "CROSS_COMPILE: $CROSS_COMPILE"
+    echo >&6 "PATH: $PATH"
 
     if [ -z "${custom_board}" ]; then
         echo "No custom board specified"
@@ -160,7 +165,7 @@ main() {
             ;;
         k)
             _kernel_only=1
-            echo >&3 "Kernel will be built but will not be placed in a boot image."
+            echo >&6 "Kernel will be built but will not be placed in a boot image."
             ;;
         t)
             export TARGET_BUILD_VARIANT=tests
@@ -182,9 +187,9 @@ main() {
 
     for custom_board in $custom_board_list
     do
-        echo >&3 
-        echo >&3 "Building kernel for $custom_board"
-        echo >&3 "---------------------------------"
+        echo >&6
+        echo >&6 "Building kernel for $custom_board"
+        echo >&6 "---------------------------------"
         init_variables "$custom_board"
         make_compat ${custom_board}
         exit_on_error $?
