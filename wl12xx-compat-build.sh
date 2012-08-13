@@ -121,7 +121,12 @@ make_compat() {
     rm -rf ${MODULE_DEST_TMP}
     mkdir -p ${MODULE_DEST_TMP};
 
-    make ARCH=${ARCH} INSTALL_MOD_STRIP=--strip-unneeded KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} install-modules
+    if [ "${TARGET_BUILD_VARIANT}" == "eng" ]; then
+	make ARCH=${ARCH} INSTALL_MOD_STRIP=--strip-debug KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} install-modules
+    else
+	make ARCH=${ARCH} INSTALL_MOD_STRIP=--strip-unneeded KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} install-modules
+    fi
+
     exit_on_error $? quiet
 
     find ${MODULE_DEST_TMP} -name *.ko -exec cp -vf {} ${MODULE_DEST} \;
