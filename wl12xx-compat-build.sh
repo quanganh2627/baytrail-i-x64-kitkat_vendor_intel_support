@@ -90,7 +90,7 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         ;;
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | mrfl_vp | mrfl_hvp | mrfl_sle)
+    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
         VENDOR=intel
         BOARD=${custom_board}
         ;;

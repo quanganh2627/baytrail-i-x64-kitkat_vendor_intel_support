@@ -101,7 +101,7 @@ init_variables() {
         BOARD=${custom_board}
        _soc_type="mfld"
         ;;
-    ctp_pr0 | ctp_pr1 )
+    ctp_pr0 | ctp_pr1 | ctp_nomodem )
         VENDOR=intel
         BOARD=${custom_board}
         _soc_type="ctp"
