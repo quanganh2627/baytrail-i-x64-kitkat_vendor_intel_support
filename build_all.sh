@@ -32,6 +32,7 @@ BOARDS="$BOARDS android_disk"		# Bootable disk for virtualbox
 BOARDS="$BOARDS mfld_cdk"
 BOARDS="$BOARDS mfld_pr2"
 BOARDS="$BOARDS mfld_gi"
+BOARDS="$BOARDS mfld_dv10"
 
 # CTP targets
 BOARDS="$BOARDS ctp_pr0"

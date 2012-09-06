@@ -98,7 +98,8 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
 
-    bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
+    if bld_flash_modem:
+        bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out=os.path.join(basedir,"out/target/product",bld)
     fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
