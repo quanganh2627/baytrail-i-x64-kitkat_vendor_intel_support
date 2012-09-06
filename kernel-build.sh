@@ -147,8 +147,8 @@ make_kernel() {
     if [ "$_clean" ]; then
         make "${KMAKEFLAGS[@]}" mrproper
     fi
-    if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
 set -x
+    if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
         echo "making kernel ${KERNEL_BUILD_DIR}/.config file"
         cp arch/x86/configs/${ARCH}_${_soc_type}_defconfig ${KERNEL_BUILD_DIR}/.config
         diffconfigs="${custom_board} ${DIFFCONFIGS}"
@@ -182,9 +182,9 @@ set -x
     fi
 
     make "${KMAKEFLAGS[@]}" ${njobs} bzImage
-set +x
 
     exit_on_error $? quiet
+set +x
 
     mkdir -p `dirname ${KERNEL_FILE}`
     cp ${KERNEL_BUILD_DIR}/arch/x86/boot/bzImage ${KERNEL_FILE}
