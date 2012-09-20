@@ -69,8 +69,8 @@ def find_ifwis(basedir):
                 "mfld_dv10":"mfld_dv*",
                 "mfld_tablet_evx":"mfld_tablet_ev*",
                 "ctp_pr0":"ctp_*[rv][0v]",
-                "ctp_pr1":"ctp_[pv][rv]1",
-		"ctp_nomodem":"ctp_nomodem",
+                "ctp_pr1":"ctp_[pv][rv][12]",
+		"ctp_nomodem":"ctp_[pv][rv][12]",
                 "mfld_cdk":"mfld_cdk"}[bld]
 
         print "look for ifwis in the tree"
