@@ -209,12 +209,12 @@ def publish_blankphone(basedir, bld, buildnumber):
 def publish_modem(basedir, bld):
     # environment variables
     board_have_modem=get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
-    bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
-    bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
-
     if not board_have_modem:
         print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld)
         return 0
+
+    bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
+    bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     modem_dest_dir=os.path.join(basedir, bldpub, "MODEM")
     shutil.rmtree(modem_dest_dir,ignore_errors=True)
