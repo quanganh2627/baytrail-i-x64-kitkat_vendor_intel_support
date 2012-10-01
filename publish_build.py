@@ -222,14 +222,11 @@ def publish_modem(basedir, bld):
 
     modem_dest_dir=os.path.join(basedir, bldpub, "MODEM")
     shutil.rmtree(modem_dest_dir,ignore_errors=True)
-    ignore_files = shutil.ignore_patterns('Android.mk')
+    ignore_files = shutil.ignore_patterns('Android.mk', '.git')
     modem_src_dir=os.path.join(basedir, get_build_options(key='RADIO_FIRMWARE_DIR'))
 
-    if bld == "ctp_pr1":
-        for board, modem in bldModemDico.iteritems():
-          shutil.copytree(modem_src_dir + modem , modem_dest_dir +"/"+ modem, ignore=ignore_files)
-    else:
-        shutil.copytree(modem_src_dir, modem_dest_dir, ignore=ignore_files)
+    for board, modem in bldModemDico.iteritems():
+        shutil.copytree(modem_src_dir + "/" + modem , modem_dest_dir +"/"+ modem, ignore=ignore_files)
 
 def publish_kernel(basedir, bld, bld_variant):
     product_out=os.path.join(basedir,"out/target/product",bld)
