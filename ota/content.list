@@ -1,6 +1,0 @@
-BOOT=$ANDROID_PRODUCT_OUT/boot.bin
-SYSTEM=$ANDROID_PRODUCT_OUT/system
-IFWI_FW=$ANDROID_PRODUCT_OUT/ifwi_firmware.bin
-DNX_FW=$ANDROID_PRODUCT_OUT/dnx_firmware.bin
-RADIO_FW=$ANDROID_PRODUCT_OUT/radio_firmware.bin
-
