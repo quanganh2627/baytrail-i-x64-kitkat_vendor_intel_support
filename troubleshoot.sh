@@ -14,7 +14,7 @@ show_help()
 {
 cat <<__
 NAME
-	troubleshoot.sh - troubleshoot UMG build environment
+	troubleshoot.sh - troubleshoot MCG build environment
 
 SYNOPSIS
         ./troubleshoot.sh [--version] [--check buildtime|all]
@@ -24,7 +24,7 @@ DESCRIPTION
        may impair your ability to use the repo tool or perform builds
 
        If any checks fail, please look into the one-time setup instructions
-       at http://umgwiki.intel.com/wiki/?title=UMSE_One-Time_Setup
+       at http://mcgwiki.intel.com/wiki/?title=UMSE_One-Time_Setup
 
 OPTIONS
        --check buildtime|all
@@ -77,21 +77,21 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-export scc_server=jfumgrepo1.jf.intel.com
+export scc_server=android.intel.com
 export gerrit_server=${scc_server}:8080
-export scc_git_server=${scc_server}
-export umgwiki=umgwiki.intel.com/wiki
-export umgbugzilla=jfumgbug3.jf.intel.com
+export scc_git_server=android.intel.com
+export mcgwiki=mcgwiki.intel.com/wiki
+export umgbugzilla=umgbugzilla.sh.intel.com
 
 
 echo ""
-echo "Troubleshooter v. ${version} for UMG SCC"
+echo "Troubleshooter v. ${version} for MCG SCC"
 echo ""
 echo "This tool diagnoses common problems in your build environment that"
 echo "may impair your ability to use the repo tool or perform builds"
 echo ""
 echo "If any checks fail, please look into the one-time setup instructions."
-echo "at http://umgwiki.intel.com/wiki/?title=UMSE_One-Time_Setup"
+echo "at http://mcgwiki.intel.com/wiki/?title=UMSE_One-Time_Setup"
 echo ""
 
 
@@ -143,10 +143,12 @@ else
         if [ $? -eq 0 ]; then
                 distro=ubuntu
                 distro_version=`awk 'NR==1{print $2}' /etc/issue`
-                if [ "$distro_version" != "10.04.2" ]; then
+                distro_major=`echo $distro_version | cut -f1 -d.`
+                distro_minor=`echo $distro_version | cut -f2 -d.`
+                if [ "$distro_major" -lt 10 -o "$distro_major" -gt 11 ]; then
                   warning_found
                   echo "WARNING - Not a supported Ubuntu distribution ($distro_version)"
-                  echo "          This should work, but 10.04.2 is recommended"
+                  echo "          This should work, but 10.04.2 or 11.04 is recommended"
                 fi
         else
           grep Fedora /etc/issue > /dev/null
@@ -317,7 +319,7 @@ fi
 
 if [ $(( $enabled_checks & 2 )) -ne 0 ]; then
 if [ $curl_ok -ne 0 ]; then
-        echo "Check http to $scc_server (UMG SCC home)"
+        echo "Check http to $scc_server (MSC SCC home)"
         curl --silent --max-time 20 http://${scc_server}/repo > $tmpf
         if [ $? -ne 0 ]; then
             error_found
@@ -326,7 +328,7 @@ if [ $curl_ok -ne 0 ]; then
             echo "        (disabling further URL checks)"
             curl_ok=0
         else
-            tmp=`awk 'NR==1' $tmpf | grep -c '/bin/sh'`
+            tmp=`head -1 $tmpf | grep -c '/bin/sh'`
             if [ "$tmp" != "1" ]; then
                 error_found
                 echo "ERROR - downloaded repo is not a script"
@@ -342,7 +344,7 @@ if [ $curl_ok -ne 0 ]; then
                         error_found
                         echo "ERROR - /bin/repo is not the one from $scc_server"
                         echo "        You might have official Android one,"
-                        echo "        but that one will not work for UMG."
+                        echo "        but that one will not work for MCG."
                         echo ""
                         echo "        To fix this, download"
                         echo "        http://$scc_server/repo and copy it to"
@@ -417,14 +419,14 @@ fi
 # This step seems to be broken... at least for me.
 # you need to have a cookie to log into it... so how did it ever work?
 #if [ $curl_ok -ne 0 ]; then
-#        echo "Check http to UMG wiki"
-#        curl --silent --max-time 20 http://${umgwiki} > $tmpf
+#        echo "Check http to MCG wiki"
+#        curl --silent --max-time 20 http://${mcgwiki} > $tmpf
 #        if [ $? -ne 0 ]; then
 #            error_found
-#            echo "ERROR - curl could not get http://${umgwiki}"
+#            echo "ERROR - curl could not get http://${mcgwiki}"
 #            echo "        (could be proxy problem)"
 #        else
-#            echo "        OK, can connect to http://${umgwiki}"
+#            echo "        OK, can connect to http://${mcgwiki}"
 #            grep "401 Unauthoriz" $tmpf > /dev/null
 #            if [ $? -eq 0 ]; then
 #                warning_found
@@ -434,7 +436,7 @@ fi
 #                echo "          But, you do need access, so be sure you browse to the site"
 #                echo "          and request access if you do not already have it"
 #                echo ""
-#                echo "              http://${umgwiki}"
+#                echo "              http://${mcgwiki}"
 #                echo ""
 #            fi
 #        fi
@@ -455,12 +457,12 @@ for i in `echo $PATH | tr ':' ' '` ; do
                     echo "        but it is not executable"
                 fi
 
-                grep HTTP_PROXY= "${i}/repo" > /dev/null
+                grep android.intel.com "${i}/repo" > /dev/null
                 if [ $? -ne 0 ]; then
                     error_found
                     echo "ERROR - repo found in path, at ${i}/repo,"
-                    echo "        but it is not a UMG version."
-                    echo "        This version will not work for UMG development"
+                    echo "        but it is not a MCG version."
+                    echo "        This version will not work for MCG development"
                 fi
         fi
 done
@@ -716,11 +718,12 @@ else
                 error_found
                 echo "ERROR - JAVA_HOME does not point to Java 1.6.0"
             else
-                grep 1.6.0_22 $tmpf > /dev/null
-                if [ $? -ne 0 ]; then
+		jdk_revision=`echo ${JAVA_HOME} | cut -f2 -d_`
+		echo "JDK 1.6.0 revision is $jdk_revision"
+		if [ "$jdk_revision" -lt 22 ]; then
                     warning_found
-                    echo "WARNING - JAVA_HOME is 1.6.0, but not 1.6.0_22"
-                    echo "          1.6.0_22 is specifically recommended"
+                    echo "WARNING - JDK 1.6.0 revision is $jdk_revision"
+                    echo "          1.6.0_22 or later is recommended"
                 fi
             fi
         fi
