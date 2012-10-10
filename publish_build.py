@@ -125,14 +125,18 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         publish_file(locals(), "%(product_out)s/obj/PACKAGING/target_files_intermediates/%(targetfile)s", ota_inputs_dir, enforce=False)
     ifwis = find_ifwis(basedir)
 
-    f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"flash-no-modem.xml")
+
     if bld_flash_modem:
+        f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"no-modem-reflash.xml")
         if bldx == "ctp_pr1":
              for board, modem in bldModemDico.iteritems():
                  xmlFileName="flash-%s-%s.xml" %(board,modem)
                  f.add_xml_file(xmlFileName)
         else:
              f.add_xml_file("flash.xml")
+    else:
+        f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"flash.xml")
+
     f.xml_header("fastboot", bld, "1")
     f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.bin"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
