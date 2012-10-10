@@ -162,7 +162,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
             for board, modem in bldModemDico.iteritems():
                 f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-%s-%s.xml"%(board,modem)])
         else:
-            f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"])
+            f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
 
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
@@ -173,7 +173,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
-    f.add_command("fastboot flash system $system_file", "Flashing system")
+    f.add_command("fastboot flash system $system_file", "Flashing system", timeout=300000)
     f.add_command("fastboot continue", "Reboot system")
     f.finish()
 
@@ -185,7 +185,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         f.add_command("adb root", "As root user")
         f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
         f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
-        f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update")
+        f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update", timeout=300000)
         f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
         f.finish()
 
