@@ -179,8 +179,6 @@ make_module_external_fcn() {
         find ${MODULE_SRC} -name ${module} -exec cp -vf {} ${MODULE_DEST} \;
         exit_on_error $? quiet
     done
-
-    make ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} clean
 }
 
 
