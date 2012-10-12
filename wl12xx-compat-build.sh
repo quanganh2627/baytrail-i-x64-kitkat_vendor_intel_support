@@ -112,9 +112,6 @@ make_compat() {
 
     cd ${COMPAT_SRC_DIR}
 
-    make ARCH=${ARCH} KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} clean
-    exit_on_error $? quiet
-
     make ARCH=${ARCH} KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR}
     exit_on_error $? quiet
 
