@@ -44,6 +44,7 @@ if [[   "$BOARD" == "mfld_cdk" \
      || "$BOARD" == "mfld_pr2" \
      || "$BOARD" == "mfld_gi" \
      || "$BOARD" == "mfld_dv10" \
+     || "$BOARD" == "salitpa" \
      || "$BOARD" == "ctp_pr0" \
      || "$BOARD" == "ctp_pr1" \
      || "$BOARD" == "ctp_nomodem" \
