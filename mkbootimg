@@ -46,6 +46,7 @@ if [[   "$BOARD" == "mfld_cdk" \
      || "$BOARD" == "mfld_dv10" \
      || "$BOARD" == "redridge" \
      || "$BOARD" == "salitpa" \
+     || "$BOARD" == "yukkabeach" \
      || "$BOARD" == "ctp_pr0" \
      || "$BOARD" == "ctp_pr1" \
      || "$BOARD" == "ctp_nomodem" \

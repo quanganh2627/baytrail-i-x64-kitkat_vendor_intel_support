@@ -96,7 +96,7 @@ init_variables() {
         BOARD=generic_x86
         _soc_type="vbox"
         ;;
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | redridge | salitpa | mfld_tablet_evx)
+    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx)
         VENDOR=intel
         BOARD=${custom_board}
        _soc_type="mfld"
@@ -137,7 +137,7 @@ make_module_external() {
     fi
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | redridge | salitpa | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
+    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
         make_module_external_fcn ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -186,7 +186,7 @@ make_module_external_fcn() {
 usage() {
     echo "Usage: $0 <options>..."
     echo ""
-    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|mfld_dv10|redridge|salitpa|mfld_tablet_evx|ctp_pr0|ctp_pr1|ctp_nomodem|mrfl_vp|mrfl_hvp|mrfl_sle]"
+    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|mfld_dv10|yukkabeach|redridge|salitpa|mfld_tablet_evx|ctp_pr0|ctp_pr1|ctp_nomodem|mrfl_vp|mrfl_hvp|mrfl_sle]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -199,7 +199,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 redridge salitpa mfld_tablet_evx ctp_pr0 ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle"
+    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 yukkabeach redridge salitpa mfld_tablet_evx ctp_pr0 ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle"
 
     while getopts vBM:Kc:j:kthCm opt
     do

@@ -70,6 +70,7 @@ def find_ifwis(basedir):
                 "redridge":"mfld_dv2*",
                 "salitpa":"salitpa",
                 "mfld_tablet_evx":"mfld_tablet_ev*",
+                "yukkabeach":"yukkabeach",
                 "ctp_pr0":"ctp_*[rv][0v]",
                 "ctp_pr1":"ctp_[pv][rv][12]",
 		"ctp_nomodem":"ctp_[pv][rv][12]",
