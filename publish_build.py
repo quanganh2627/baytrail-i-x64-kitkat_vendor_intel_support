@@ -67,6 +67,7 @@ def find_ifwis(basedir):
         ifwiglob = {"mfld_pr2":"mfld_pr*",
                 "mfld_gi":"mfld_gi",
                 "mfld_dv10":"mfld_dv*",
+                "redridge":"mfld_dv2*",
                 "salitpa":"salitpa",
                 "mfld_tablet_evx":"mfld_tablet_ev*",
                 "ctp_pr0":"ctp_*[rv][0v]",
