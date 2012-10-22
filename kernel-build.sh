@@ -96,12 +96,12 @@ init_variables() {
         BOARD=generic_x86
         _soc_type="vbox"
         ;;
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx)
+    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx)
         VENDOR=intel
         BOARD=${custom_board}
        _soc_type="mfld"
         ;;
-    ctp_pr0 | ctp_pr1 | ctp_nomodem )
+    victoriabay | ctp_pr1 | ctp_nomodem )
         VENDOR=intel
         BOARD=${custom_board}
         _soc_type="ctp"
@@ -160,11 +160,11 @@ set -x
                 echo apply $diffconfig
                 cat $BOARD_CONFIG_DIR/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
             fi
-            #TODO: Handle other paths nicely eg. for vendor/intel/medfield/board/salitpa
-            if [ -f $TOP/vendor/intel/medfield/board/${custom_board}/${diffconfig}_diffconfig ]
+            #TODO: manage pltform correctly: $custom_board should be different for each platform family
+            if [ -f $TOP/vendor/intel/*/board/${custom_board}/${diffconfig}_diffconfig ]
             then
                 echo apply $diffconfig
-                cat $TOP/vendor/intel/medfield/board/${custom_board}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
+                cat $TOP/vendor/intel/*/board/${custom_board}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
             fi
         done
         if [ -f user_diffconfig ]
@@ -197,7 +197,7 @@ set +x
     exit_on_error $? quiet
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
+    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | victoriabay | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
         make_modules ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -254,7 +254,7 @@ make_module_external() {
     fi
 
     case "${custom_board}" in
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
+    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | victoriabay | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
         make_module_external_fcn ${custom_board}
         exit_on_error $? quiet
         ;;
@@ -303,7 +303,7 @@ make_module_external_fcn() {
 usage() {
     echo "Usage: $0 <options>..."
     echo ""
-    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|mfld_dv10|yukkabeach|redridge|salitpa|mfld_tablet_evx|ctp_pr0|ctp_pr1|ctp_nomodem|mrfl_vp|mrfl_hvp|mrfl_sle]"
+    echo " -c [generic_x86|vbox|mfld_pr2|mfld_gi|mfld_dv10|yukkabeach|redridge|salitpa|mfld_tablet_evx|victoriabay|ctp_pr1|ctp_nomodem|mrfl_vp|mrfl_hvp|mrfl_sle]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -316,7 +316,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 yukkabeach redridge salitpa mfld_tablet_evx ctp_pr0 ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle"
+    local custom_board_list="vbox mfld_pr2 mfld_gi mfld_dv10 yukkabeach redridge salitpa mfld_tablet_evx victoriabay ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle"
 
     while getopts vBM:Kc:j:kthCmo: opt
     do

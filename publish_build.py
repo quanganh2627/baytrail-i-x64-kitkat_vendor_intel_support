@@ -71,10 +71,9 @@ def find_ifwis(basedir):
                 "salitpa":"salitpa",
                 "mfld_tablet_evx":"mfld_tablet_ev*",
                 "yukkabeach":"yukkabeach",
-                "ctp_pr0":"ctp_*[rv][0v]",
+                "victoriabay":"ctp_vv2",
                 "ctp_pr1":"ctp_[pv][rv][12]",
-		"ctp_nomodem":"ctp_[pv][rv][12]",
-                "mfld_cdk":"mfld_cdk"}[bld]
+		"ctp_nomodem":"ctp_[pv][rv][12]"}[bld]
 
         print "look for ifwis in the tree"
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)

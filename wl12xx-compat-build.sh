@@ -90,7 +90,7 @@ init_variables() {
         VENDOR=""
         BOARD=generic_x86
         ;;
-    mfld_cdk | mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | ctp_pr0 | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
+    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | victoriabay | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle)
         VENDOR=intel
         BOARD=${custom_board}
         ;;
@@ -134,7 +134,7 @@ usage() {
     echo "Usage: $0 [-c custom_board] [-j jobs]"
 
     echo ""
-    echo " -c [generic_x86|vbox|mfld_cdk|mfld_pr2|mfld_gi|mfld_dv10|yukkabeach|redridge|salitpa|mfld_tablet_evx|ctp_pr0|ctp_pr1|mrfl_vp|mrfl_hvp|mrfl_sle]"
+    echo " -c [generic_x86|vbox|mfld_pr2|mfld_gi|mfld_dv10|yukkabeach|redridge|salitpa|mfld_tablet_evx|victoriabay|ctp_pr1|mrfl_vp|mrfl_hvp|mrfl_sle]"
     echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
     echo " -K                       Build a kboot kernel"
@@ -144,7 +144,7 @@ usage() {
 }
 
 main() {
-    local custom_board_list="vbox mfld_cdk mfld_pr2 mfld_gi mfld_dv10 yukkabeach redridge salitpa mfld_tablet_evx ctp_pr0 ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle"
+    local custom_board_list="vbox mfld_pr2 mfld_gi mfld_dv10 yukkabeach redridge salitpa mfld_tablet_evx victoriabay ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle"
 
     while getopts Kc:j:kthCm opt
     do

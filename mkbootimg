@@ -39,15 +39,13 @@ CMDLINE_FILE=${TARG}/${IMGNAME}_cmdline
 echo $CMDLINE > $CMDLINE_FILE
 BOOTSTUB=vendor/intel/support/bootstub
 
-if [[   "$BOARD" == "mfld_cdk" \
-     || "$BOARD" == "mfld_pr1" \
-     || "$BOARD" == "mfld_pr2" \
+if [[   "$BOARD" == "mfld_pr2" \
      || "$BOARD" == "mfld_gi" \
      || "$BOARD" == "mfld_dv10" \
      || "$BOARD" == "redridge" \
      || "$BOARD" == "salitpa" \
      || "$BOARD" == "yukkabeach" \
-     || "$BOARD" == "ctp_pr0" \
+     || "$BOARD" == "victoriabay" \
      || "$BOARD" == "ctp_pr1" \
      || "$BOARD" == "ctp_nomodem" \
      || "$BOARD" == "mrfl_vp" \
