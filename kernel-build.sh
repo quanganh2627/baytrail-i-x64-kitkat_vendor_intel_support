@@ -233,7 +233,7 @@ make_modules() {
     exit_on_error $? quiet
 
     make "${KMAKEFLAGS[@]}" ${njobs} modules_install \
-        INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC}
+        INSTALL_MOD_STRIP=${STRIP_MODE} INSTALL_MOD_PATH=${MODULE_SRC}
     exit_on_error $? quiet
 
     find ${MODULE_SRC} -name *.ko -exec cp -vf {} ${MODULE_DEST} \;
@@ -284,7 +284,7 @@ make_module_external_fcn() {
     modules_file=${TOP}/${EXTERNAL_MODULE_DIRECTORY}/`basename ${EXTERNAL_MODULE_DIRECTORY}`.list
 
     make "${KMAKEFLAGS[@]}" ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules_install \
-        INSTALL_MOD_STRIP=--strip-unneeded INSTALL_MOD_PATH=${MODULE_SRC} \
+        INSTALL_MOD_STRIP=${STRIP_MODE} INSTALL_MOD_PATH=${MODULE_SRC} \
         | tee $modules_file
     exit_on_error $? quiet
 
@@ -382,6 +382,11 @@ main() {
         esac
     done
 
+    if [ "${TARGET_BUILD_VARIANT}" == "eng" ]; then
+        STRIP_MODE=--strip-debug
+    else
+        STRIP_MODE=--strip-unneeded
+    fi
     for custom_board in $custom_board_list
     do
         init_variables "$custom_board"
