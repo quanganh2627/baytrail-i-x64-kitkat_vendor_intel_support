@@ -65,7 +65,7 @@ def find_ifwis(basedir):
     # IFWI for Merrifield VP and HVP are not published
     if bld not in ["mrfl_vp","mrfl_hvp"]:
         ifwiglob = {"mfld_pr2":"mfld_pr*",
-                "mfld_gi":"mfld_gi",
+                "mfld_gi":"mfld_gi*",
                 "mfld_dv10":"mfld_dv*",
                 "redridge":"mfld_dv2*",
                 "salitpa":"salitpa",
