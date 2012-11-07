@@ -238,6 +238,8 @@ def publish_blankphone(basedir, bld, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     product_out=os.path.join(basedir,"out/target/product",bld)
     blankphone_dir=os.path.join(basedir,bldpub,"flash_files/blankphone")
+    partition_filename="partition.tbl"
+    partition_file=os.path.join(product_out, partition_filename)
     if bld_supports_droidboot:
         recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
     else:
@@ -251,8 +253,15 @@ def publish_blankphone(basedir, bld, buildnumber):
                                  ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                  ("OS_DNX", args["osdnx"], args["ifwiversion"])))
         f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
-        for i in "system cache config data".split():
+
+        f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
+        f.add_command("fastboot oem start_partitioning", "Start partitioning")
+        f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
+        f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
+
+        for i in "system cache config data logs factory config".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
+        f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
         f.finish()
 
 def publish_modem(basedir, bld):
