@@ -65,8 +65,9 @@ def find_ifwis(basedir):
     """
     ifwis = {}
     # IFWI for Merrifield VP and HVP are not published
-    if bld not in ["mrfl_vp","mrfl_hvp"]:
+    if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
         ifwiglob = {"mfld_pr2":"mfld_pr*",
+                    "mfld_pr2_bcm":"mfld_pr*/variant/mfld_pr*_bcm*",
                     "mfld_gi":"mfld_gi*",
                     "mfld_dv10":"mfld_dv*",
                     "redridge":"mfld_dv2*",
@@ -76,9 +77,9 @@ def find_ifwis(basedir):
                     "victoriabay":"ctp_vv2",
                     "ctp_pr1":"ctp_[pv][rv][12]",
                     "ctp_nomodem":"ctp_[pv][rv][12]",
-                    "merr_vv":"merr_vv0"}[bld]
+                    "merr_vv":"merr_vv0"}[bld_prod]
 
-        print "look for ifwis in the tree"
+        print "look for ifwis in the tree for %s"%bld_prod
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
         for ifwidir in glob.glob(gl):
             board = ifwidir.split("/")[-1]
@@ -287,9 +288,10 @@ def publish_kernel(basedir, bld, bld_variant):
 if __name__ == '__main__':
     # parse options
     basedir=sys.argv[1]
-    bld=sys.argv[2].lower()
-    bld_variant=sys.argv[3]
-    buildnumber=sys.argv[4]
+    bld_prod=sys.argv[2].lower()
+    bld=sys.argv[3].lower()
+    bld_variant=sys.argv[4]
+    buildnumber=sys.argv[5]
 
     init_global(bld)
     bootonly_flashfile = get_build_options(key='FLASHFILE_BOOTONLY', key_type='boolean', default_value=False)
