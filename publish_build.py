@@ -3,6 +3,7 @@
 import sys, shutil
 import glob
 import os
+import json
 from flashfile import FlashFile
 
 global bldpub
@@ -34,13 +35,12 @@ def init_global(bld):
     global bldpub
     bldpub = get_build_options(key='TARGET_PUBLISH_PATH')
 
-def publish_file(args, src, dest, enforce=True):
-    # first glob the src specification
+def publish_file_without_formatting(src,dst,enforce=True):
     if enforce:
         error = "error"
     else:
         error = "warning"
-    src = src%args
+    # first glob the src specification
     srcl = glob.glob(src)
     if len(srcl) != 1:
         print >>sys.stderr, error, ", "+src+" did not match exactly one file (matched %d files): %s"%(len(srcl)," ".join(srcl))
@@ -49,13 +49,15 @@ def publish_file(args, src, dest, enforce=True):
         else:
             return
     src = srcl[0]
-    # then dest (no need to glob)
-    dst = dest%args
     # ensure dir are created
     os.system("mkdir -p "+dst)
     # copy
     print "   copy", src, dst
     shutil.copyfile(src, os.path.join(dst, os.path.basename(src)))
+
+def publish_file(args, src, dest, enforce=True):
+    return publish_file_without_formatting(src%args,dest%args,
+                                           enforce=enforce)
 
 def find_ifwis(basedir):
     """ walk the ifwi directory for matching ifwi
@@ -65,16 +67,16 @@ def find_ifwis(basedir):
     # IFWI for Merrifield VP and HVP are not published
     if bld not in ["mrfl_vp","mrfl_hvp"]:
         ifwiglob = {"mfld_pr2":"mfld_pr*",
-                "mfld_gi":"mfld_gi*",
-                "mfld_dv10":"mfld_dv*",
-                "redridge":"mfld_dv2*",
-                "salitpa":"salitpa",
-                "mfld_tablet_evx":"mfld_tablet_ev*",
-                "yukkabeach":"yukkabeach",
-                "victoriabay":"ctp_vv2",
-                "ctp_pr1":"ctp_[pv][rv][12]",
-		"ctp_nomodem":"ctp_[pv][rv][12]",
-		"merr_vv":"merr_vv0"}[bld]
+                    "mfld_gi":"mfld_gi*",
+                    "mfld_dv10":"mfld_dv*",
+                    "redridge":"mfld_dv2*",
+                    "salitpa":"salitpa",
+                    "mfld_tablet_evx":"mfld_tablet_ev*",
+                    "yukkabeach":"yukkabeach",
+                    "victoriabay":"ctp_vv2",
+                    "ctp_pr1":"ctp_[pv][rv][12]",
+                    "ctp_nomodem":"ctp_[pv][rv][12]",
+                    "merr_vv":"merr_vv0"}[bld]
 
         print "look for ifwis in the tree"
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
@@ -94,13 +96,39 @@ def find_ifwis(basedir):
 
     return ifwis
 
+def get_publish_conf():
+    res=get_build_options(key='PUBLISH_CONF', default_value=42)
+    if res == 42:
+        return None
+    else:
+        return json.loads(res)
+
+def do_we_publish_bld_variant(bld_variant):
+    r = get_publish_conf()
+    if r != None:
+        return bld_variant in r
+    else:
+        return True
+
+def do_we_publish_extra_build(bld_variant,extra_build):
+    """do_we_publish_bld_variant(bld_variant)
+    must be True"""
+    r = get_publish_conf()
+    if r != None:
+        return extra_build in r[bld_variant]
+    else:
+        return True
+
 def publish_build(basedir, bld, bld_variant, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
-    bld_supports_ota = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
+    bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
-
+    publish_ota_target_files = do_we_publish_extra_build(bld_variant,'ota_target_files')
+    publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
+    publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
+    publish_full_ota_flashfile = do_we_publish_extra_build(bld_variant, 'full_ota_flashfile')
     if bld_flash_modem:
         bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
@@ -115,16 +143,21 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     # everything is already ready in product out directory, just publish it
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
+    system_img_path_in_out = None
     if bld_supports_droidboot:
         publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
-        publish_file(locals(), "%(product_out)s/system.img.gz", fastboot_dir)
+        system_img_path_in_out = os.path.join(product_out,"system.img.gz")
     else:
         publish_file(locals(), "%(product_out)s/recovery.img.POS.bin", fastboot_dir, enforce=False)
-        publish_file(locals(), "%(product_out)s/system.tar.gz", fastboot_dir)
+        system_img_path_in_out = os.path.join(product_out,"system.tar.gz")
+    if publish_system_img:
+        publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
-    publish_file(locals(), "%(product_out)s/%(otafile)s", fastboot_dir, enforce=False)
-    if bld_variant.find("user")>=0:
+    otafile_path_in_out = os.path.join(product_out,otafile)
+    if publish_full_ota:
+        publish_file_without_formatting(otafile_path_in_out, fastboot_dir, enforce=False)
+    if bld_variant.find("user")>=0 and publish_ota_target_files:
         publish_file(locals(), "%(product_out)s/obj/PACKAGING/target_files_intermediates/%(targetfile)s", ota_inputs_dir, enforce=False)
     ifwis = find_ifwis(basedir)
 
@@ -153,7 +186,9 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
 
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir,"droidboot.img"), buildnumber)
-    f.add_file("SYSTEM", os.path.join(fastboot_dir,"system.img.gz"), buildnumber)
+    #the system_img is optionally published, therefore
+    #we use the one that is in out to be included in the flashfile
+    f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
 
     for board, args in ifwis.items():
         f.add_codegroup("FIRWMARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
@@ -181,10 +216,12 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.finish()
 
     # build the ota flashfile
-    if bld_supports_ota:
+    if bld_supports_ota_flashfile and publish_full_ota_flashfile:
         f = FlashFile(os.path.join(flashfile_dir, "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" %locals()), "flash.xml")
         f.xml_header("ota", bld, "1")
-        f.add_file("OTA", os.path.join(fastboot_dir,otafile), buildnumber)
+        #the ofafile is optionally published, therefore
+        #we use the one that is in out to be included in the flashfile
+        f.add_file("OTA", otafile_path_in_out, buildnumber)
         f.add_command("adb root", "As root user")
         f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
         f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
@@ -259,5 +296,5 @@ if __name__ == '__main__':
             publish_blankphone(basedir, bld, buildnumber)
         elif bld_variant == "modem":
             publish_modem(basedir, bld)
-        else:
+        elif do_we_publish_bld_variant(bld_variant):
             publish_build(basedir, bld, bld_variant, buildnumber)
