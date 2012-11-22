@@ -75,7 +75,7 @@ def find_ifwis(basedir):
                     "mfld_tablet_evx":"mfld_tablet_ev*",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"ctp_vv2",
-                    "ctp_pr1":"ctp_[pv][rv][12]",
+                    "ctp_pr1":"ctp_[pv][rv][2]",
                     "ctp_nomodem":"ctp_[pv][rv][12]",
                     "merr_vv":"merr_vv0"}[bld_prod]
 
@@ -166,10 +166,12 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
 
     if bld_flash_modem:
         f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"no-modem-reflash.xml")
-        if bldx == "ctp_pr1":
+        # if we have different modem, prepare a flash file for each one
+        if len(bldModemDico) > 1:
              for board, modem in bldModemDico.iteritems():
                  xmlFileName="flash-%s-%s.xml" %(board,modem)
                  f.add_xml_file(xmlFileName)
+        # if not, use a single flash.xml
         else:
              f.add_xml_file("flash.xml")
     else:
@@ -180,9 +182,10 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
     if bld_flash_modem:
         for board, modem in bldModemDico.iteritems():
-            # CTP can have different flash.xml files
-            if bldx == "ctp_pr1":
+            # if we have different modems, declare them in their respective flash file
+            if len(bldModemDico) > 1:
                 f.add_file("MODEM", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s.bin" %locals(), buildnumber,xml_filter=["flash-%s-%s.xml"%(board,modem)])
+            # if not, declare it in the flash.xml file
             else:
                 f.add_file("MODEM", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
         f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
@@ -199,9 +202,11 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
     f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
     if bld_flash_modem:
-        if bldx == "ctp_pr1":
+        # if we have different modems, insert flash command in respective flash file
+        if len(bldModemDico) > 1:
             for board, modem in bldModemDico.iteritems():
                 f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-%s-%s.xml"%(board,modem)])
+        # if not, insert flash command in the flash.xml file
         else:
             f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
         f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
