@@ -277,7 +277,7 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
 
-        for i in "system cache config data logs factory config".split():
+        for i in "system cache config logs factory data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
         f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
         f.finish()

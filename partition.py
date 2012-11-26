@@ -368,21 +368,27 @@ else:
         partition_data = get_dict_from(storage_json, "partitions")
         os_data = get_dict_from(filesystem_json, "oses")
 
+        if (os.getenv("PART_MOUNT_OUT_FILE")):
+            target = os.getenv("PART_MOUNT_OUT_FILE")
 
-        """
-            Generate partition table for fastboot OS
-        """
-        out_file = "%s/%s" % (out_path, "partition.tbl")
-        print out_file
-        partition_table_file = file(out_file, "w")
-        partition_table_file.write("partition_table=%s\n" % global_data["format_table"])
+        if (target.endswith("partition.tbl")):
 
-        if global_data["format_table"] == "gpt":
-            gpt_commands = generate_gpt_partition_file(emmc_data, global_data)
-            for line in gpt_commands:
-                partition_table_file.write(line+"\n")
+            """
+                Generate partition table for fastboot OS
+            """
+            out_file = "%s/%s" % (out_path, "partition.tbl")
+            print out_file
+            partition_table_file = file(out_file, "w")
+            partition_table_file.write("partition_table=%s\n" % global_data["format_table"])
 
-        partition_table_file.close()
+            if global_data["format_table"] == "gpt":
+                gpt_commands = generate_gpt_partition_file(emmc_data, global_data)
+                for line in gpt_commands:
+                    partition_table_file.write(line+"\n")
+
+            partition_table_file.close()
+            sys.exit()
+
 
 
         """
@@ -395,16 +401,17 @@ else:
 
             if v_os["recovery_fstab_dest_file"] is not None:
                 out_file = "%s/%s" % (out_path, v_os["recovery_fstab_dest_file"])
-                if os.path.isdir(os.path.dirname(out_file)) is True:
+                if out_file.endswith(target):
                     print "\t%s" % (out_file)
                     recovery_lines, fill = generate_mbr_recovery_fstab_file(emmc_data, global_data)
                     fstab_indent(out_file, recovery_lines, fill)
+                    sys.exit()
 
             if v_os["fstab_file"] is not None:
                 out_file = "%s/%s" % (out_path, v_os["fstab_file"])
                 print "\t%s" % (out_file)
 
-                if os.path.isdir(os.path.dirname(out_file)) is True:
+                if out_file.endswith(target):
                     if global_data["format_table"] == "mbr":
                         fstab_lines, fill = generate_mbr_fstab_file(emmc_data, global_data, v_os)
                         fstab_indent(out_file, fstab_lines, fill)
@@ -412,5 +419,7 @@ else:
                     if global_data["format_table"] == "gpt":
                        fstab_lines, fill = generate_gpt_fstab_file(emmc_data, global_data, v_os)
                        fstab_indent("%s/%s" % (out_path, v_os["fstab_file"]), fstab_lines, fill)
+
+                    sys.exit()
     except KeyError, e:
         print "Key %s does not exist (overriding file malformed)" % str(e)
