@@ -49,7 +49,6 @@ _soc_type="mfld"
 _host_os=`uname -s | tr '[:upper:]' '[:lower:]'`
 
 init_variables() {
-    local custom_board=$1
 
     if [ -z "${TARGET_TOOLS_PREFIX}" ]; then
         echo >&6 "Warning: TARGET_TOOLS_PREFIX was not set."
@@ -85,52 +84,37 @@ init_variables() {
     echo >&6 "CROSS_COMPILE: $CROSS_COMPILE"
     echo >&6 "PATH: $PATH"
 
-    if [ -z "${custom_board}" ]; then
+    if [ -z "${TARGET_BOARD_PLATFORM}" ]; then
         echo "No custom board specified"
         exit_on_error 2
     fi
+    VENDOR=intel
 
-    case "${custom_board}" in
-    generic_x86 | vbox )
-        VENDOR=""
-        BOARD=generic_x86
-        _soc_type="vbox"
-        ;;
-    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx)
-        VENDOR=intel
-        BOARD=${custom_board}
+    case "${TARGET_BOARD_PLATFORM}" in
+    medfield)
        _soc_type="mfld"
         ;;
-    victoriabay | ctp_pr1 | ctp_nomodem )
-        VENDOR=intel
-        BOARD=${custom_board}
+    clovertrail)
         _soc_type="ctp"
         ;;
-    mrfl_vp | mrfl_hvp | mrfl_sle | merr_vv )
-        VENDOR=intel
-        BOARD=${custom_board}
+    merrifield)
         _soc_type="mrfl"
         ;;
     *)
-        echo "Unknown board specified \"${custom_board}\""
+        echo "Unknown platform specified \"${TARGET_BOARD_PLATFORM}\""
         exit_on_error 2
         ;;
     esac
 
-    BOARD_CONFIG_DIR=${TOP}/vendor/intel/${BOARD}
-
-    PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
+    BOARD_CONFIG_DIR=${TOP}/vendor/intel/${TARGET_DEVICE}
+    PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
     KERNEL_FILE=${PRODUCT_OUT}/kernel
     KERNEL_SRC_DIR=${TOP}/hardware/intel/linux-2.6
-    if [ "$DIFFCONFIGS" != "kboot" ]; then
-        KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
-    else
-        KERNEL_BUILD_DIR=${PRODUCT_OUT}/kboot/kernel_build
-    fi
+    KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
+
 }
 
 make_kernel() {
-    local custom_board=${1}
     local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "${KERNEL_BUILD_FLAGS}")
     local njobs=""
     if [ "${_jobs}" != 0 ] ; then
@@ -151,7 +135,7 @@ set -x
     if [ ! -e ${KERNEL_BUILD_DIR}/.config ]; then
         echo "making kernel ${KERNEL_BUILD_DIR}/.config file"
         cp arch/x86/configs/${ARCH}_${_soc_type}_defconfig ${KERNEL_BUILD_DIR}/.config
-        diffconfigs="${custom_board} ${DIFFCONFIGS}"
+        diffconfigs="${TARGET_DEVICE} ${DIFFCONFIGS}"
         echo ${diffconfigs}
         for diffconfig in ${diffconfigs}
         do
@@ -160,11 +144,11 @@ set -x
                 echo apply $diffconfig
                 cat $BOARD_CONFIG_DIR/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
             fi
-            #TODO: manage pltform correctly: $custom_board should be different for each platform family
-            if [ -f $TOP/vendor/intel/*/board/${custom_board}/${diffconfig}_diffconfig ]
+            #TODO: manage pltform correctly: $TARGET_DEVICE should be different for each platform family
+            if [ -f $TOP/vendor/intel/*/board/${TARGET_DEVICE}/${diffconfig}_diffconfig ]
             then
                 echo apply $diffconfig
-                cat $TOP/vendor/intel/*/board/${custom_board}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
+                cat $TOP/vendor/intel/*/board/${TARGET_DEVICE}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
             fi
         done
         if [ -f user_diffconfig ]
@@ -196,26 +180,15 @@ set +x
     cp ${KERNEL_BUILD_DIR}/arch/x86/boot/bzImage ${KERNEL_FILE}
     exit_on_error $? quiet
 
-    case "${custom_board}" in
-    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | victoriabay | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle | merr_vv)
-        make_modules ${custom_board}
-        exit_on_error $? quiet
-        ;;
-    generic_x86 | vbox)
-        ;;
-    esac
+    make_modules
+    exit_on_error $? quiet
 
     cd ${TOP}
 }
 
 make_modules() {
-    local custom_board=${1}
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
-    if [ "$DIFFCONFIGS" != "kboot" ]; then
-        local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
-    else
-        local MODULE_DEST=${PRODUCT_OUT}/kboot/root/lib/modules
-    fi
+    local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
 
     echo "  Making driver modules..."
 
@@ -243,30 +216,62 @@ make_modules() {
 
 # Build a kernel module from source that is not in the kernel build directory
 make_module_external() {
-    local custom_board=${1}
-    local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "${KERNEL_BUILD_FLAGS}")
 
     cd $KERNEL_SRC_DIR
 
-    if [ ! -d `dirname ${KERNEL_FILE}` ]; then
-        echo >&6 "The kernel must be built first. Directory not found: `dirname ${KERNEL_FILE}`"
+    if [ ! -f ${KERNEL_FILE} ]; then
+        echo >&6 "The kernel must be built first. File not found: ${KERNEL_FILE}"
         exit 1
     fi
 
-    case "${custom_board}" in
-    mfld_pr2 | mfld_gi | mfld_dv10 | yukkabeach | redridge | salitpa | mfld_tablet_evx | victoriabay | ctp_pr1 | ctp_nomodem | mrfl_vp | mrfl_hvp | mrfl_sle | merr_vv)
-        make_module_external_fcn ${custom_board}
-        exit_on_error $? quiet
-        ;;
-    generic_x86 | vbox)
-        ;;
-    esac
+    make_module_external_fcn
+    exit_on_error $? quiet
+
+    cd ${TOP}
+}
+
+# Build a kernel module from source that is not in the kernel build directory
+#   Launch the build directly from the module directory
+make_module_external_in_directory() {
+    local njobs=""
+    if [ "${_jobs}" != 0 ] ; then
+      njobs="-j${_jobs}"
+    fi
+
+    if [ ! -d ${EXTERNAL_MODULE_IN_DIRECTORY} ]; then
+        echo >&6 "Module path not found: ${EXTERNAL_MODULE_IN_DIRECTORY}"
+        exit 1
+    fi
+
+    cd $EXTERNAL_MODULE_IN_DIRECTORY
+
+    if [ ! -f ${KERNEL_FILE} ]; then
+        echo >&6 "The kernel must be built first. File not found: ${KERNEL_FILE}"
+        exit 1
+    fi
+
+    local MODULE_DEST_TMP=${PRODUCT_OUT}/$(basename $EXTERNAL_MODULE_IN_DIRECTORY)
+    local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
+ 
+    make ARCH=${ARCH} KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} \
+        ${njobs} ${KERNEL_BUILD_FLAGS} ${EXTRA_MAKEFLAGS}
+    exit_on_error $? quiet
+
+    rm -rf ${MODULE_DEST_TMP}
+    mkdir -p ${MODULE_DEST_TMP}
+
+    make ARCH=${ARCH} INSTALL_MOD_STRIP=${STRIP_MODE} KLIB=${MODULE_DEST_TMP} \
+        KLIB_BUILD=${KERNEL_BUILD_DIR} ${njobs} ${KERNEL_BUILD_FLAGS} \
+        ${EXTRA_MAKEFLAGS} install-modules
+    exit_on_error $? quiet
+
+    find ${MODULE_DEST_TMP} -name *.ko -exec cp -vf {} ${MODULE_DEST} \;
+    exit_on_error $? quiet
 
     cd ${TOP}
 }
 
 make_module_external_fcn() {
-    local custom_board=${1}
     local MODULE_SRC=${PRODUCT_OUT}/kernel_modules
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
     local KMAKEFLAGS=("ARCH=${ARCH}" "O=${KERNEL_BUILD_DIR}" "${KERNEL_BUILD_FLAGS}")
@@ -278,12 +283,14 @@ make_module_external_fcn() {
     fi
     echo "  Making driver modules from external source directory..."
 
-    make "${KMAKEFLAGS[@]}" ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules
+    make "${KMAKEFLAGS[@]}" ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} \
+        ${EXTRA_MAKEFLAGS}
     exit_on_error $? quiet
 
     modules_file=${TOP}/${EXTERNAL_MODULE_DIRECTORY}/`basename ${EXTERNAL_MODULE_DIRECTORY}`.list
 
-    make "${KMAKEFLAGS[@]}" ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} modules_install \
+    make "${KMAKEFLAGS[@]}" ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} \
+        ${EXTRA_MAKEFLAGS} modules_install \
         INSTALL_MOD_STRIP=${STRIP_MODE} INSTALL_MOD_PATH=${MODULE_SRC} \
         | tee $modules_file
     exit_on_error $? quiet
@@ -303,22 +310,19 @@ make_module_external_fcn() {
 usage() {
     echo "Usage: $0 <options>..."
     echo ""
-    echo " -c [generic_x86|vbox|mfld_pr2|mfld_gi|mfld_dv10|yukkabeach|redridge|salitpa|mfld_tablet_evx|victoriabay|ctp_pr1|ctp_nomodem|mrfl_vp|mrfl_hvp|mrfl_sle|merr_vv]"
-    echo "                          custom board (target platform)"
     echo " -j [jobs]                # of jobs to run simultaneously.  0=automatic"
-    echo " -K                       Build a kboot kernel"
     echo " -k                       build kernel only"
     echo " -t                       testtool build"
     echo " -v                       verbose (V=1) build"
     echo " -C                       clean first"
     echo " -M                       external module source directory"
+    echo " -X                       external module source directory - in module build"
     echo " -B                       Build a 64bit kernel"
+    echo " -f                       Extra flags to pass to make"
 }
 
 main() {
-    local custom_board_list="vbox mfld_pr2 mfld_gi mfld_dv10 yukkabeach redridge salitpa mfld_tablet_evx victoriabay ctp_pr1 ctp_nomodem mrfl_vp mrfl_hvp mrfl_sle merr_vv"
-
-    while getopts vBM:Kc:j:kthCmo: opt
+    while getopts vBM:j:kthCo:X:f: opt
     do
         case "${opt}" in
         v)
@@ -327,9 +331,6 @@ main() {
         B)
             kernel_build_64bit=1
             ;;
-        K)
-            DIFFCONFIGS="kboot"
-            ;;
         h)
             usage
             exit 0
@@ -337,8 +338,8 @@ main() {
         M)
             EXTERNAL_MODULE_DIRECTORY="${OPTARG}"
             ;;
-        c)
-            custom_board_list="${OPTARG}"
+        X)
+            EXTERNAL_MODULE_IN_DIRECTORY="${OPTARG}"
             ;;
         j)
             if [ ${OPTARG} -gt 0 ]; then
@@ -374,6 +375,9 @@ main() {
                     _menuconfig=true
             fi
             ;;
+        f)
+            EXTRA_MAKEFLAGS=${OPTARG}
+            ;;
         ?)
             echo "Unknown option"
             usage
@@ -387,24 +391,27 @@ main() {
     else
         STRIP_MODE=--strip-unneeded
     fi
-    for custom_board in $custom_board_list
-    do
-        init_variables "$custom_board"
+ 
+        init_variables "$TARGET_DEVICE"
 
-        if [ "$EXTERNAL_MODULE_DIRECTORY" ]; then
-            echo >&6
-            echo >&6 "Building external module for $custom_board"
-            echo >&6 "------------------------------------------------"
-            make_module_external ${custom_board}
-            continue
-        fi
-
+    if [ "$EXTERNAL_MODULE_DIRECTORY" ]; then
         echo >&6
-        echo >&6 "Building kernel for $custom_board"
+        echo >&6 "Building external module for $TARGET_DEVICE"
+        echo >&6 "------------------------------------------------"
+        make_module_external ${TARGET_DEVICE}
+    elif [ "$EXTERNAL_MODULE_IN_DIRECTORY" ]; then
+        echo >&6
+        echo >&6 "Building external module for $TARGET_DEVICE"
+        echo >&6 "  from $EXTERNAL_MODULE_IN_DIRECTORY"
+        echo >&6 "------------------------------------------------"
+        make_module_external_in_directory ${TARGET_DEVICE}
+    else
+        echo >&6
+        echo >&6 "Building kernel for $TARGET_DEVICE"
         echo >&6 "---------------------------------"
-        make_kernel ${custom_board} 
+        make_kernel ${TARGET_DEVICE}
         exit_on_error $?
-    done
+    fi
     exit 0
 }
 
