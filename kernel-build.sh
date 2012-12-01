@@ -206,7 +206,7 @@ make_modules() {
     exit_on_error $? quiet
 
     make "${KMAKEFLAGS[@]}" ${njobs} modules_install \
-        INSTALL_MOD_STRIP=${STRIP_MODE} INSTALL_MOD_PATH=${MODULE_SRC}
+        INSTALL_MOD_PATH=${MODULE_SRC}
     exit_on_error $? quiet
 
     find ${MODULE_SRC} -name *.ko -exec cp -vf {} ${MODULE_DEST} \;
@@ -291,7 +291,7 @@ make_module_external_fcn() {
 
     make "${KMAKEFLAGS[@]}" ${njobs} M=${TOP}/${EXTERNAL_MODULE_DIRECTORY} \
         ${EXTRA_MAKEFLAGS} modules_install \
-        INSTALL_MOD_STRIP=${STRIP_MODE} INSTALL_MOD_PATH=${MODULE_SRC} \
+        INSTALL_MOD_PATH=${MODULE_SRC} \
         | tee $modules_file
     exit_on_error $? quiet
 
@@ -386,13 +386,7 @@ main() {
         esac
     done
 
-    if [ "${TARGET_BUILD_VARIANT}" == "eng" ]; then
-        STRIP_MODE=--strip-debug
-    else
-        STRIP_MODE=--strip-unneeded
-    fi
- 
-        init_variables "$TARGET_DEVICE"
+    init_variables "$TARGET_DEVICE"
 
     if [ "$EXTERNAL_MODULE_DIRECTORY" ]; then
         echo >&6
