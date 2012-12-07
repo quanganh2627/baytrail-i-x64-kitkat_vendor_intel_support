@@ -206,7 +206,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
 
     for board, args in ifwis.items():
-        f.add_codegroup("FIRWMARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
+        f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
                                  ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
     f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
@@ -270,7 +270,7 @@ def publish_blankphone(basedir, bld, buildnumber):
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])))
         else:
-            f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"])))
         f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
