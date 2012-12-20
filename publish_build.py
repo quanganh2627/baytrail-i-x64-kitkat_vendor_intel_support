@@ -63,6 +63,7 @@ def find_ifwis(basedir):
     """ walk the ifwi directory for matching ifwi
     return a dict indexed by boardname, with all the information in ir
     """
+    bldx = get_build_options(key='GENERIC_TARGET_NAME')
     ifwis = {}
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
@@ -81,15 +82,24 @@ def find_ifwis(basedir):
             board = ifwidir.split("/")[-1]
             fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
             osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
+            if bldx == "merr_vv":
+                xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
             ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
             ifwiversion = os.path.basename(ifwi)
             ifwiversion = os.path.splitext(ifwiversion)[0]
             print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
             if ifwiversion != "None":
-                ifwis[board] = dict(ifwiversion = ifwiversion,
-                                    ifwi = ifwi,
-                                    fwdnx = fwdnx,
-                                    osdnx = osdnx)
+                if bldx == "merr_vv":
+                    ifwis[board] = dict(ifwiversion = ifwiversion,
+                                        ifwi = ifwi,
+                                        fwdnx = fwdnx,
+                                        osdnx = osdnx,
+                                        xxrdnx = xxrdnx)
+                else:
+                    ifwis[board] = dict(ifwiversion = ifwiversion,
+                                        ifwi = ifwi,
+                                        fwdnx = fwdnx,
+                                        osdnx = osdnx)
 
     return ifwis
 
@@ -237,6 +247,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
 
 def publish_blankphone(basedir, bld, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bldx = get_build_options(key='GENERIC_TARGET_NAME')
     product_out=os.path.join(basedir,"out/target/product",bld)
     blankphone_dir=os.path.join(basedir,bldpub,"flash_files/blankphone")
     partition_filename="partition.tbl"
@@ -250,9 +261,15 @@ def publish_blankphone(basedir, bld, buildnumber):
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
         f.xml_header("system", bld, "1")
-        f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                 ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                 ("OS_DNX", args["osdnx"], args["ifwiversion"])))
+        if bldx == "merr_vv":
+            f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])))
+        else:
+            f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"])))
         f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
 
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
