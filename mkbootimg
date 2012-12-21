@@ -41,13 +41,10 @@ BOOTSTUB=vendor/intel/support/bootstub
 
 if [[   "$BOARD" == "mfld_pr2" \
      || "$BOARD" == "mfld_gi" \
-     || "$BOARD" == "mfld_dv10" \
-     || "$BOARD" == "redridge" \
      || "$BOARD" == "salitpa" \
      || "$BOARD" == "yukkabeach" \
      || "$BOARD" == "victoriabay" \
      || "$BOARD" == "ctp_pr1" \
-     || "$BOARD" == "ctp_nomodem" \
      || "$BOARD" == "mrfl_vp" \
      || "$BOARD" == "mrfl_hvp" \
      || "$BOARD" == "mrfl_sle" \
