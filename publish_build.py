@@ -74,7 +74,7 @@ def find_ifwis(basedir):
                     "salitpa":"salitpa",
                     "mfld_tablet_evx":"mfld_tablet_ev*",
                     "yukkabeach":"yukkabeach",
-                    "victoriabay":"ctp_vv2",
+                    "victoriabay":"victoriabay",
                     "ctp_pr1":"ctp_[pv][rv][2]",
                     "ctp_nomodem":"ctp_[pv][rv][12]",
                     "merr_vv":"merr_vv0"}[bld_prod]
