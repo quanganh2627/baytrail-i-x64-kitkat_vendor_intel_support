@@ -73,7 +73,7 @@ def find_ifwis(basedir):
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay",
-                    "ctp_pr1":"ctp_[pv][rv][2]",
+                    "ctp_pr1":"ctp_[pv][rv][23]",
                     "merr_vv":"merr_vv0"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
