@@ -9,7 +9,7 @@ LINUXDIR=${TOP}/hardware/intel/linux-2.6
 PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
 KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 BCMDHD_4334_SRC_DIR=${TOP}/hardware/broadcom/wlan_driver/bcm4334/open-src/src/dhd/linux
-BCMDHD_4335_SRC_DIR=${TOP}/hardware/broadcom/wlan_driver/bcm4335/open-src/src/dhd/linux
+BCMDHD_4335_SRC_DIR=${TOP}/hardware/broadcom/wlan_driver/bcm4335/src
 MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
 TARGET=dhd-cdc-sdmmc-android-intel-jellybean-cfg80211-oob
 
@@ -41,13 +41,18 @@ make_bcmdhd() {
     echo "Making driver <${DRIVER}> for <${BOARD}>"
     echo "----------------------------------------"
 
-    make ARCH=${ARCH} K_BUILD=${KERNEL_BUILD_DIR} LINUXDIR=${LINUXDIR}/ LINUXVER=${LINUXVER} O=${KERNEL_BUILD_DIR}/ ${TARGET}
+    if [ "$DRIVER" == "bcm4334" ]; then
+        make ARCH=${ARCH} K_BUILD=${KERNEL_BUILD_DIR} LINUXDIR=${LINUXDIR}/ LINUXVER=${LINUXVER} O=${KERNEL_BUILD_DIR}/ ${TARGET}
+    elif [ "$DRIVER" == "bcm4335" ]; then
+        make ARCH=${ARCH} -C ${KERNEL_BUILD_DIR}/ M=$PWD CONFIG_BCMDHD=m
+    fi
+
     exit_on_error $? quiet
 
     if [ "$DRIVER" == "bcm4334" ]; then
         cp -f ${BCMDHD_4334_SRC_DIR}/${TARGET}-${LINUXVER}/bcmdhd.ko ${MODULE_DEST}
     elif [ "$DRIVER" == "bcm4335" ]; then
-        cp -f ${BCMDHD_4335_SRC_DIR}/${TARGET}-${LINUXVER}/bcmdhd.ko ${MODULE_DEST}
+        cp -f ${BCMDHD_4335_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}
     else
         echo "Should not get there"
     fi
