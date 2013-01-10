@@ -209,7 +209,7 @@ def generate_gpt_partition_file(emmc, global_data):
         if partition["size"] is None:
             pass
         else:
-            if (partition["size"] < 0):
+            if (partition["size"] <= 0):
                 partition_size = "$calc($lba_end%s)" % (partition_size_hint)
             else:
                 partition_size = ( (int(partition["size"])*1024*1024) - partition_size_hint ) / 512
