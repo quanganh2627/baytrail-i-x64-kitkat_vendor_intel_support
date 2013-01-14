@@ -51,7 +51,7 @@ BOARDS="$BOARDS sdk_x86"
 BOARDS="$BOARDS sdk"
 
 # List of projects that need scrubbing before each build
-DIRTY_LIST="hardware/intel/PRIVATE/pvr hardware/ti/wlan hardware/intel/linux-2.6"
+DIRTY_LIST="hardware/intel/PRIVATE/pvr hardware/ti/wlan $\(KERNEL_SRC_DIR\)"
 
 BUILD_TYPE=eng
 

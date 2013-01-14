@@ -5,7 +5,6 @@ ARCH=x86
 LINUXVER=
 BOARD=$1
 DRIVER=$2
-LINUXDIR=${TOP}/hardware/intel/linux-2.6
 PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
 KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 BCMDHD_4334_SRC_DIR=${TOP}/hardware/broadcom/wlan_driver/bcm4334/src
@@ -21,7 +20,7 @@ function exit_on_error {
 }
 
 get_kernelversion() {
-    LINUXVER=`make -C ${LINUXDIR} kernelversion | sed -n 2p`
+    LINUXVER=`make -C ${TOP}/${KERNEL_SRC_DIR} kernelversion | sed -n 2p`
     echo "LINUXVER detected <$LINUXVER>"
 }
 

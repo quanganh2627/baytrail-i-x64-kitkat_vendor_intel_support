@@ -111,7 +111,6 @@ init_variables() {
 
     PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
     KERNEL_FILE=${PRODUCT_OUT}/kernel
-    KERNEL_SRC_DIR=${TOP}/hardware/intel/linux-2.6
     KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 
 }
