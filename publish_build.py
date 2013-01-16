@@ -68,12 +68,13 @@ def find_ifwis(basedir):
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
         ifwiglob = {"mfld_pr2":"mfld_pr*",
-                    "mfld_pr2_bcm":"mfld_pr*/variant/mfld_pr*_bcm*",
                     "mfld_gi":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay",
-                    "ctp_pr1":"ctp_[pv][rv][23]",
+                    "redhookbay":"ctp_[pv][rv][23]",
+                    "ctpscaleht":"ctp_vv2/CTPSCALEHT",
+                    "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "merr_vv":"merr_vv0"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
