@@ -4,6 +4,8 @@ import sys, shutil
 import glob
 import os
 import json
+import zipfile
+import re
 from flashfile import FlashFile
 
 global bldpub
@@ -313,6 +315,35 @@ def publish_kernel(basedir, bld, bld_variant):
     # everything is already ready in product out directory, just publish it
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
 
+def publish_external(basedir, bld, bld_variant):
+    os.system("mkdir -p "+os.path.join(basedir,bldpub))
+    product_out=os.path.join(basedir,"out/target/product",bld)
+    prebuilts_out = os.path.join(product_out,"prebuilts")
+    prebuilts_pub = os.path.join(basedir,bldpub,"prebuilts.zip")
+    white_list_fn = ".repo/manifests/external_binaries_whitelist"
+    white_list = []
+    # external_binaries_white_list is a simple text file containing a list of regular expression
+    # matching the PRIVATE folders whose we want to publish binary
+    try:
+        with open(white_list_fn,"r") as f:
+            for line in f:
+                if not line.startswith("#"):
+                    # as /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
+                    # we need to update regexp accordingly
+                    white_list.append(line.strip().replace("/PRIVATE/","/prebuilts/[^/]+/"))
+    except IOError:
+        print "WARNING: unable to publish external: no white list file found!",white_list_fn
+    white_list = re.compile("(%s)"%("|".join(white_list)))
+    if os.path.exists(prebuilts_out):
+        z = zipfile.ZipFile(prebuilts_pub, "w")
+        for root, dirs, files in os.walk(prebuilts_out):
+            for f in files:
+                filename = os.path.join(root, f)
+                arcname = filename.replace(product_out,"")
+                if white_list.search(arcname):
+                    z.write(filename, arcname)
+                    print arcname
+        z.close()
 if __name__ == '__main__':
     # parse options
     basedir=sys.argv[1]
@@ -323,6 +354,9 @@ if __name__ == '__main__':
 
     init_global(bld)
     bootonly_flashfile = get_build_options(key='FLASHFILE_BOOTONLY', key_type='boolean', default_value=False)
+    external_release = get_build_options(key='EXTERNAL_BINARIES', key_type='boolean', default_value=not bootonly_flashfile)
+    if external_release:
+        publish_external(basedir, bld, bld_variant)
 
     if bootonly_flashfile:
         if bld_variant not in ["blankphone","modem"]:
