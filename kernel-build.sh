@@ -106,7 +106,6 @@ init_variables() {
         ;;
     esac
 
-    BOARD_CONFIG_DIR=${TOP}/vendor/intel/${TARGET_DEVICE}
     PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
     KERNEL_FILE=${PRODUCT_OUT}/kernel
     KERNEL_SRC_DIR=${TOP}/hardware/intel/linux-2.6
@@ -139,16 +138,10 @@ set -x
         echo ${diffconfigs}
         for diffconfig in ${diffconfigs}
         do
-            if [ -f $BOARD_CONFIG_DIR/${diffconfig}_diffconfig ]
+            if [ -f ${TOP}/${KERNEL_DIFFCONFIG_DIR}/${diffconfig}_diffconfig ]
             then
                 echo apply $diffconfig
-                cat $BOARD_CONFIG_DIR/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
-            fi
-            #TODO: manage pltform correctly: $TARGET_DEVICE should be different for each platform family
-            if [ -f $TOP/vendor/intel/*/board/${TARGET_DEVICE}/${diffconfig}_diffconfig ]
-            then
-                echo apply $diffconfig
-                cat $TOP/vendor/intel/*/board/${TARGET_DEVICE}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
+                cat ${TOP}/${KERNEL_DIFFCONFIG_DIR}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
             fi
         done
         if [ -f user_diffconfig ]
