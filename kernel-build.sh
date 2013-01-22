@@ -100,6 +100,9 @@ init_variables() {
     merrifield)
         _soc_type="mrfl"
         ;;
+    baytrail)
+        _soc_type="byt"
+        ;;
     *)
         echo "Unknown platform specified \"${TARGET_BOARD_PLATFORM}\""
         exit_on_error 2
@@ -142,6 +145,11 @@ set -x
             then
                 echo apply $diffconfig
                 cat ${TOP}/${KERNEL_DIFFCONFIG_DIR}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
+            fi
+            if [ -f $TOP/vendor/intel/*/${TARGET_DEVICE}/${diffconfig}_diffconfig ]
+            then
+                echo apply $diffconfig
+                cat $TOP/vendor/intel/*/${TARGET_DEVICE}/${diffconfig}_diffconfig >> ${KERNEL_BUILD_DIR}/.config
             fi
         done
         if [ -f user_diffconfig ]
