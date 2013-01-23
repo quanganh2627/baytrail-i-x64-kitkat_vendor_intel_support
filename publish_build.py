@@ -86,25 +86,19 @@ def find_ifwis(basedir):
             board = ifwidir.split("/")[-1]
             fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
             osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
-            if bldx == "merr_vv":
-                xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
+            softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
+            xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
             ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
             ifwiversion = os.path.basename(ifwi)
             ifwiversion = os.path.splitext(ifwiversion)[0]
             print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
             if ifwiversion != "None":
-                if bldx == "merr_vv":
-                    ifwis[board] = dict(ifwiversion = ifwiversion,
-                                        ifwi = ifwi,
-                                        fwdnx = fwdnx,
-                                        osdnx = osdnx,
-                                        xxrdnx = xxrdnx)
-                else:
-                    ifwis[board] = dict(ifwiversion = ifwiversion,
-                                        ifwi = ifwi,
-                                        fwdnx = fwdnx,
-                                        osdnx = osdnx)
-
+                ifwis[board] = dict(ifwiversion = ifwiversion,
+                                    ifwi = ifwi,
+                                    fwdnx = fwdnx,
+                                    osdnx = osdnx,
+                                    softfuse = softfuse,
+                                    xxrdnx = xxrdnx)
     return ifwis
 
 def get_publish_conf():
@@ -275,8 +269,37 @@ def publish_blankphone(basedir, bld, buildnumber):
     for board, args in ifwis.items():
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
-        f.xml_header("system", bld, "1")
-        if bldx == "merr_vv":
+        if args["softfuse"] != "None":
+            f.add_xml_file("flash-softfuse.xml")
+            f.xml_header("system", bld, "1")
+            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml"])
+            f.add_gpflag(0x80000145, xml_filter=["flash.xml"])
+        else:
+            f.xml_header("system", bld, "1")
+            f.add_gpflag(0x80000045, xml_filter=["flash.xml"])
+        if args["softfuse"] != "None" and args["xxrdnx"] != "None":
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("SOFTFUSE", args["softfuse"], args["ifwiversion"]),
+                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
+                                         xml_filter=["flash-softfuse.xml"])
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
+                                         xml_filter=["flash.xml"])
+        elif args["softfuse"] != "None" and args["xxrdnx"] == "None":
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("SOFTFUSE", args["softfuse"], args["ifwiversion"])),
+                                         xml_filter=["flash-softfuse.xml"])
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"])),
+                                         xml_filter=["flash.xml"])
+        elif args["xxrdnx"] != "None":
             f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
