@@ -305,6 +305,8 @@ def publish_modem(basedir, bld):
 
     for board, modem in bldModemDico.iteritems():
         publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + ".bin", modem_dest_dir + modem)
+        publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + "_no_debug.bin", modem_dest_dir + modem, enforce=False)
+
     publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
 def publish_kernel(basedir, bld, bld_variant):
