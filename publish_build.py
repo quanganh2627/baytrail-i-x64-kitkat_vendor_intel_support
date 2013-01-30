@@ -149,6 +149,11 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
     publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
+    if bld_flash_modem:
+        for files in os.listdir(product_out + "/obj/ETC/modem_version_intermediates/"):
+            if files.endswith(".txt"):
+                print "publishing "+files
+                publish_file(locals(),"%(product_out)s/obj/ETC/modem_version_intermediates/"+ files , fastboot_dir, enforce=False)
     if bld_supports_droidboot:
         publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
@@ -336,10 +341,14 @@ def publish_modem(basedir, bld):
     product_out=os.path.join(basedir,"out/target/product",bld)
     modem_out_dir=os.path.join(product_out, "system/etc/firmware/modem/")
     modem_src_dir=os.path.join(product_out, "obj/ETC/modem_intermediates/")
+    modem_version_src_dir=os.path.join(product_out, "obj/ETC/modem_version_intermediates/")
 
     for board, modem in bldModemDico.iteritems():
         publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + ".bin", modem_dest_dir + modem)
         publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + "_debug.bin", modem_dest_dir + modem, enforce=False)
+        for files in os.listdir(modem_version_src_dir):
+            if files.endswith(".txt"):
+                publish_file(locals(), modem_version_src_dir + files , modem_dest_dir + modem)
 
     publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
