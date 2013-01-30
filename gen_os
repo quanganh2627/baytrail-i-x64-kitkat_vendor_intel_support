@@ -209,6 +209,28 @@ class NoneHandler(object):
             raise RuntimeError(err)
 
 
+# XXX: THIS HANDLER SHALL BE REMOVED ONCE XFSTK-STITCHER SUPPORTS platformXML
+#      FOR ALL PLATFORMS
+@Stitch.register('merrifield')
+class MerrifieldHandler(NoneHandler):
+
+    def stitch(self, output_file):
+        output_file = os.path.abspath(output_file)
+
+        self.set_stitch_info(ImageName=output_file,
+                             PlatformType=self.platform_type,
+                             # CAUTION: minus 'p' for platformXML
+                             platformXML=self.stitch_platform_file)
+
+        stitch_cmd = [self.STITCH_PROG, '-c', self.stitch_config_file]
+        # Set the current working directory so that the stitcher can find key
+        # files, which paths are relative to STITCH_HOME to date.
+        retcode, out, err = _run(stitch_cmd, cwd=self.STITCH_HOME)
+        logging.info(out)
+        if retcode:
+            raise RuntimeError(err)
+
+
 @Stitch.register('isu')
 class IsuHandler(NoneHandler):
 
@@ -274,6 +296,11 @@ def main():
                             help="Signing method to use")
     args = cmd_parser.parse_args()
     try:
+        # XXX: THIS TEST SHALL BE REMOVED ONCE XFSTK-STITCHER SUPPORTS
+        #      platformXML FOR ALL PLATFORMS
+        if args.type == "MRFLDA0":
+            args.handler_name = 'merrifield'
+
         stitch_handler = Stitch.get(args.handler_name)
         with stitch_handler(args.input_file, args.definition, args.type) as h:
             h.stitch(args.output_file)
