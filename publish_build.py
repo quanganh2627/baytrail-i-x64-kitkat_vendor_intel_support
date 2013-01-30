@@ -278,6 +278,7 @@ def publish_blankphone(basedir, bld, buildnumber):
     for board, args in ifwis.items():
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
+        f.add_xml_file("flash-factory-production-only.xml")
         if args["softfuse"] != "None":
             f.add_xml_file("flash-softfuse.xml")
             f.xml_header("system", bld, "1")
@@ -323,8 +324,9 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
+        f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash-factory-production-only.xml"])
 
-        for i in "system cache config logs factory spare data".split():
+        for i in "system cache config logs spare data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
         f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
         f.finish()
