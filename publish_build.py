@@ -77,8 +77,7 @@ def find_ifwis(basedir):
                     "redhookbay":"ctp_[pv][rv][23]",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "merr_vv":"merr_vv0",
-                    "bodegabay":"bodegabay*"}[bld_prod]
+                    "merr_vv":"merr_vv0"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
@@ -195,9 +194,20 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
             # if we have different modems, declare them in their respective flash file
             if len(bldModemDico) > 1:
                 f.add_file("MODEM", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s.bin" %locals(), buildnumber,xml_filter=["flash-%s-%s.xml"%(board,modem)])
+                modemsrc="%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin"
+                modemsrcl=glob.glob(modemsrc)
+                if len(modemsrcl) == 1:
+                     f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" %locals(), buildnumber,xml_filter=["flash-%s-%s.xml"%(board,modem)])
             # if not, declare it in the flash.xml file
             else:
                 f.add_file("MODEM", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
+		modem_src_dir=os.path.join(product_out, "obj/ETC/modem_intermediates/")
+                modemsrc=modem_src_dir + "/radio_firmware_" + modem +"_debug.bin"
+                modemsrcl=glob.glob(modemsrc)
+                print modemsrc + " len %d"%(len(modemsrcl))
+                if len(modemsrcl) == 1:
+                     f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
+
         f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
@@ -306,7 +316,7 @@ def publish_modem(basedir, bld):
 
     for board, modem in bldModemDico.iteritems():
         publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + ".bin", modem_dest_dir + modem)
-        publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + "_no_debug.bin", modem_dest_dir + modem, enforce=False)
+        publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + "_debug.bin", modem_dest_dir + modem, enforce=False)
 
     publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
