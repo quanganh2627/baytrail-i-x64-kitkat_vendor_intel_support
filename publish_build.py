@@ -77,7 +77,8 @@ def find_ifwis(basedir):
                     "redhookbay":"ctp_[pv][rv][23]",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "merr_vv":"merr_vv0"}[bld_prod]
+                    "merr_vv":"merr_vv0",
+                    "bodegabay":"bodegabay*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
