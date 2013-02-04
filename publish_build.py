@@ -69,8 +69,8 @@ def find_ifwis(basedir):
     ifwis = {}
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
-        ifwiglob = {"mfld_pr2":"mfld_pr*",
-                    "mfld_gi":"mfld_gi*",
+        ifwiglob = {"blackbay":"mfld_pr*",
+                    "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay",
@@ -124,7 +124,7 @@ def do_we_publish_extra_build(bld_variant,extra_build):
     else:
         return True
 
-def publish_build(basedir, bld, bld_variant, buildnumber):
+def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
@@ -139,11 +139,11 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out=os.path.join(basedir,"out/target/product",bld)
-    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
+    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_prod)
     flashfile_dir=os.path.join(basedir,bldpub,"flash_files")
-    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_variant)
-    otafile = "%(bld)s-ota-%(buildnumber)s.zip"%locals()
-    targetfile = "%(bld)s-target_files-%(buildnumber)s.zip"%locals()
+    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_prod)
+    otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip"%locals()
+    targetfile = "%(bld_prod)s-target_files-%(buildnumber)s.zip"%locals()
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
@@ -421,4 +421,4 @@ if __name__ == '__main__':
         elif bld_variant == "modem":
             publish_modem(basedir, bld)
         elif do_we_publish_bld_variant(bld_variant):
-            publish_build(basedir, bld, bld_variant, buildnumber)
+            publish_build(basedir, bld, bld_variant, bld_prod, buildnumber)
