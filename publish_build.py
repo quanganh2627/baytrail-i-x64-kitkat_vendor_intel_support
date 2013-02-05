@@ -351,6 +351,22 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
         f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
 
+
+
+        fru_configs = get_build_options(key='FRU_CONFIGS')
+        if os.path.exists(fru_configs):
+            f.add_xml_file("flash-fru.xml")
+            fru = ["flash-fru.xml"]
+            f.xml_header("fastboot", bld, "1", xml_filter=fru)
+            token_filename = "token.bin"
+            stub_token=os.path.join(product_out, token_filename)
+            os.system("touch " + stub_token)
+            f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
+            f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
+            f.add_command("fastboot oem fru set $fru_value" , "Flash FRU value on device", xml_filter=fru)
+            f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
+            f.add_raw_file(fru_configs, xml_filter=fru)
+
         # Creation of a "flash IFWI only" xml
         f.add_xml_file("flash-IFWI-only.xml")
         f.xml_header("system", bld, "1",xml_filter="flash-IFWI-only.xml")
