@@ -114,3 +114,19 @@ class FlashFile:
             os.system("zip -j %(outzip)s %(fn)s"%locals())
         for flashxml in flashxmls:
             os.unlink(flashxml)
+
+    """
+    Role: append content of a specified file
+          (which is asserted to be in xml format) into the xml file
+    """
+    def add_raw_file_in_xml(self, filename, xml):
+        fd=file(filename)
+        xml+="\n"
+        xml+=fd.read()
+        fd.close()
+        return xml
+
+    def add_raw_file(self, filename, xml_filter=[]):
+        def f(xml):
+            return self.add_raw_file_in_xml(filename, xml)
+        self.apply_f_to_all_valid_xml(f,xml_filter)
