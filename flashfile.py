@@ -34,6 +34,18 @@ class FlashFile:
             return self.xml_header_in_xml(flashtype,platform,flashversion,xml)
         self.apply_f_to_all_valid_xml(f,xml_filter)
 
+    def add_gpflag_in_xml(self, gpflag, xml):
+        xml += """
+    <gpflag>
+        <value>0x%(gpflag)x</value>
+    </gpflag>"""%locals()
+        return xml
+
+    def add_gpflag(self, gpflag=0x80000045, xml_filter=[]):
+        def f(xml):
+            return self.add_gpflag_in_xml(gpflag, xml)
+        self.apply_f_to_all_valid_xml(f, xml_filter)
+
     def add_code_group_in_xml(self, type, files, xml):
         xml += '\n        <code_group name="%(type)s">'%locals()
         for filetype, filename, version in files:
@@ -82,9 +94,6 @@ class FlashFile:
         for (flashname,xml) in self.xml.items():
             if xml != "":
                 xml += """
-    <gpflag>
-        <value>0x80000045</value>
-    </gpflag>
 </flashfile>"""
                 flashxml = os.path.join(os.path.dirname(self.filename),flashname)
                 flashxmls.append(flashxml)

@@ -2,8 +2,8 @@
 # build nand boot recovery image for android
 
 TEMP=`getopt \
-         -o c:r:k:o:p:t: \
-         --long cmdline:,ramdisk:,kernel:,output:,product:,type: \
+         -o c:r:k:o:p:t:s: \
+         --long cmdline:,ramdisk:,kernel:,output:,product:,type:,sign-with: \
          -n '$0' \
          --  "$@"`
 
@@ -16,6 +16,7 @@ while true ; do
         --kernel) BZIMAGE=$2; shift 2;;
         --output) OUT=$2; shift 2;;
         --product) BOARD=$2; shift 2;;
+        --sign-with) SIGN_WITH=${2,,}; shift 2;;
         --type) TYPE=$2; shift 2;;
         --) shift ; break ;;
     esac
@@ -29,9 +30,12 @@ case "$TYPE" in
     fastboot) IMGNAME="fastboot";;
     droidboot) IMGNAME="droidboot";;
 esac
-if [ -z $IMGNAME ]; then
-    echo "error: image type is not one of [mos|recovery]"
+if [ -z "$IMGNAME" ]; then
+    echo "Error: image type shall be one of: mos,recovery,combined,fastboot,droidboot"
     exit 1
+fi
+if [ -z "$SIGN_WITH" ]; then
+    SIGN_WITH="none"
 fi
 
 UNSIGNED_OUT=${TARG}/${IMGNAME}.unsigned
@@ -105,26 +109,26 @@ fi
 TOP=`pwd`
 # stitch binary
 
-UPPER_TYPE=`echo $TYPE|tr '[:lower:]' '[:upper:]'`
+UPPER_TYPE=${TYPE^^}
 TMPFILE=`mktemp /tmp/gen-os.tmp.XXX`
-GEN_OS_APP="device/intel/PRIVATE/xfstk-stitcher/gen-os.sh"
-GEN_OS_APP_ARGS="--input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --plt_type $PLT_TYPE"
 
-./${GEN_OS_APP} ${GEN_OS_APP_ARGS} 2>${TMPFILE}
+GEN_OS=vendor/intel/support/gen_os
+GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --platform-type $PLT_TYPE --sign-with $SIGN_WITH"
+$GEN_OS_CMD 2>${TMPFILE}
 if [ $? -ne 0 ]; then
-	echo -e  "./${GEN_OS_APP} ${GEN_OS_APP_ARGS}: error\n$(cat ${TMPFILE})" >&2
+	echo -e "$GEN_OS_CMD: error\n$(cat ${TMPFILE})" >&2
 	rm -f ${TMPFILE}
 	exit 1
 fi
 rm -f ${TMPFILE}
 
-# only generate POS version for those types of images
 case "$TYPE" in
     combined|fastboot|droidboot)
-            GEN_OS_APP_ARGS="--input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --plt_type $PLT_TYPE"
-            ./${GEN_OS_APP} ${GEN_OS_APP_ARGS} 2>${TMPFILE}
+        # Only generate POS version for these image types.
+        GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --platform-type $PLT_TYPE --sign-with $SIGN_WITH"
+        $GEN_OS_CMD 2>$TMPFILE
 			if [ $? -ne 0 ]; then
-				echo -e  "./${GEN_OS_APP} ${GEN_OS_APP_ARGS}: error\n$(cat ${TMPFILE})" >&2
+				echo -e  "$GEN_OS_CMD: error\n$(cat $TMPFILE)" >&2
 				rm -f ${TMPFILE}
 				exit 1
 			fi
