@@ -129,6 +129,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
+    bld_skip_nvm = get_build_options(key='SKIP_NVM', key_type='boolean')
     publish_ota_target_files = do_we_publish_extra_build(bld_variant,'ota_target_files')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
     publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
@@ -148,7 +149,8 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
-    publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
+    if bld_skip_nvm == False:
+       publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
     if bld_flash_modem:
         for files in os.listdir(product_out + "/obj/ETC/modem_version_intermediates/"):
             if files.endswith(".txt"):
@@ -207,7 +209,8 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
                 if len(modemsrcl) == 1:
                      f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
 
-        f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
+        if bld_skip_nvm == False:
+           f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir,"droidboot.img"), buildnumber)
@@ -228,8 +231,9 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         # if not, insert flash command in the flash.xml file
         else:
             f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
-        f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
-        f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
+        if bld_skip_nvm == False:
+           f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
+           f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
 
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
