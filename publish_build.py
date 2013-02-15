@@ -278,12 +278,15 @@ def publish_blankphone(basedir, bld, buildnumber):
     for board, args in ifwis.items():
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
-        f.add_xml_file("flash-factory-production-only.xml")
+        f.add_xml_file("flash-noEraseFactory.xml")
+
         if args["softfuse"] != "None":
             f.add_xml_file("flash-softfuse.xml")
+            f.add_xml_file("flash-softfuse-noEraseFactory.xml")
+
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml"])
-            f.add_gpflag(0x80000145, xml_filter=["flash.xml"])
+            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml","flash-softfuse-noEraseFactory.xml"])
+            f.add_gpflag(0x80000145, xml_filter=["flash.xml","flash-noEraseFactory.xml"])
         else:
             f.xml_header("system", bld, "1")
             f.add_gpflag(0x80000045, xml_filter=["flash.xml"])
@@ -293,22 +296,22 @@ def publish_blankphone(basedir, bld, buildnumber):
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("SOFTFUSE", args["softfuse"], args["ifwiversion"]),
                                         ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash-softfuse.xml"])
+                                         xml_filter=["flash-softfuse.xml","flash-softfuse-noEraseFactory.xml"])
             f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash.xml"])
+                                         xml_filter=["flash.xml","flash-noEraseFactory.xml"])
         elif args["softfuse"] != "None" and args["xxrdnx"] == "None":
             f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("SOFTFUSE", args["softfuse"], args["ifwiversion"])),
-                                         xml_filter=["flash-softfuse.xml"])
+                                         xml_filter=["flash-softfuse.xml","flash-softfuse-noEraseFactory.xml"])
             f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash.xml"])
+                                         xml_filter=["flash.xml","flash-noEraseFactory.xml"])
         elif args["xxrdnx"] != "None":
             f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
@@ -324,7 +327,10 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
-        f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash-factory-production-only.xml"])
+        if args["softfuse"] != "None":
+            f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash.xml","flash-softfuse.xml"])
+        else:
+            f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash.xml"])
 
         for i in "system cache config logs spare data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
