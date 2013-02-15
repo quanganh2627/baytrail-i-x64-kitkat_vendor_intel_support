@@ -77,7 +77,8 @@ def find_ifwis(basedir):
                     "redhookbay":"ctp_[pv][rv][23]",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "merr_vv":"merr_vv0"}[bld_prod]
+                    "merr_vv":"merr_vv0",
+                    "bodegabay":"bodegabay*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
@@ -85,25 +86,19 @@ def find_ifwis(basedir):
             board = ifwidir.split("/")[-1]
             fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
             osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
-            if bldx == "merr_vv":
-                xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
+            softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
+            xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
             ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
             ifwiversion = os.path.basename(ifwi)
             ifwiversion = os.path.splitext(ifwiversion)[0]
             print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
             if ifwiversion != "None":
-                if bldx == "merr_vv":
-                    ifwis[board] = dict(ifwiversion = ifwiversion,
-                                        ifwi = ifwi,
-                                        fwdnx = fwdnx,
-                                        osdnx = osdnx,
-                                        xxrdnx = xxrdnx)
-                else:
-                    ifwis[board] = dict(ifwiversion = ifwiversion,
-                                        ifwi = ifwi,
-                                        fwdnx = fwdnx,
-                                        osdnx = osdnx)
-
+                ifwis[board] = dict(ifwiversion = ifwiversion,
+                                    ifwi = ifwi,
+                                    fwdnx = fwdnx,
+                                    osdnx = osdnx,
+                                    softfuse = softfuse,
+                                    xxrdnx = xxrdnx)
     return ifwis
 
 def get_publish_conf():
@@ -135,6 +130,7 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bldModemDicosrc= get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
+    bld_skip_nvm = get_build_options(key='SKIP_NVM', key_type='boolean')
     publish_ota_target_files = do_we_publish_extra_build(bld_variant,'ota_target_files')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
     publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
@@ -154,7 +150,13 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
-    publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
+    if bld_skip_nvm == False:
+       publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
+    if bld_flash_modem:
+        for files in os.listdir(product_out + "/obj/ETC/modem_version_intermediates/"):
+            if files.endswith(".txt"):
+                print "publishing "+files
+                publish_file(locals(),"%(product_out)s/obj/ETC/modem_version_intermediates/"+ files , fastboot_dir, enforce=False)
     if bld_supports_droidboot:
         publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
@@ -208,7 +210,8 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
                 if len(modemsrcl) == 1:
                      f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
 
-        f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
+        if bld_skip_nvm == False:
+           f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir,"droidboot.img"), buildnumber)
@@ -229,8 +232,9 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         # if not, insert flash command in the flash.xml file
         else:
             f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
-        f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
-        f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
+        if bld_skip_nvm == False:
+           f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
+           f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
 
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
@@ -274,8 +278,38 @@ def publish_blankphone(basedir, bld, buildnumber):
     for board, args in ifwis.items():
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
-        f.xml_header("system", bld, "1")
-        if bldx == "merr_vv":
+        f.add_xml_file("flash-factory-production-only.xml")
+        if args["softfuse"] != "None":
+            f.add_xml_file("flash-softfuse.xml")
+            f.xml_header("system", bld, "1")
+            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml"])
+            f.add_gpflag(0x80000145, xml_filter=["flash.xml"])
+        else:
+            f.xml_header("system", bld, "1")
+            f.add_gpflag(0x80000045, xml_filter=["flash.xml"])
+        if args["softfuse"] != "None" and args["xxrdnx"] != "None":
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("SOFTFUSE", args["softfuse"], args["ifwiversion"]),
+                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
+                                         xml_filter=["flash-softfuse.xml"])
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
+                                         xml_filter=["flash.xml"])
+        elif args["softfuse"] != "None" and args["xxrdnx"] == "None":
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
+                                        ("SOFTFUSE", args["softfuse"], args["ifwiversion"])),
+                                         xml_filter=["flash-softfuse.xml"])
+            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
+                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                        ("OS_DNX", args["osdnx"], args["ifwiversion"])),
+                                         xml_filter=["flash.xml"])
+        elif args["xxrdnx"] != "None":
             f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
@@ -290,8 +324,9 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
+        f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash-factory-production-only.xml"])
 
-        for i in "system cache config logs factory spare data".split():
+        for i in "system cache config logs spare data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
         f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
         f.finish()
@@ -313,10 +348,14 @@ def publish_modem(basedir, bld):
     product_out=os.path.join(basedir,"out/target/product",bld)
     modem_out_dir=os.path.join(product_out, "system/etc/firmware/modem/")
     modem_src_dir=os.path.join(product_out, "obj/ETC/modem_intermediates/")
+    modem_version_src_dir=os.path.join(product_out, "obj/ETC/modem_version_intermediates/")
 
     for board, modem in bldModemDico.iteritems():
         publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + ".bin", modem_dest_dir + modem)
         publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + "_debug.bin", modem_dest_dir + modem, enforce=False)
+        for files in os.listdir(modem_version_src_dir):
+            if files.endswith(".txt"):
+                publish_file(locals(), modem_version_src_dir + files , modem_dest_dir + modem)
 
     publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 

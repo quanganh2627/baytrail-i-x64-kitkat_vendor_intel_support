@@ -40,7 +40,7 @@ Features:
 (6)	Add optional commit number/tag support. It can allow the users
 	to append optional commit number/tag/branch to the end of the command.
 	It is useful to the project created by Intel. For example , the project
-	hardware/intel/linux-2.6 is newly created project, compared with the
+	$\(KERNEL_SRC_DIR\) is newly created project, compared with the
 	original Froyo code base. If we use command below, you will get a whole
 	linux-2.6 copied:
 	$ create-patch.sh -b1 android-2.2_r1 -m2 build-20100904-manifest.xml -o
@@ -48,7 +48,7 @@ Features:
 
 	If you want to only see the kernel changes since v2.6.31.6, you can find
 	out the commit number of v2.6.31.6  first:
-	$ cd hardware/intel/linux-2.6
+	$ cd $\(KERNEL_SRC_DIR\)
 	$ git log --pretty=oneline
 	120f68c426e746771e8c09736c0f753822ff3f52 Linux 2.6.31.6
 
