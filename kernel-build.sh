@@ -230,6 +230,28 @@ make_module_external() {
     cd ${TOP}
 }
 
+run_depmod() {
+
+    local MODULE_SRC=${PRODUCT_OUT}/kernel_modules/
+    local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
+    local VERSION_TAG=$(echo $MODULE_SRC/lib/modules/*/ | awk -F'/' '{print $(NF-1)}')
+
+    tmp_dir=$(mktemp -d ${TMPDIR:-/tmp}/depmod.XXXXXX)
+    tmp_mod_dir=${tmp_dir}/lib/modules/$VERSION_TAG
+
+    mkdir -p "$tmp_mod_dir"
+
+    find ${MODULE_DEST} -name *.ko -exec cp -f {} ${tmp_mod_dir} \;
+    exit_on_error $? quiet
+
+    /sbin/depmod -b $tmp_dir $VERSION_TAG
+
+    find ${tmp_mod_dir} -name modules.* -exec cp -f {} ${MODULE_DEST} \;
+    exit_on_error $? quiet
+
+   rm -fr "$tmp_dir"
+}
+
 # Build a kernel module from source that is not in the kernel build directory
 #   Launch the build directly from the module directory
 make_module_external_in_directory() {
@@ -406,6 +428,7 @@ main() {
         make_kernel ${TARGET_DEVICE}
         exit_on_error $?
     fi
+    run_depmod
     exit 0
 }
 
