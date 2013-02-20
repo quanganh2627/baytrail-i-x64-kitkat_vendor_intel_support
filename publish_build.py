@@ -75,15 +75,20 @@ def find_ifwis(basedir):
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay",
                     "redhookbay":"ctp_[pv][rv][23]",
-                    "ctpscaleht":"ctp_vv2/CTPSCALEHT",
-                    "ctpscalelt":"ctp_vv2/CTPSCALELT",
+                    "ctpscaleht":"ctp_vv[23]/CTPSCALEHT",
+                    "ctpscalelt":"ctp_vv[23]/CTPSCALELT",
                     "merr_vv":"merr_vv0",
                     "bodegabay":"bodegabay*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
         for ifwidir in glob.glob(gl):
-            board = ifwidir.split("/")[-1]
+            # When the ifwi directory is placed within a subdir, we shall
+            # take the subdir in the board name
+            nameindex = 0 - ifwiglob.count('/') - 1
+            board = ifwidir.split("/")[nameindex]
+            for idx in range(nameindex+1, 0):
+                board = board + '_' + ifwidir.split("/")[idx]
             fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
             osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
             softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
