@@ -103,6 +103,9 @@ init_variables() {
     baytrail)
         _soc_type="byt"
         ;;
+    moorefield)
+        _soc_type="moor"
+        ;;
     *)
         echo "Unknown platform specified \"${TARGET_BOARD_PLATFORM}\""
         exit_on_error 2

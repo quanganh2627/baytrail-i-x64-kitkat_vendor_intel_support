@@ -55,6 +55,7 @@ if [[   "$BOARD" == "mfld_pr2" \
      || "$BOARD" == "mrfl_sle" \
      || "$BOARD" == "saltbay" \
      || "$BOARD" == "bodegabay" \
+     || "$BOARD" == "moor_hvp" \
    ]]; then
             SILICON=1;
     else
@@ -66,6 +67,7 @@ if [[   "$BOARD" == "mrfl_vp" \
      || "$BOARD" == "mrfl_sle" \
      || "$BOARD" == "saltbay" \
      || "$BOARD" == "bodegabay" \
+     || "$BOARD" == "moor_hvp" \
    ]]; then
             SPI_FLAG=1;
             BOOTSTUB=${BOOTSTUB}_mrfl
