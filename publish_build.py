@@ -75,12 +75,12 @@ def find_ifwis(basedir):
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
-        ifwiglob = {"blackbay":"mfld_pr*",
+        ifwiglobs = {"blackbay":"mfld_pr*",
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
-                    "victoriabay":"victoriabay",
-                    "redhookbay":"ctp_[pv][rv][23]",
+                    "victoriabay":"victoriabay vb_pr1",
+                    "redhookbay":"ctp_pr[23] ctp_vv[23]",
                     "ctpscaleht":"ctp_vv[23]/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv[23]/CTPSCALELT",
                     "merr_vv":"merr_vv0",
@@ -88,29 +88,30 @@ def find_ifwis(basedir):
                     "baylake":"baylake*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
-        gl = os.path.join(basedir, ifwi_base_dir, ifwiglob)
-        for ifwidir in glob.glob(gl):
-            # When the ifwi directory is placed within a subdir, we shall
-            # take the subdir in the board name
-            nameindex = 0 - ifwiglob.count('/') - 1
-            board = ifwidir.split("/")[nameindex]
-            for idx in range(nameindex+1, 0):
-                board = board + '_' + ifwidir.split("/")[idx]
-            fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
-            osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
-            softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
-            xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
-            ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
-            ifwiversion = os.path.basename(ifwi)
-            ifwiversion = os.path.splitext(ifwiversion)[0]
-            print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
-            if ifwiversion != "None":
-                ifwis[board] = dict(ifwiversion = ifwiversion,
-                                    ifwi = ifwi,
-                                    fwdnx = fwdnx,
-                                    osdnx = osdnx,
-                                    softfuse = softfuse,
-                                    xxrdnx = xxrdnx)
+        for ifwiglob in ifwiglobs.split(" "):
+            gl = os.path.join(basedir, ifwi_base_dir,ifwiglob)
+            for ifwidir in glob.glob(gl):
+                # When the ifwi directory is placed within a subdir, we shall
+                # take the subdir in the board name
+                nameindex = 0 - ifwiglob.count('/') - 1
+                board = ifwidir.split("/")[nameindex]
+                for idx in range(nameindex+1, 0):
+                    board = board + '_' + ifwidir.split("/")[idx]
+                fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
+                osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
+                softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
+                xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
+                ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
+                ifwiversion = os.path.basename(ifwi)
+                ifwiversion = os.path.splitext(ifwiversion)[0]
+                print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
+                if ifwiversion != "None":
+                    ifwis[board] = dict(ifwiversion = ifwiversion,
+                                        ifwi = ifwi,
+                                        fwdnx = fwdnx,
+                                        osdnx = osdnx,
+                                        softfuse = softfuse,
+                                        xxrdnx = xxrdnx)
     return ifwis
 
 def get_publish_conf():
