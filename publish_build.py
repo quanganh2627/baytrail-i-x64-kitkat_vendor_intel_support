@@ -150,9 +150,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out=os.path.join(basedir,"out/target/product",bld)
-    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_prod)
+    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
     flashfile_dir=os.path.join(basedir,bldpub,"flash_files")
-    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_prod)
+    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_variant)
     otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip"%locals()
     targetfile = "%(bld_prod)s-target_files-%(buildnumber)s.zip"%locals()
 
