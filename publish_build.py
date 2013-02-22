@@ -88,6 +88,7 @@ def find_ifwis(basedir):
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "merr_vv":"merr_vv0",
+                    "saltbay":"merr_vv0",
                     "bodegabay":"bodegabay*",
                     "baylake":"baylake*",
                     "baylake_iafw":"baylake*"}[bld_prod]
