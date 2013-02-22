@@ -69,8 +69,8 @@ def find_ifwis(basedir):
     ifwis = {}
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
-        ifwiglob = {"mfld_pr2":"mfld_pr*",
-                    "mfld_gi":"mfld_gi*",
+        ifwiglob = {"blackbay":"mfld_pr*",
+                    "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay",
@@ -124,7 +124,7 @@ def do_we_publish_extra_build(bld_variant,extra_build):
     else:
         return True
 
-def publish_build(basedir, bld, bld_variant, buildnumber):
+def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
@@ -139,11 +139,11 @@ def publish_build(basedir, bld, bld_variant, buildnumber):
         bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out=os.path.join(basedir,"out/target/product",bld)
-    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
+    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_prod)
     flashfile_dir=os.path.join(basedir,bldpub,"flash_files")
-    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_variant)
-    otafile = "%(bld)s-ota-%(buildnumber)s.zip"%locals()
-    targetfile = "%(bld)s-target_files-%(buildnumber)s.zip"%locals()
+    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_prod)
+    otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip"%locals()
+    targetfile = "%(bld_prod)s-target_files-%(buildnumber)s.zip"%locals()
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
@@ -278,12 +278,15 @@ def publish_blankphone(basedir, bld, buildnumber):
     for board, args in ifwis.items():
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
-        f.add_xml_file("flash-factory-production-only.xml")
+        f.add_xml_file("flash-noEraseFactory.xml")
+
         if args["softfuse"] != "None":
             f.add_xml_file("flash-softfuse.xml")
+            f.add_xml_file("flash-softfuse-noEraseFactory.xml")
+
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml"])
-            f.add_gpflag(0x80000145, xml_filter=["flash.xml"])
+            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml","flash-softfuse-noEraseFactory.xml"])
+            f.add_gpflag(0x80000145, xml_filter=["flash.xml","flash-noEraseFactory.xml"])
         else:
             f.xml_header("system", bld, "1")
             f.add_gpflag(0x80000045, xml_filter=["flash.xml"])
@@ -293,22 +296,22 @@ def publish_blankphone(basedir, bld, buildnumber):
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("SOFTFUSE", args["softfuse"], args["ifwiversion"]),
                                         ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash-softfuse.xml"])
+                                         xml_filter=["flash-softfuse.xml","flash-softfuse-noEraseFactory.xml"])
             f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash.xml"])
+                                         xml_filter=["flash.xml","flash-noEraseFactory.xml"])
         elif args["softfuse"] != "None" and args["xxrdnx"] == "None":
             f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"]),
                                         ("SOFTFUSE", args["softfuse"], args["ifwiversion"])),
-                                         xml_filter=["flash-softfuse.xml"])
+                                         xml_filter=["flash-softfuse.xml","flash-softfuse-noEraseFactory.xml"])
             f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
                                         ("OS_DNX", args["osdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash.xml"])
+                                         xml_filter=["flash.xml","flash-noEraseFactory.xml"])
         elif args["xxrdnx"] != "None":
             f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
                                         ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
@@ -324,7 +327,10 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
-        f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash-factory-production-only.xml"])
+        if args["softfuse"] != "None":
+            f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash.xml","flash-softfuse.xml"])
+        else:
+            f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash.xml"])
 
         for i in "system cache config logs spare data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
@@ -421,4 +427,4 @@ if __name__ == '__main__':
         elif bld_variant == "modem":
             publish_modem(basedir, bld)
         elif do_we_publish_bld_variant(bld_variant):
-            publish_build(basedir, bld, bld_variant, buildnumber)
+            publish_build(basedir, bld, bld_variant, bld_prod, buildnumber)
