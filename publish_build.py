@@ -84,7 +84,8 @@ def find_ifwis(basedir):
                     "ctpscaleht":"ctp_vv[23]/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv[23]/CTPSCALELT",
                     "merr_vv":"merr_vv0",
-                    "bodegabay":"bodegabay*"}[bld_prod]
+                    "bodegabay":"bodegabay*",
+                    "baylake":"baylake*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         gl = os.path.join(basedir, ifwi_base_dir, ifwiglob)
