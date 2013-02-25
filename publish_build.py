@@ -299,47 +299,40 @@ def publish_blankphone(basedir, bld, buildnumber):
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
         f.add_xml_file("flash-EraseFactory.xml")
 
+        default_files = f.xml.keys()
+
         if args["softfuse"] != "None":
-            f.add_xml_file("flash-softfuse.xml")
-            f.add_xml_file("flash-softfuse-EraseFactory.xml")
+            softfuse_files = ["flash-softfuse.xml", "flash-softfuse-EraseFactory.xml"]
+            for softfuse_f in softfuse_files:
+                f.add_xml_file(softfuse_f)
 
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000245, xml_filter=["flash-softfuse.xml","flash-softfuse-EraseFactory.xml"])
-            f.add_gpflag(0x80000145, xml_filter=["flash.xml","flash-EraseFactory.xml"])
+            f.add_gpflag(0x80000245, xml_filter=softfuse_files)
+            f.add_gpflag(0x80000145, xml_filter=default_files)
         else:
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000045, xml_filter=["flash.xml"])
-        if args["softfuse"] != "None" and args["xxrdnx"] != "None":
-            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
-                                        ("SOFTFUSE", args["softfuse"], args["ifwiversion"]),
-                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash-softfuse.xml","flash-softfuse-EraseFactory.xml"])
-            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
-                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash.xml","flash-EraseFactory.xml"])
-        elif args["softfuse"] != "None" and args["xxrdnx"] == "None":
-            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
-                                        ("SOFTFUSE", args["softfuse"], args["ifwiversion"])),
-                                         xml_filter=["flash-softfuse.xml","flash-softfuse-EraseFactory.xml"])
-            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                        ("OS_DNX", args["osdnx"], args["ifwiversion"])),
-                                         xml_filter=["flash.xml","flash-EraseFactory.xml"])
-        elif args["xxrdnx"] != "None":
-            f.add_codegroup("FIRWMARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                        ("OS_DNX", args["osdnx"], args["ifwiversion"]),
-                                        ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])))
-        else:
-            f.add_codegroup("FIRMWARE",(("IFWI", args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                                        ("OS_DNX", args["osdnx"], args["ifwiversion"])))
+            f.add_gpflag(0x80000045, xml_filter=default_files)
+
+        default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
+                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                        ("OS_DNX", args["osdnx"], args["ifwiversion"]))
+
+        ifwis_dict = {}
+        for xml_file in f.xml.keys():
+            ifwis_dict[xml_file] = default_ifwi
+
+        if args["xxrdnx"] != "None":
+            xxrdnx = ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])
+            for xml_file in f.xml.keys():
+                ifwis_dict[xml_file] += (xxrdnx,)
+
+        if args["softfuse"] != "None":
+            softfuse = ("SOFTFUSE", args["softfuse"], args["ifwiversion"])
+            for xml_file in softfuse_files:
+                ifwis_dict[xml_file] += (softfuse,)
+
+        for xml_file in f.xml.keys():
+            f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter=[xml_file])
 
         f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
 
@@ -347,10 +340,10 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
-        if args["softfuse"] != "None":
-            f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash-EraseFactory.xml","flash-softfuse-EraseFactory.xml"])
-        else:
-            f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=["flash-EraseFactory.xml"])
+
+        tag = "-EraseFactory"
+        xml_tag_list = [i for i in f.xml.keys() if tag in i]
+        f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
 
         for i in "system cache config logs spare data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
