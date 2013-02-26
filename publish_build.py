@@ -17,9 +17,13 @@ def get_link_path(gl):
     if os.path.islink(gl):
         print "os path real path = ",os.path.realpath(gl)
         return os.path.realpath(gl)
+    elif os.path.exists(gl):
+        print "No LINK but file exist for %s in directory %s"%(os.path.basename(gl),os.path.dirname(gl))
+        return os.path.realpath(gl)
     else:
-        print "No LINK for %s in directory %s"%(os.path.basename(gl),os.path.dirname(gl))
+        print "No file for %s in directory %s"%(os.path.basename(gl),os.path.dirname(gl))
         return "None"
+
 
 def get_build_options(key, key_type=None, default_value=None):
     try:
@@ -407,6 +411,7 @@ def publish_external(basedir, bld, bld_variant):
     white_list = re.compile("(%s)"%("|".join(white_list)))
     if os.path.exists(prebuilts_out):
         z = zipfile.ZipFile(prebuilts_pub, "w")
+        # automatic prebuilt publication
         for root, dirs, files in os.walk(prebuilts_out):
             for f in files:
                 filename = os.path.join(root, f)
@@ -414,6 +419,8 @@ def publish_external(basedir, bld, bld_variant):
                 if white_list.search(arcname):
                     z.write(filename, arcname)
                     print arcname
+
+        # IFWI publication
         ifwis = find_ifwis(basedir)
         def write_ifwi_bin(board, fn, arcname):
             arcname = os.path.join(ifwi_external_dir, board, arcname)
@@ -431,6 +438,7 @@ def publish_external(basedir, bld, bld_variant):
             print >>sys.stderr, possibilities
             sys.exit(1)
         for k, v in ifwis.items():
+            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
             v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
                                           [("PROD", "*CRAK_PROD.bin"),
                                            ("..", "PROD", "*CRAK_PROD.bin")]
@@ -440,7 +448,7 @@ def publish_external(basedir, bld, bld_variant):
                                                 ("..", "..", "..", "Android.mk")])
             write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
             write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
-            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
+            write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
             write_ifwi_bin(k, v["androidmk"], "Android.mk")
         commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
                                             [("..", "..", "..","common","Android.mk"),
