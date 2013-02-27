@@ -89,7 +89,8 @@ def find_ifwis(basedir):
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "merr_vv":"merr_vv0",
                     "bodegabay":"bodegabay*",
-                    "baylake":"baylake*"}[bld_prod]
+                    "baylake":"baylake*",
+                    "baylake_iafw":"baylake*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         for ifwiglob in ifwiglobs.split(" "):
