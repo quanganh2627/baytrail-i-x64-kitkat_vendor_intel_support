@@ -8,9 +8,7 @@ import zipfile
 import re
 from flashfile import FlashFile
 
-bldpub = None
-ifwi_external_dir = "prebuilts/intel/device/intel/prebuilts/fw/ifwi"
-ifwi_private_dir = "device/intel/PRIVATE/fw/ifwi"
+global bldpub
 
 def get_link_path(gl):
     print "gl=",gl
@@ -69,10 +67,6 @@ def find_ifwis(basedir):
     """
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     ifwis = {}
-    if os.path.exists(os.path.join(basedir, ifwi_private_dir)):
-        ifwi_base_dir = ifwi_private_dir
-    else:
-        ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
         ifwiglob = {"blackbay":"mfld_pr*",
@@ -87,7 +81,7 @@ def find_ifwis(basedir):
                     "bodegabay":"bodegabay*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
-        gl = os.path.join(basedir, ifwi_base_dir, ifwiglob)
+        gl = os.path.join(basedir, "device/intel/PRIVATE/fw/ifwi",ifwiglob)
         for ifwidir in glob.glob(gl):
             board = ifwidir.split("/")[-1]
             fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
@@ -145,9 +139,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out=os.path.join(basedir,"out/target/product",bld)
-    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
+    fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_prod)
     flashfile_dir=os.path.join(basedir,bldpub,"flash_files")
-    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_variant)
+    ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_prod)
     otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip"%locals()
     targetfile = "%(bld_prod)s-target_files-%(buildnumber)s.zip"%locals()
 
@@ -382,7 +376,7 @@ def publish_kernel(basedir, bld, bld_variant):
 def publish_external(basedir, bld, bld_variant):
     os.system("mkdir -p "+os.path.join(basedir,bldpub))
     product_out=os.path.join(basedir,"out/target/product",bld)
-    prebuilts_out = os.path.join(product_out,"prebuilts/intel")
+    prebuilts_out = os.path.join(product_out,"prebuilts")
     prebuilts_pub = os.path.join(basedir,bldpub,"prebuilts.zip")
     white_list_fn = ".repo/manifests/external_binaries_whitelist"
     white_list = []
@@ -407,38 +401,6 @@ def publish_external(basedir, bld, bld_variant):
                 if white_list.search(arcname):
                     z.write(filename, arcname)
                     print arcname
-        ifwis = find_ifwis(basedir)
-        def write_ifwi_bin(board, fn, arcname):
-            arcname = os.path.join(ifwi_external_dir, board, arcname)
-            print fn.replace(basedir,""),"->", arcname
-            z.write(fn, arcname)
-        def find_sibling_file(fn, _type, possibilities):
-            dn = os.path.dirname(fn)
-            for glform in possibilities:
-                glform = os.path.join(dn, *glform)
-                gl = glob.glob(glform)
-                if len(gl)==1:
-                    return gl[0]
-            print >>sys.stderr, "unable to find %s for external release"%(_type)
-            print >>sys.stderr, "please put the file in:"
-            print >>sys.stderr, possibilities
-            sys.exit(1)
-        for k, v in ifwis.items():
-            v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
-                                          [("PROD", "*CRAK_PROD.bin"),
-                                           ("..", "PROD", "*CRAK_PROD.bin")]
-                                          )
-            v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                               [("..", "..", "Android.mk"),
-                                                ("..", "..", "..", "Android.mk")])
-            write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
-            write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
-            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
-            write_ifwi_bin(k, v["androidmk"], "Android.mk")
-        commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
-                                            [("..", "..", "..","common","Android.mk"),
-                                            ("..", "..", "..", "..","common","Android.mk")])
-        write_ifwi_bin("common", commonandroidmk, "Android.mk")
         z.close()
 if __name__ == '__main__':
     # parse options
@@ -450,6 +412,9 @@ if __name__ == '__main__':
 
     init_global(bld)
     bootonly_flashfile = get_build_options(key='FLASHFILE_BOOTONLY', key_type='boolean', default_value=False)
+    external_release = get_build_options(key='EXTERNAL_BINARIES', key_type='boolean', default_value=not bootonly_flashfile)
+    if external_release:
+        publish_external(basedir, bld, bld_variant)
 
     if bootonly_flashfile:
         if bld_variant not in ["blankphone","modem"]:
@@ -461,9 +426,5 @@ if __name__ == '__main__':
             publish_blankphone(basedir, bld, buildnumber)
         elif bld_variant == "modem":
             publish_modem(basedir, bld)
-        else:
-            external_release = get_build_options(key='EXTERNAL_BINARIES', key_type='boolean', default_value=not bootonly_flashfile)
-            if external_release:
-                publish_external(basedir, bld, bld_variant)
-            if do_we_publish_bld_variant(bld_variant):
-                publish_build(basedir, bld, bld_variant, bld_prod, buildnumber)
+        elif do_we_publish_bld_variant(bld_variant):
+            publish_build(basedir, bld, bld_variant, bld_prod, buildnumber)
