@@ -35,7 +35,24 @@ import subprocess
 import xml.etree.ElementTree as ElementTree
 import re
 
-logging.basicConfig(level=logging.INFO)
+
+DEBUG = False  # Set to False for some speedups
+
+
+def logging_debug(*args):
+    # NOTE: If you want to see debug messages, set the logging level manually to
+    # logging.DEBUG - 1.  See below.
+    if DEBUG and logging.getLogger().level < logging.DEBUG:
+        logging.debug(*args)
+
+
+# Find out where prebuilt executables are on the host machine.  We really only
+# care about Linux, which 'isu' and 'xfstk-stitcher' are compiled for.
+system, _, _, _, machine = os.uname()
+if 'Linux' in system and '86' in machine:
+    HOST_OUT_EXECUTABLES = os.path.join('out', 'host', 'linux-x86', 'bin')
+else:
+    raise SystemError("Unsupported platform: %s %s" % (system, machine))
 
 
 # Check whether an argparse argument is a file.
@@ -47,11 +64,14 @@ def file_pathname(arg):
 
 # Run a command and return its exit code, output, and errput.
 def _run(cmd, cwd=None, input=None):
+    logging_debug("Spawning child process: %r", cmd)
+    logging_debug("  cwd=%s", cwd)
     p = subprocess.Popen(cmd, shell=isinstance(cmd, basestring), cwd=cwd,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     out, err = p.communicate(input)
+    logging_debug("  exit code=%s", p.returncode)
     return p.returncode, out, err
 
 
@@ -83,10 +103,7 @@ class Stitch(object):
     # enough!
     @classmethod
     def register(self, name):
-        try:
-            assert(name not in self._handlers)
-        except:
-            raise NameError("Handler already exists: %s" % name)
+        assert name not in self._handlers, "Handler already exists: %s" % name
 
         def decorator(klass):
             self._handlers[name] = klass
@@ -114,10 +131,10 @@ class NoneHandler(object):
     CHUNK_SIZE = 8192   # Size of blocks sent to sha.update().
     ALIGN_SIZE = 4      # Byte boundary for alignment.
 
-    STITCH_HOME = os.path.join('device', 'intel', 'PRIVATE', 'xfstk-stitcher')
+    STITCH_HOME = os.path.join('device', 'intel', 'xfstk-stitcher')
     STITCH_SHARE = os.path.join(STITCH_HOME, 'share', 'xfstk-stitcher')
     STITCH_CONFIG = os.path.join(STITCH_SHARE, 'ConfigFile_os.txt')
-    STITCH_PROG = os.path.join('bin', 'xfstk-stitcher')
+    STITCH_PROG = os.path.join(HOST_OUT_EXECUTABLES, 'xfstk-stitcher')
 
     def __init__(self, image_file, platform_definition, platform_type=None):
         self.image_files = [image_file]
@@ -153,6 +170,7 @@ class NoneHandler(object):
         padding_len = self.ALIGN_SIZE - (self.getsize() % self.ALIGN_SIZE)
         padding_len = padding_len % self.ALIGN_SIZE
         if padding_len:
+            logging_debug("Adding %d padding bytes to align image", padding_len)
             padding = binascii.unhexlify('ff' * padding_len)
             with open(self.image_files[0], 'ab') as f:
                 f.write(padding)
@@ -169,6 +187,7 @@ class NoneHandler(object):
         # filename, i.e. the image file used by the stitcher to build the final
         # image.  If the image is signed, the first bit of image_attributes
         # shall be reset as well.
+        logging_debug("Updating stitching information...")
         elem_tree = ElementTree.parse(self.stitch_platform_file)
         tree_root = elem_tree.getroot()
         if self.is_signed:
@@ -183,6 +202,7 @@ class NoneHandler(object):
             config = f.read()
         for k, v in kwargs.items():
             if v is not None:
+                logging_debug("  %s = %s", k, v)
                 patt = r'(%s\s*=).*' % k
                 repl = r'\1 %s' % v
                 config = re.sub(patt, repl, config)
@@ -198,12 +218,11 @@ class NoneHandler(object):
                              PlatformType=self.platform_type,
                              # CAUTION: minus 'p' for platformXML
                              platformXML=self.stitch_platform_file)
+        logging_debug("Stitching image %s...", self.image_files[self.is_signed])
         stitch_cmd = [self.STITCH_PROG,
                       '-k', self.stitch_platform_file,
                       '-c', self.stitch_config_file]
-        # Set the current working directory so that the stitcher can find key
-        # files, which paths are relative to STITCH_HOME to date.
-        retcode, out, err = _run(stitch_cmd, cwd=self.STITCH_HOME)
+        retcode, out, err = _run(stitch_cmd)
         logging.info(out)
         if retcode:
             raise RuntimeError(err)
@@ -222,10 +241,9 @@ class MerrifieldHandler(NoneHandler):
                              # CAUTION: minus 'p' for platformXML
                              platformXML=self.stitch_platform_file)
 
+        logging_debug("Stitching image %s...", self.image_files[self.is_signed])
         stitch_cmd = [self.STITCH_PROG, '-c', self.stitch_config_file]
-        # Set the current working directory so that the stitcher can find key
-        # files, which paths are relative to STITCH_HOME to date.
-        retcode, out, err = _run(stitch_cmd, cwd=self.STITCH_HOME)
+        retcode, out, err = _run(stitch_cmd)
         logging.info(out)
         if retcode:
             raise RuntimeError(err)
@@ -234,11 +252,15 @@ class MerrifieldHandler(NoneHandler):
 @Stitch.register('isu')
 class IsuHandler(NoneHandler):
 
-    # Intel Signing Utility
-    ISU_HOME = os.path.join('device', 'intel', 'PRIVATE', 'intel_signing_utility')
-    ISU_CERT = os.path.join(ISU_HOME, 'c0_234.pem')
-    ISU_PROG = os.path.join(ISU_HOME, 'isu_stream')
-    PATH_PREFIX_ON_SIGNER = os.path.join('~', 'isu')
+    # Intel Signing Utility.
+    # CAUTION: resist the temptation to expand the ISU_HOME_ON_SIGNER path here,
+    # e.g. through os.path.expanduser(): it's going to expand to the HOME
+    # environment variable, or the current user's home directory, whereas it
+    # shall be the SIGNER_LOGIN home directory on the SIGNER_SERVER.
+    ISU_HOME = os.path.join('device', 'intel', 'intel_signing_utility')
+    ISU_HOME_ON_SIGNER = os.path.join('~', 'intel_signing_utility')
+    ISU_PROG = os.path.join('isu_stream')
+    ISU_CERT = os.path.join('c0_234.pem')
 
     def _sign(self):
         # ISU will be called in stream mode.  We communicate the image hash and
@@ -246,17 +268,23 @@ class IsuHandler(NoneHandler):
         # is the same whether we want to sign the image locally or use a signing
         # server, except the script is run through ssh in the latter case.
         if _SIGNATURE_BY_SIGNER:
+            logging_debug("Signature is delegated to %s", _SIGNER)
             if _SIGNER is None:
                 raise EnvironmentError("Please, set both environment variables: "
                                        "SIGNER_LOGIN, SIGNER_SERVER")
             # Update paths to what they are supposed to be on the server.
-            self.ISU_PROG = os.path.join(self.PATH_PREFIX_ON_SIGNER, self.ISU_PROG)
-            self.ISU_CERT = os.path.join(self.PATH_PREFIX_ON_SIGNER, self.ISU_CERT)
-            isu_cmd = ['ssh', _SIGNER, self.ISU_PROG, '-k', self.ISU_CERT]
+            isu_prog = os.path.join(self.ISU_HOME_ON_SIGNER, self.ISU_PROG)
+            cert_file = os.path.join(self.ISU_HOME_ON_SIGNER, self.ISU_CERT)
+            isu_cmd = ['ssh', _SIGNER, isu_prog, '-k', cert_file]
         else:
-            isu_cmd = [self.ISU_PROG, '-k', self.ISU_CERT]
-        image_info = "%s\n%X\n" % (self.gethash(), self.getsize())
-        retcode, signature, err = _run(isu_cmd, input=image_info)
+            logging_debug("Signature is performed on localhost")
+            isu_prog = os.path.join(HOST_OUT_EXECUTABLES, self.ISU_PROG)
+            cert_file = os.path.join(self.ISU_HOME, self.ISU_CERT)
+            isu_cmd = [isu_prog, '-k', cert_file]
+        img_hash, img_size = self.gethash(), self.getsize()
+        logging_debug("Image information: size=%X  hash=%s", img_size, img_hash)
+        retcode, signature, err = _run(isu_cmd,
+                                       input="%s\n%X\n" % (img_hash, img_size))
         logging.info(err)  # Output redirected to stderr for streaming purpose.
         if retcode:
             raise RuntimeError("Failed to sign image")
@@ -278,6 +306,9 @@ class IsuHandler(NoneHandler):
 
 
 def main():
+    logging.basicConfig(format=("%(filename)s: %(levelname)s: %(message)s"),
+                        level=logging.INFO)
+
     cmd_parser = argparse.ArgumentParser()
     cmd_parser.add_argument('--input', type=file_pathname, required=True,
                             dest='input_file', metavar='input-pname',
@@ -305,7 +336,7 @@ def main():
         with stitch_handler(args.input_file, args.definition, args.type) as h:
             h.stitch(args.output_file)
     except Exception, e:
-        print >>sys.stderr, "Error: %s" % e
+        logging.error(e)
         return 1
 
 
