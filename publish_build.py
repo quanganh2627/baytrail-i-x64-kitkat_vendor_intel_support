@@ -10,8 +10,8 @@ from flashfile import FlashFile
 from subprocess import Popen, PIPE
 
 bldpub = None
-ifwi_external_dir = "prebuilts/intel/device/intel/prebuilts/fw/ifwi"
-ifwi_private_dir = "device/intel/PRIVATE/fw/ifwi"
+ifwi_external_dir = "prebuilts/intel/vendor/intel/fw/prebuilts/ifwi"
+ifwi_private_dir = "vendor/intel/fw/PRIVATE/ifwi"
 
 def get_link_path(gl):
     print "gl=",gl
