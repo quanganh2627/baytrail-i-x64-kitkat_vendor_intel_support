@@ -168,7 +168,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
-    if bld_skip_nvm == False:
+    if not bld_skip_nvm:
        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
     if bld_flash_modem:
         for files in os.listdir(product_out + "/obj/ETC/modem_version_intermediates/"):
@@ -228,7 +228,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
                 if len(modemsrcl) == 1:
                      f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
 
-        if bld_skip_nvm == False:
+        if not bld_skip_nvm:
            f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
@@ -250,7 +250,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         # if not, insert flash command in the flash.xml file
         else:
             f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
-        if bld_skip_nvm == False:
+        if not bld_skip_nvm:
            f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
            f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
 
@@ -358,6 +358,7 @@ def publish_blankphone(basedir, bld, buildnumber):
 def publish_modem(basedir, bld):
     # environment variables
     board_have_modem=get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
+    bld_skip_nvm = get_build_options(key='SKIP_NVM', key_type='boolean')
     if not board_have_modem:
         print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld)
         return 0
@@ -381,7 +382,8 @@ def publish_modem(basedir, bld):
             if files.endswith(".txt"):
                 publish_file(locals(), modem_version_src_dir + files , modem_dest_dir + modem)
 
-    publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
+    if not bld_skip_nvm:
+       publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
 def publish_kernel(basedir, bld, bld_variant):
     product_out=os.path.join(basedir,"out/target/product",bld)
