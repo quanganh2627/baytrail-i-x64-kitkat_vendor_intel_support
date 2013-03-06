@@ -112,7 +112,7 @@ init_variables() {
         ;;
     esac
 
-    PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
+    [ x"$PRODUCT_OUT" == x"" ] && PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
     KERNEL_FILE=${PRODUCT_OUT}/kernel
     KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 
