@@ -241,7 +241,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     for board, args in ifwis.items():
         f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
                                  ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
-    f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+    if bld_supports_droidboot:
+        f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
+
     f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
     if bld_flash_modem:
         # if we have different modems, insert flash command in respective flash file
@@ -255,9 +257,6 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
            f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
            f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
 
-    if bld_supports_droidboot:
-        f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
-        #f.add_command("fastboot flash boot $recovery_file", "Flashing recovery in kboot")
 
     for board, args in ifwis.items():
         f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
@@ -265,6 +264,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
     f.add_command("fastboot flash system $system_file", "Flashing system", timeout=300000)
+    f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
     f.add_command("fastboot continue", "Reboot system")
     f.finish()
 
