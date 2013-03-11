@@ -17,9 +17,13 @@ def get_link_path(gl):
     if os.path.islink(gl):
         print "os path real path = ",os.path.realpath(gl)
         return os.path.realpath(gl)
+    elif os.path.exists(gl):
+        print "No LINK but file exist for %s in directory %s"%(os.path.basename(gl),os.path.dirname(gl))
+        return os.path.realpath(gl)
     else:
-        print "No LINK for %s in directory %s"%(os.path.basename(gl),os.path.dirname(gl))
+        print "No file for %s in directory %s"%(os.path.basename(gl),os.path.dirname(gl))
         return "None"
+
 
 def get_build_options(key, key_type=None, default_value=None):
     try:
@@ -75,41 +79,43 @@ def find_ifwis(basedir):
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield VP and HVP are not published
     if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
-        ifwiglob = {"blackbay":"mfld_pr*",
+        ifwiglobs = {"blackbay":"mfld_pr*",
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
-                    "victoriabay":"victoriabay",
-                    "redhookbay":"ctp_[pv][rv][23]",
-                    "ctpscaleht":"ctp_vv[23]/CTPSCALEHT",
-                    "ctpscalelt":"ctp_vv[23]/CTPSCALELT",
+                    "victoriabay":"victoriabay vb_pr1",
+                    "redhookbay":"ctp_pr[23] ctp_vv2",
+                    "ctpscaleht":"ctp_vv2/CTPSCALEHT",
+                    "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "merr_vv":"merr_vv0",
-                    "bodegabay":"bodegabay*"}[bld_prod]
+                    "bodegabay":"bodegabay*",
+                    "baylake":"baylake*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
-        gl = os.path.join(basedir, ifwi_base_dir, ifwiglob)
-        for ifwidir in glob.glob(gl):
-            # When the ifwi directory is placed within a subdir, we shall
-            # take the subdir in the board name
-            nameindex = 0 - ifwiglob.count('/') - 1
-            board = ifwidir.split("/")[nameindex]
-            for idx in range(nameindex+1, 0):
-                board = board + '_' + ifwidir.split("/")[idx]
-            fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
-            osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
-            softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
-            xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
-            ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
-            ifwiversion = os.path.basename(ifwi)
-            ifwiversion = os.path.splitext(ifwiversion)[0]
-            print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
-            if ifwiversion != "None":
-                ifwis[board] = dict(ifwiversion = ifwiversion,
-                                    ifwi = ifwi,
-                                    fwdnx = fwdnx,
-                                    osdnx = osdnx,
-                                    softfuse = softfuse,
-                                    xxrdnx = xxrdnx)
+        for ifwiglob in ifwiglobs.split(" "):
+            gl = os.path.join(basedir, ifwi_base_dir,ifwiglob)
+            for ifwidir in glob.glob(gl):
+                # When the ifwi directory is placed within a subdir, we shall
+                # take the subdir in the board name
+                nameindex = 0 - ifwiglob.count('/') - 1
+                board = ifwidir.split("/")[nameindex]
+                for idx in range(nameindex+1, 0):
+                    board = board + '_' + ifwidir.split("/")[idx]
+                fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
+                osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
+                softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
+                xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
+                ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
+                ifwiversion = os.path.basename(ifwi)
+                ifwiversion = os.path.splitext(ifwiversion)[0]
+                print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
+                if ifwiversion != "None":
+                    ifwis[board] = dict(ifwiversion = ifwiversion,
+                                        ifwi = ifwi,
+                                        fwdnx = fwdnx,
+                                        osdnx = osdnx,
+                                        softfuse = softfuse,
+                                        xxrdnx = xxrdnx)
     return ifwis
 
 def get_publish_conf():
@@ -405,6 +411,7 @@ def publish_external(basedir, bld, bld_variant):
     white_list = re.compile("(%s)"%("|".join(white_list)))
     if os.path.exists(prebuilts_out):
         z = zipfile.ZipFile(prebuilts_pub, "w")
+        # automatic prebuilt publication
         for root, dirs, files in os.walk(prebuilts_out):
             for f in files:
                 filename = os.path.join(root, f)
@@ -412,6 +419,8 @@ def publish_external(basedir, bld, bld_variant):
                 if white_list.search(arcname):
                     z.write(filename, arcname)
                     print arcname
+
+        # IFWI publication
         ifwis = find_ifwis(basedir)
         def write_ifwi_bin(board, fn, arcname):
             arcname = os.path.join(ifwi_external_dir, board, arcname)
@@ -429,6 +438,7 @@ def publish_external(basedir, bld, bld_variant):
             print >>sys.stderr, possibilities
             sys.exit(1)
         for k, v in ifwis.items():
+            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
             v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
                                           [("PROD", "*CRAK_PROD.bin"),
                                            ("..", "PROD", "*CRAK_PROD.bin")]
@@ -438,7 +448,7 @@ def publish_external(basedir, bld, bld_variant):
                                                 ("..", "..", "..", "Android.mk")])
             write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
             write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
-            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
+            write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
             write_ifwi_bin(k, v["androidmk"], "Android.mk")
         commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
                                             [("..", "..", "..","common","Android.mk"),

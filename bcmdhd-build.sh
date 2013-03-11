@@ -45,9 +45,9 @@ make_bcmdhd() {
     exit_on_error $? quiet
 
     if [ "$DRIVER" == "bcm4334" ]; then
-        cp -f ${BCMDHD_4334_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}
+        cp -f ${BCMDHD_4334_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/bcm4334.ko
     elif [ "$DRIVER" == "bcm4335" ]; then
-        cp -f ${BCMDHD_4335_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}
+        cp -f ${BCMDHD_4335_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/bcm4335.ko
     else
         echo "Should not get there"
     fi
