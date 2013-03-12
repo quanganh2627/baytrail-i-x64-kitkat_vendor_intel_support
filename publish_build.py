@@ -441,23 +441,24 @@ def publish_external(basedir, bld, bld_variant):
             print >>sys.stderr, "please put the file in:"
             print >>sys.stderr, possibilities
             sys.exit(1)
-        for k, v in ifwis.items():
-            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
-            v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
-                                          [("PROD", "*CRAK_PROD.bin"),
-                                           ("..", "PROD", "*CRAK_PROD.bin")]
-                                          )
-            v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                               [("..", "..", "Android.mk"),
-                                                ("..", "..", "..", "Android.mk")])
-            write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
-            write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
-            write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
-            write_ifwi_bin(k, v["androidmk"], "Android.mk")
-        commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
-                                            [("..", "..", "..","common","Android.mk"),
-                                            ("..", "..", "..", "..","common","Android.mk")])
-        write_ifwi_bin("common", commonandroidmk, "Android.mk")
+        if ifwis:
+            for k, v in ifwis.items():
+                write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
+                v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
+                                              [("PROD", "*CRAK_PROD.bin"),
+                                               ("..", "PROD", "*CRAK_PROD.bin")]
+                                              )
+                v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
+                                                   [("..", "..", "Android.mk"),
+                                                    ("..", "..", "..", "Android.mk")])
+                write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
+                write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
+                write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
+                write_ifwi_bin(k, v["androidmk"], "Android.mk")
+            commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
+                                                [("..", "..", "..", "common", "Android.mk"),
+                                                 ("..", "..", "..", "..", "common", "Android.mk")])
+            write_ifwi_bin("common", commonandroidmk, "Android.mk")
         z.close()
 if __name__ == '__main__':
     # parse options
