@@ -73,7 +73,10 @@ if [[   "$BOARD" == "mrfl_vp" \
     else
             SPI_FLAG=0;
     fi
-
+if [[   "$BOARD" == "baylake" \
+   ]]; then
+            BOOTSTUB=${BOOTSTUB}_byt
+    fi
 if [ ! -e ${BZIMAGE} ]; then
     echo "error: bzImage file ${BZIMAGE} does not exist"
     exit 1
