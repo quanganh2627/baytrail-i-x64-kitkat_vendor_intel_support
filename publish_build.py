@@ -88,8 +88,10 @@ def find_ifwis(basedir):
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "merr_vv":"merr_vv0",
+                    "saltbay":"merr_vv0",
                     "bodegabay":"bodegabay*",
-                    "baylake":"baylake*"}[bld_prod]
+                    "baylake":"baylake*",
+                    "baylake_iafw":"baylake*"}[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         for ifwiglob in ifwiglobs.split(" "):
@@ -167,7 +169,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
-    if bld_skip_nvm == False:
+    if not bld_skip_nvm:
        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
     if bld_flash_modem:
         for files in os.listdir(product_out + "/obj/ETC/modem_version_intermediates/"):
@@ -227,7 +229,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
                 if len(modemsrcl) == 1:
                      f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" %locals(), buildnumber,xml_filter=["flash.xml"])
 
-        if bld_skip_nvm == False:
+        if not bld_skip_nvm:
            f.add_file("MODEM_NVM", os.path.join(fastboot_dir,"modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
@@ -239,7 +241,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     for board, args in ifwis.items():
         f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
                                  ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
-    f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+    if bld_supports_droidboot:
+        f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
+
     f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
     if bld_flash_modem:
         # if we have different modems, insert flash command in respective flash file
@@ -249,13 +253,10 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         # if not, insert flash command in the flash.xml file
         else:
             f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
-        if bld_skip_nvm == False:
+        if not bld_skip_nvm:
            f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
            f.add_command("fastboot oem nvm applyzip /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
 
-    if bld_supports_droidboot:
-        f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
-        #f.add_command("fastboot flash boot $recovery_file", "Flashing recovery in kboot")
 
     for board, args in ifwis.items():
         f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
@@ -263,6 +264,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
     f.add_command("fastboot flash system $system_file", "Flashing system", timeout=300000)
+    f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
     f.add_command("fastboot continue", "Reboot system")
     f.finish()
 
@@ -357,6 +359,7 @@ def publish_blankphone(basedir, bld, buildnumber):
 def publish_modem(basedir, bld):
     # environment variables
     board_have_modem=get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
+    bld_skip_nvm = get_build_options(key='SKIP_NVM', key_type='boolean')
     if not board_have_modem:
         print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld)
         return 0
@@ -380,7 +383,8 @@ def publish_modem(basedir, bld):
             if files.endswith(".txt"):
                 publish_file(locals(), modem_version_src_dir + files , modem_dest_dir + modem)
 
-    publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
+    if not bld_skip_nvm:
+       publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
 def publish_kernel(basedir, bld, bld_variant):
     product_out=os.path.join(basedir,"out/target/product",bld)
@@ -437,23 +441,24 @@ def publish_external(basedir, bld, bld_variant):
             print >>sys.stderr, "please put the file in:"
             print >>sys.stderr, possibilities
             sys.exit(1)
-        for k, v in ifwis.items():
-            write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
-            v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
-                                          [("PROD", "*CRAK_PROD.bin"),
-                                           ("..", "PROD", "*CRAK_PROD.bin")]
-                                          )
-            v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                               [("..", "..", "Android.mk"),
-                                                ("..", "..", "..", "Android.mk")])
-            write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
-            write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
-            write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
-            write_ifwi_bin(k, v["androidmk"], "Android.mk")
-        commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
-                                            [("..", "..", "..","common","Android.mk"),
-                                            ("..", "..", "..", "..","common","Android.mk")])
-        write_ifwi_bin("common", commonandroidmk, "Android.mk")
+        if ifwis:
+            for k, v in ifwis.items():
+                write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
+                v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
+                                              [("PROD", "*CRAK_PROD.bin"),
+                                               ("..", "PROD", "*CRAK_PROD.bin")]
+                                              )
+                v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
+                                                   [("..", "..", "Android.mk"),
+                                                    ("..", "..", "..", "Android.mk")])
+                write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
+                write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
+                write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
+                write_ifwi_bin(k, v["androidmk"], "Android.mk")
+            commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
+                                                [("..", "..", "..", "common", "Android.mk"),
+                                                 ("..", "..", "..", "..", "common", "Android.mk")])
+            write_ifwi_bin("common", commonandroidmk, "Android.mk")
         z.close()
 if __name__ == '__main__':
     # parse options

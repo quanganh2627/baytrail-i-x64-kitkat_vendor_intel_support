@@ -59,7 +59,7 @@ init_variables() {
         echo >&6 "Warning: CCACHE_TOOLS_PREFIX was not set."
         CCACHE_TOOLS_DIR=$TOP/prebuilts/misc/${_host_os}-x86/ccache
     fi
-    export PATH="`dirname ${TARGET_TOOLS_PREFIX}`:$PATH"
+    export PATH="$ANDROID_BUILD_PATHS:$PATH"
 
     # force using minigzip instead of gzip to build bzimage
     export PATH="$TOP/vendor/intel/support:$PATH"
