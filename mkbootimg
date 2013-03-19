@@ -53,7 +53,7 @@ if [[   "$BOARD" == "mfld_pr2" \
      || "$BOARD" == "mrfl_vp" \
      || "$BOARD" == "mrfl_hvp" \
      || "$BOARD" == "mrfl_sle" \
-     || "$BOARD" == "merr_vv" \
+     || "$BOARD" == "saltbay" \
      || "$BOARD" == "bodegabay" \
    ]]; then
             SILICON=1;
@@ -64,7 +64,7 @@ if [[   "$BOARD" == "mfld_pr2" \
 if [[   "$BOARD" == "mrfl_vp" \
      || "$BOARD" == "mrfl_hvp" \
      || "$BOARD" == "mrfl_sle" \
-     || "$BOARD" == "merr_vv" \
+     || "$BOARD" == "saltbay" \
      || "$BOARD" == "bodegabay" \
    ]]; then
             SPI_FLAG=1;
