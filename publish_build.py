@@ -87,8 +87,8 @@ def find_ifwis(basedir):
                     "redhookbay":"ctp_pr[23] ctp_vv2",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "saltbay_pr0":"saltbay_pr0",
-                    "saltbay_pr1":"saltbay_pr1",
+                    "saltbay_pr0":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
+                    "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "bodegabay":"bodegabay*",
                     "baylake":"baylake*",
                     "baylake_iafw":"baylake*"}[bld_prod]
