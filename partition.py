@@ -256,8 +256,6 @@ def generate_mbr_recovery_fstab_file(emmc, global_data):
         current_line = list()
         partition_id = partition["id"]
 
-        current_line.append("#size_hint=%d" % (partition["size"]))
-        current_line.append("\n")
         current_line.append("/%s" % (partition_name))
         current_line.append("\t")
         current_line.append("%s" % (partition["fs_type"]))
@@ -265,6 +263,8 @@ def generate_mbr_recovery_fstab_file(emmc, global_data):
         current_line.append("%sp%d" % (emmc["base_name"], partition_id))
         current_line.append("\t")
         current_line.append("length=%d" % (partition["length"]))
+        current_line.append("\t")
+        current_line.append("size_hint=%d" % (partition["size"]))
         current_line.append("\n")
         update_fill_list(current_line, fill)
         fstab_lines.append(current_line)
