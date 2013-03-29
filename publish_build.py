@@ -77,8 +77,8 @@ def find_ifwis(basedir):
         ifwi_base_dir = ifwi_private_dir
     else:
         ifwi_base_dir = ifwi_external_dir
-    # IFWI for Merrifield VP and HVP are not published
-    if bld_prod not in ["mrfl_vp","mrfl_hvp"]:
+    # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
+    if bld_prod not in ["mrfl_vp","mrfl_hvp","moor_hvp","moor_sle"]:
         ifwiglobs = {"blackbay":"mfld_pr*",
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
@@ -87,8 +87,8 @@ def find_ifwis(basedir):
                     "redhookbay":"ctp_pr[23] ctp_vv2",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "merr_vv":"merr_vv0",
-                    "saltbay":"merr_vv0",
+                    "saltbay_pr0":"saltbay_pr0",
+                    "saltbay_pr1":"saltbay_pr1",
                     "bodegabay":"bodegabay*",
                     "baylake":"baylake*",
                     "baylake_iafw":"baylake*"}[bld_prod]

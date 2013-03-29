@@ -103,13 +103,16 @@ init_variables() {
     baytrail)
         _soc_type="byt"
         ;;
+    moorefield)
+        _soc_type="moor"
+        ;;
     *)
         echo "Unknown platform specified \"${TARGET_BOARD_PLATFORM}\""
         exit_on_error 2
         ;;
     esac
 
-    PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
+    [ x"$PRODUCT_OUT" == x"" ] && PRODUCT_OUT=${TOP}/out/target/product/${TARGET_DEVICE}
     KERNEL_FILE=${PRODUCT_OUT}/kernel
     KERNEL_BUILD_DIR=${PRODUCT_OUT}/kernel_build
 
