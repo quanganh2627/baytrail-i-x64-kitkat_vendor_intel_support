@@ -7,6 +7,7 @@ import json
 import zipfile
 import re
 from flashfile import FlashFile
+from subprocess import Popen, PIPE
 
 bldpub = None
 ifwi_external_dir = "prebuilts/intel/device/intel/prebuilts/fw/ifwi"
@@ -396,24 +397,31 @@ def publish_kernel(basedir, bld, bld_variant):
     # everything is already ready in product out directory, just publish it
     publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
 
+def generateAllowedPrebuiltsList(customer):
+    """return a list of private paths that:
+       - belong to bsp-priv manifest group
+       - and have customer annotation <customer>_external='bin'"""
+    # we need to specify a group in the repo forall command due to following repo behavior:
+    # if a project doesn't have the searched annotation, it is included in the list of repo projects to process
+    cmd = "repo forall -g bsp-priv -a %s_external=bin -c 'echo $REPO_PATH'" % (customer,)
+    p = Popen(cmd, stdout=PIPE, close_fds=True, shell=True)
+    allowedPrebuiltsList, _ = p.communicate()
+    # as /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
+    # we need to update regexp accordingly
+    allowedPrebuiltsList = allowedPrebuiltsList.replace("/PRIVATE/", "/prebuilts/[^/]+/")
+    return allowedPrebuiltsList.splitlines()
+
 def publish_external(basedir, bld, bld_variant):
     os.system("mkdir -p "+os.path.join(basedir,bldpub))
     product_out=os.path.join(basedir,"out/target/product",bld)
     prebuilts_out = os.path.join(product_out,"prebuilts/intel")
     prebuilts_pub = os.path.join(basedir,bldpub,"prebuilts.zip")
-    white_list_fn = ".repo/manifests/external_binaries_whitelist"
-    white_list = []
-    # external_binaries_white_list is a simple text file containing a list of regular expression
-    # matching the PRIVATE folders whose we want to publish binary
-    try:
-        with open(white_list_fn,"r") as f:
-            for line in f:
-                if not line.startswith("#"):
-                    # as /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
-                    # we need to update regexp accordingly
-                    white_list.append(line.strip().replace("/PRIVATE/","/prebuilts/[^/]+/"))
-    except IOError:
-        print "WARNING: unable to publish external: no white list file found!",white_list_fn
+    # white_list contains the list of regular expression
+    # matching the PRIVATE folders whose we want to publish binary.
+    # We use 'generic' customer config to generate white list
+    white_list = generateAllowedPrebuiltsList("g")
+    # Need to append the top level generated makefile that includes all prebuilt makefiles
+    white_list.append(os.path.relpath(os.path.join(prebuilts_out, "Android.mk"), product_out))
     white_list = re.compile("(%s)"%("|".join(white_list)))
     if os.path.exists(prebuilts_out):
         z = zipfile.ZipFile(prebuilts_pub, "w")
