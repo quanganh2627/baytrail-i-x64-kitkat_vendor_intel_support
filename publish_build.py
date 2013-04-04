@@ -84,8 +84,8 @@ def find_ifwis(basedir):
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
-                    "victoriabay":"victoriabay vb_pr1",
-                    "redhookbay":"ctp_pr[23] ctp_vv2",
+                    "victoriabay":"victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
+                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_pr0":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
@@ -365,6 +365,20 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_raw_file(fru_configs, xml_filter=fru)
 
         f.finish()
+
+	# TEMPORARY MODIFICATION FOR BZ 9642 INTEGRATION
+	# TO BE REMOVED ONCE NEW IFWI MAPPING IS TOTALLY MERGED
+
+	# Keep compatibility with ACS and keep old blankphone names
+	if board == "vb_vv_b0_b1":
+		shutil.copyfile(os.path.join(blankphone_dir, "vb_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "victoriabay-blankphone.zip"))
+	if board == "ctp_vv_b0_b1":
+		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv2-blankphone.zip"))
+	if board == "ctp_vv":
+		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv3-blankphone.zip"))
+	#
+	# END
+	#
 
 def publish_modem(basedir, bld):
     # environment variables
