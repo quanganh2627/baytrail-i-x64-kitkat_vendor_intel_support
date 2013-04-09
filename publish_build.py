@@ -364,6 +364,13 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
             f.add_raw_file(fru_configs, xml_filter=fru)
 
+        # Creation of a "flash IFWI only" xml
+        flash_IFWI = "flash-IFWI-only.xml"
+        f.add_xml_file(flash_IFWI)
+        f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
+        f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
+        f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
+
         f.finish()
 
 	# TEMPORARY MODIFICATION FOR BZ 9642 INTEGRATION
