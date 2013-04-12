@@ -2,7 +2,6 @@
 
 TOP=`pwd`
 ARCH=x86
-LINUXVER=
 BOARD=$1
 DRIVER=$2
 PRODUCT_OUT=${TOP}/out/target/product/${BOARD}
@@ -19,15 +18,12 @@ function exit_on_error {
     fi
 }
 
-get_kernelversion() {
-    LINUXVER=`make -C ${TOP}/${KERNEL_SRC_DIR} kernelversion | sed -n 2p`
-    echo "LINUXVER detected <$LINUXVER>"
-}
-
 make_bcmdhd() {
     if [ "$DRIVER" == "" ]; then
         echo "No driver specified. Nothing to do"
         exit 1
+    elif [ "$DRIVER" == "bcm43241" ]; then
+         cd $BCMDHD_4334_SRC_DIR
     elif [ "$DRIVER" == "bcm4334" ]; then
          cd $BCMDHD_4334_SRC_DIR
     elif [ "$DRIVER" == "bcm4335" ]; then
@@ -40,14 +36,16 @@ make_bcmdhd() {
     echo "Making driver <${DRIVER}> for <${BOARD}>"
     echo "----------------------------------------"
 
-    make ARCH=${ARCH} -C ${KERNEL_BUILD_DIR}/ M=$PWD CONFIG_BCMDHD=m
+    make ARCH=${ARCH} -C ${KERNEL_BUILD_DIR}/ M=$PWD CONFIG_BCMDHD=m CONFIG_${DRIVER^^}=y
 
     exit_on_error $? quiet
 
-    if [ "$DRIVER" == "bcm4334" ]; then
-        cp -f ${BCMDHD_4334_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/bcm4334.ko
+    if [ "$DRIVER" == "bcm43241" ]; then
+        cp -f ${BCMDHD_4334_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/${DRIVER}.ko
+    elif [ "$DRIVER" == "bcm4334" ]; then
+        cp -f ${BCMDHD_4334_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/${DRIVER}.ko
     elif [ "$DRIVER" == "bcm4335" ]; then
-        cp -f ${BCMDHD_4335_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/bcm4335.ko
+        cp -f ${BCMDHD_4335_SRC_DIR}/bcmdhd.ko ${MODULE_DEST}/${DRIVER}.ko
     else
         echo "Should not get there"
     fi
@@ -55,7 +53,6 @@ make_bcmdhd() {
     cd ${TOP}
 }
 
-get_kernelversion
 make_bcmdhd
 exit_on_error $?
 exit 0
