@@ -406,10 +406,12 @@ def generateAllowedPrebuiltsList(customer):
     cmd = "repo forall -g bsp-priv -a %s_external=bin -c 'echo $REPO_PATH'" % (customer,)
     p = Popen(cmd, stdout=PIPE, close_fds=True, shell=True)
     allowedPrebuiltsList, _ = p.communicate()
-    # as /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
-    # we need to update regexp accordingly
-    allowedPrebuiltsList = allowedPrebuiltsList.replace("/PRIVATE/", "/prebuilts/[^/]+/")
-    return allowedPrebuiltsList.splitlines()
+    # As /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
+    # we need to update regexp accordingly.
+    # allowedPrebuilts are only directory path:
+    # to avoid /my/path/to/diraaa/dirb/file1 matching
+    # /my/path/to/dira, we add a trailing '/' to the path.
+    return [allowedPrebuilts.replace("/PRIVATE/", "/prebuilts/[^/]+/") + '/' for allowedPrebuilts in allowedPrebuiltsList.splitlines()]
 
 def publish_external(basedir, bld, bld_variant):
     os.system("mkdir -p "+os.path.join(basedir,bldpub))
