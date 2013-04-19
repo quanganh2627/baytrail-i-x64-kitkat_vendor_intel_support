@@ -84,7 +84,7 @@ def find_ifwis(basedir):
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay vb_pr1",
-                    "redhookbay":"ctp_pr[23] ctp_vv2",
+                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_pr0":"saltbay_pr0",
@@ -349,6 +349,13 @@ def publish_blankphone(basedir, bld, buildnumber):
         for i in "system cache config logs spare data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
         f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
+
+        # Creation of a "flash IFWI only" xml
+        f.add_xml_file("flash-IFWI-only.xml")
+        f.xml_header("system", bld, "1",xml_filter="flash-IFWI-only.xml")
+        f.add_gpflag(0x80000142, xml_filter="flash-IFWI-only.xml")
+        f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter="flash-IFWI-only.xml")
+
         f.finish()
 
 def publish_modem(basedir, bld):
