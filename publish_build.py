@@ -84,8 +84,8 @@ def find_ifwis(basedir):
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
-                    "victoriabay":"victoriabay vb_pr1",
-                    "redhookbay":"ctp_pr[23] ctp_vv2",
+                    "victoriabay":"victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
+                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_pr0":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
@@ -364,7 +364,28 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
             f.add_raw_file(fru_configs, xml_filter=fru)
 
+        # Creation of a "flash IFWI only" xml
+        flash_IFWI = "flash-IFWI-only.xml"
+        f.add_xml_file(flash_IFWI)
+        f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
+        f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
+        f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
+
         f.finish()
+
+	# TEMPORARY MODIFICATION FOR BZ 9642 INTEGRATION
+	# TO BE REMOVED ONCE NEW IFWI MAPPING IS TOTALLY MERGED
+
+	# Keep compatibility with ACS and keep old blankphone names
+	if board == "vb_vv_b0_b1":
+		shutil.copyfile(os.path.join(blankphone_dir, "vb_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "victoriabay-blankphone.zip"))
+	if board == "ctp_vv_b0_b1":
+		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv2-blankphone.zip"))
+	if board == "ctp_vv":
+		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv3-blankphone.zip"))
+	#
+	# END
+	#
 
 def publish_modem(basedir, bld):
     # environment variables
@@ -413,10 +434,12 @@ def generateAllowedPrebuiltsList(customer):
     cmd = "repo forall -g bsp-priv -a %s_external=bin -c 'echo $REPO_PATH'" % (customer,)
     p = Popen(cmd, stdout=PIPE, close_fds=True, shell=True)
     allowedPrebuiltsList, _ = p.communicate()
-    # as /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
-    # we need to update regexp accordingly
-    allowedPrebuiltsList = allowedPrebuiltsList.replace("/PRIVATE/", "/prebuilts/[^/]+/")
-    return allowedPrebuiltsList.splitlines()
+    # As /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
+    # we need to update regexp accordingly.
+    # allowedPrebuilts are only directory path:
+    # to avoid /my/path/to/diraaa/dirb/file1 matching
+    # /my/path/to/dira, we add a trailing '/' to the path.
+    return [allowedPrebuilts.replace("/PRIVATE/", "/prebuilts/[^/]+/") + '/' for allowedPrebuilts in allowedPrebuiltsList.splitlines()]
 
 def publish_external(basedir, bld, bld_variant):
     os.system("mkdir -p "+os.path.join(basedir,bldpub))

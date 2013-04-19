@@ -275,15 +275,12 @@ make_module_external_in_directory() {
         exit 1
     fi
 
-    local MODULE_DEST_TMP=${PRODUCT_OUT}/$(basename $EXTERNAL_MODULE_IN_DIRECTORY)
+    local MODULE_DEST_TMP=`mktemp -d -p ${PRODUCT_OUT} $(basename $EXTERNAL_MODULE_IN_DIRECTORY).XXXXXXXX`
     local MODULE_DEST=${PRODUCT_OUT}/root/lib/modules
- 
+
     make ARCH=${ARCH} KLIB=${MODULE_DEST_TMP} KLIB_BUILD=${KERNEL_BUILD_DIR} \
         ${njobs} ${KERNEL_BUILD_FLAGS} ${EXTRA_MAKEFLAGS}
     exit_on_error $? quiet
-
-    rm -rf ${MODULE_DEST_TMP}
-    mkdir -p ${MODULE_DEST_TMP}
 
     make ARCH=${ARCH} INSTALL_MOD_STRIP=${STRIP_MODE} KLIB=${MODULE_DEST_TMP} \
         KLIB_BUILD=${KERNEL_BUILD_DIR} ${njobs} ${KERNEL_BUILD_FLAGS} \
@@ -291,6 +288,9 @@ make_module_external_in_directory() {
     exit_on_error $? quiet
 
     find ${MODULE_DEST_TMP} -name *.ko -exec cp -vf {} ${MODULE_DEST} \;
+
+    rm -rf ${MODULE_DEST_TMP}
+
     exit_on_error $? quiet
 
     cd ${TOP}
