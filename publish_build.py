@@ -364,13 +364,6 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
             f.add_raw_file(fru_configs, xml_filter=fru)
 
-        # Creation of a "flash IFWI only" xml
-        flash_IFWI = "flash-IFWI-only.xml"
-        f.add_xml_file(flash_IFWI)
-        f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
-        f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
-        f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
-
         f.finish()
 
 	# TEMPORARY MODIFICATION FOR BZ 9642 INTEGRATION
@@ -434,12 +427,10 @@ def generateAllowedPrebuiltsList(customer):
     cmd = "repo forall -g bsp-priv -a %s_external=bin -c 'echo $REPO_PATH'" % (customer,)
     p = Popen(cmd, stdout=PIPE, close_fds=True, shell=True)
     allowedPrebuiltsList, _ = p.communicate()
-    # As /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
-    # we need to update regexp accordingly.
-    # allowedPrebuilts are only directory path:
-    # to avoid /my/path/to/diraaa/dirb/file1 matching
-    # /my/path/to/dira, we add a trailing '/' to the path.
-    return [allowedPrebuilts.replace("/PRIVATE/", "/prebuilts/[^/]+/") + '/' for allowedPrebuilts in allowedPrebuiltsList.splitlines()]
+    # as /PRIVATE/ has been replaced by /prebuilts/<ref_product>/ in prebuilts dir,
+    # we need to update regexp accordingly
+    allowedPrebuiltsList = allowedPrebuiltsList.replace("/PRIVATE/", "/prebuilts/[^/]+/")
+    return allowedPrebuiltsList.splitlines()
 
 def publish_external(basedir, bld, bld_variant):
     os.system("mkdir -p "+os.path.join(basedir,bldpub))
