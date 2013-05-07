@@ -357,6 +357,15 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_gpflag(0x80000142, xml_filter="flash-IFWI-only.xml")
         f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter="flash-IFWI-only.xml")
 
+	# Create a dedicated flash file for buildbot
+	# Use EraseFactory for redhookbay if it exists.
+	# Use flash.xml for all other
+	if bld == "redhookbay":
+		if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
+			f.copy_xml_file("flash.xml","flash-buildbot.xml")
+	else:
+		f.copy_xml_file("flash.xml","flash-buildbot.xml")
+
         f.finish()
 
 def publish_modem(basedir, bld):

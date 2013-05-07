@@ -9,6 +9,13 @@ class FlashFile:
         self.filenames = []
         self.filenames_dict = {}
 
+    def copy_xml_file(self, source, target):
+        if self.xml.has_key(source):
+           self.xml[target] = self.xml[source]
+	   return True
+	else:
+	    return False
+
     def add_xml_file(self, xmlfilename):
         if not self.xml.has_key(xmlfilename):
             self.xml[xmlfilename] = ""
