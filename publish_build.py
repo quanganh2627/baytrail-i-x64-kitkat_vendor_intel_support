@@ -379,6 +379,15 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
         f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
+	# Create a dedicated flash file for buildbot
+	# Use EraseFactory for redhookbay if it exists.
+	# Use flash.xml for all other
+	if bld == "redhookbay":
+		if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
+			f.copy_xml_file("flash.xml","flash-buildbot.xml")
+	else:
+		f.copy_xml_file("flash.xml","flash-buildbot.xml")
+
         f.finish()
 
 	# TEMPORARY MODIFICATION FOR BZ 9642 INTEGRATION
