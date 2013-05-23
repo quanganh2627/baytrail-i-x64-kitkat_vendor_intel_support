@@ -78,6 +78,7 @@ if [[   "$BOARD" == "mrfl_vp" \
             SPI_FLAG=0;
     fi
 if [[   "$BOARD" == "baylake" \
+     || "$BOARD" == "byt_m_crb" \
    ]]; then
             BOOTSTUB=${BOOTSTUB}_byt
     fi
