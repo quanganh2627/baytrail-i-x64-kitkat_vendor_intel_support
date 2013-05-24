@@ -79,7 +79,7 @@ def find_ifwis(basedir):
     else:
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
-    if bld_prod not in ["mrfl_vp","mrfl_hvp","moor_hvp","moor_sle"]:
+    if bld_prod not in ["mrfl_vp","mrfl_hvp","moor_hvp","moor_sle","crc_hvp"]:
         ifwiglobs = {"blackbay":"mfld_pr*",
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
