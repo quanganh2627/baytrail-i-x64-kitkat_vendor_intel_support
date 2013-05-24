@@ -362,11 +362,12 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_xml_file("flash-fru.xml")
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=fru)
-            token_filename = "token.bin"
-            stub_token=os.path.join(product_out, token_filename)
-            os.system("touch " + stub_token)
-            f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
-            f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
+            if bld_prod not in ["saltbay_pr0","saltbay_lnp","saltbay_pr1","bodegabay"]:
+                token_filename = "token.bin"
+                stub_token=os.path.join(product_out, token_filename)
+                os.system("touch " + stub_token)
+                f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
+                f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
             f.add_command("fastboot oem fru set $fru_value" , "Flash FRU value on device", xml_filter=fru)
             f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
             f.add_raw_file(fru_configs, xml_filter=fru)
