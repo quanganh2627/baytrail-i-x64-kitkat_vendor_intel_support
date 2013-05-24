@@ -1,9 +1,11 @@
 #!/bin/bash
 # build nand boot recovery image for android
+PLTTYPE=MFDC0
+SPIFLAG=0
 
 TEMP=`getopt \
-         -o c:r:k:o:p:t:s: \
-         --long cmdline:,ramdisk:,kernel:,output:,product:,type:,sign-with: \
+         -o c:r:k:o:p:t:s:f:y: \
+         --long cmdline:,ramdisk:,kernel:,output:,product:,type:,sign-with:,spi-flag:,plt-type: \
          -n '$0' \
          --  "$@"`
 
@@ -18,6 +20,8 @@ while true ; do
         --product) BOARD=$2; shift 2;;
         --sign-with) SIGN_WITH=${2,,}; shift 2;;
         --type) TYPE=$2; shift 2;;
+        --spi-flag) SPIFLAG=$2; shift 2;;
+        --plt-type) PLTTYPE=$2; shift 2;;
         --) shift ; break ;;
     esac
 done
@@ -42,26 +46,7 @@ UNSIGNED_OUT=${TARG}/${IMGNAME}.unsigned
 CMDLINE_FILE=${TARG}/${IMGNAME}_cmdline
 echo $CMDLINE > $CMDLINE_FILE
 BOOTSTUB=vendor/intel/support/bootstub
-PLT_TYPE=MFDC0
 
-if [[   "$BOARD" == "mfld_pr2" \
-     || "$BOARD" == "mfld_gi" \
-     || "$BOARD" == "salitpa" \
-     || "$BOARD" == "yukkabeach" \
-     || "$BOARD" == "victoriabay" \
-     || "$BOARD" == "ctp_pr1" \
-     || "$BOARD" == "mrfl_vp" \
-     || "$BOARD" == "mrfl_hvp" \
-     || "$BOARD" == "mrfl_sle" \
-     || "$BOARD" == "saltbay" \
-     || "$BOARD" == "bodegabay" \
-     || "$BOARD" == "moor_hvp" \
-     || "$BOARD" == "moor_sle" \
-   ]]; then
-            SILICON=1;
-    else
-            SILICON=0;
-    fi
 
 if [[   "$BOARD" == "mrfl_vp" \
      || "$BOARD" == "mrfl_hvp" \
@@ -70,18 +55,17 @@ if [[   "$BOARD" == "mrfl_vp" \
      || "$BOARD" == "bodegabay" \
      || "$BOARD" == "moor_hvp" \
      || "$BOARD" == "moor_sle" \
+     || "$BOARD" == "crc_hvp" \
    ]]; then
-            SPI_FLAG=1;
-            BOOTSTUB=${BOOTSTUB}_mrfl
-            PLT_TYPE=MRFLDA0
-    else
-            SPI_FLAG=0;
-    fi
+    BOOTSTUB=${BOOTSTUB}_mrfl
+fi
+
 if [[   "$BOARD" == "baylake" \
      || "$BOARD" == "byt_m_crb" \
    ]]; then
-            BOOTSTUB=${BOOTSTUB}_byt
-    fi
+    BOOTSTUB=${BOOTSTUB}_byt
+fi
+
 if [ ! -e ${BZIMAGE} ]; then
     echo "error: bzImage file ${BZIMAGE} does not exist"
     exit 1
@@ -110,7 +94,9 @@ fi
 echo "Creating image \`${OUT}'for FSTK stitching..."
 
 rm -f ${UNSIGNED_OUT}
-./vendor/intel/support/stitch.sh ${CMDLINE_FILE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} ${SPI_FLAG} ${SILICON} ${UNSIGNED_OUT}
+# 0: SPI0(Moorestown) 1: SPI1(Medfield)
+SILICON=1
+./vendor/intel/support/stitch.sh ${CMDLINE_FILE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} ${SPIFLAG} ${SILICON} ${UNSIGNED_OUT}
 
 if [ "0" -ne "$?" ]; then
     echo "error running stitch.sh for generating ${UNSIGNED_OUT}"
@@ -123,7 +109,7 @@ UPPER_TYPE=${TYPE^^}
 TMPFILE=`mktemp /tmp/gen-os.tmp.XXX`
 
 GEN_OS=vendor/intel/support/gen_os
-GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --platform-type $PLT_TYPE --sign-with $SIGN_WITH"
+GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --platform-type $PLTTYPE --sign-with $SIGN_WITH"
 $GEN_OS_CMD 2>${TMPFILE}
 if [ $? -ne 0 ]; then
 	echo -e "$GEN_OS_CMD: error\n$(cat ${TMPFILE})" >&2
@@ -135,7 +121,7 @@ rm -f ${TMPFILE}
 case "$TYPE" in
     combined|fastboot|droidboot)
         # Only generate POS version for these image types.
-        GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --platform-type $PLT_TYPE --sign-with $SIGN_WITH"
+        GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --platform-type $PLTTYPE --sign-with $SIGN_WITH"
         $GEN_OS_CMD 2>$TMPFILE
 			if [ $? -ne 0 ]; then
 				echo -e  "$GEN_OS_CMD: error\n$(cat $TMPFILE)" >&2
