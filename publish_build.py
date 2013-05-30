@@ -85,7 +85,7 @@ def find_ifwis(basedir):
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay vb_pr1",
-                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2",
+                    "redhookbay":"ctp_pr[23] ctp_pr3.1",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_pr0":"saltbay_pr0",
@@ -356,6 +356,15 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.xml_header("system", bld, "1",xml_filter="flash-IFWI-only.xml")
         f.add_gpflag(0x80000142, xml_filter="flash-IFWI-only.xml")
         f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter="flash-IFWI-only.xml")
+
+	# Create a dedicated flash file for buildbot
+	# Use EraseFactory for redhookbay if it exists.
+	# Use flash.xml for all other
+	if bld == "redhookbay":
+		if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
+			f.copy_xml_file("flash.xml","flash-buildbot.xml")
+	else:
+		f.copy_xml_file("flash.xml","flash-buildbot.xml")
 
         f.finish()
 
