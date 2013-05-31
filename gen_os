@@ -131,7 +131,7 @@ class NoneHandler(object):
     CHUNK_SIZE = 8192   # Size of blocks sent to sha.update().
     ALIGN_SIZE = 4      # Byte boundary for alignment.
 
-    STITCH_HOME = os.path.join('device', 'intel', 'xfstk-stitcher')
+    STITCH_HOME = os.path.join('vendor', 'intel', 'tools/xfstk-stitcher')
     STITCH_SHARE = os.path.join(STITCH_HOME, 'share', 'xfstk-stitcher')
     STITCH_CONFIG = os.path.join(STITCH_SHARE, 'ConfigFile_os.txt')
     STITCH_PROG = os.path.join(HOST_OUT_EXECUTABLES, 'xfstk-stitcher')
@@ -257,7 +257,7 @@ class IsuHandler(NoneHandler):
     # e.g. through os.path.expanduser(): it's going to expand to the HOME
     # environment variable, or the current user's home directory, whereas it
     # shall be the SIGNER_LOGIN home directory on the SIGNER_SERVER.
-    ISU_HOME = os.path.join('device', 'intel', 'intel_signing_utility')
+    ISU_HOME = os.path.join('vendor', 'intel', 'tools/intel_signing_utility')
     ISU_HOME_ON_SIGNER = os.path.join('~', 'intel_signing_utility')
     ISU_PROG = os.path.join('isu_stream')
     ISU_CERT = os.path.join('c0_234.pem')

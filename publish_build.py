@@ -10,8 +10,8 @@ from flashfile import FlashFile
 from subprocess import Popen, PIPE
 
 bldpub = None
-ifwi_external_dir = "prebuilts/intel/device/intel/prebuilts/fw/ifwi"
-ifwi_private_dir = "device/intel/PRIVATE/fw/ifwi"
+ifwi_external_dir = "prebuilts/intel/vendor/intel/fw/prebuilts/ifwi"
+ifwi_private_dir = "vendor/intel/fw/PRIVATE/ifwi"
 
 def get_link_path(gl):
     print "gl=",gl
@@ -79,7 +79,7 @@ def find_ifwis(basedir):
     else:
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
-    if bld_prod not in ["mrfl_vp","mrfl_hvp","moor_hvp","moor_sle"]:
+    if bld_prod not in ["mrfl_vp","mrfl_hvp","moor_hvp","moor_sle","crc_hvp"]:
         ifwiglobs = {"blackbay":"mfld_pr*",
                     "lexington":"mfld_gi*",
                     "salitpa":"salitpa",
@@ -378,6 +378,15 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
         f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
         f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
+
+	# Create a dedicated flash file for buildbot
+	# Use EraseFactory for redhookbay if it exists.
+	# Use flash.xml for all other
+	if bld == "redhookbay":
+		if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
+			f.copy_xml_file("flash.xml","flash-buildbot.xml")
+	else:
+		f.copy_xml_file("flash.xml","flash-buildbot.xml")
 
         f.finish()
 
