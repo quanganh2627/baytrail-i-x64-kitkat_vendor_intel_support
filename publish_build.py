@@ -90,7 +90,7 @@ def find_ifwis(basedir):
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                    "bodegabay":"bodegabay*",
+                    "bodegabay":"bodegabay bodegabay/DBG",
                     "baylake":"baylake*",
                     "baylake_iafw":"baylake*"}[bld_prod]
 
