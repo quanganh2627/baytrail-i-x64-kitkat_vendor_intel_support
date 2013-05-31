@@ -86,7 +86,7 @@ def find_ifwis(basedir):
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
                     "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
-                    "ctpscaleht":"ctp_vv2/CTPSCALEHT",
+                    "ctp7160":"ctp_vv2/ctp7160",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
