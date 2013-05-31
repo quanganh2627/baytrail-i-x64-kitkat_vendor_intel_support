@@ -88,7 +88,6 @@ def find_ifwis(basedir):
                     "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "saltbay_pr0":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
                     "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "bodegabay":"bodegabay*",
@@ -362,7 +361,7 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_xml_file("flash-fru.xml")
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=fru)
-            if bld_prod not in ["saltbay_pr0","saltbay_lnp","saltbay_pr1","bodegabay"]:
+            if bld_prod not in ["saltbay_lnp","saltbay_pr1","bodegabay"]:
                 token_filename = "token.bin"
                 stub_token=os.path.join(product_out, token_filename)
                 # create a token with dummy data to make phone flash tool happy
