@@ -89,7 +89,7 @@ def find_ifwis(basedir):
                     "ctpscaleht":"ctp_vv2/CTPSCALEHT",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_pr0":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
-                    "saltbay_lnp":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
+                    "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "bodegabay":"bodegabay*",
                     "baylake":"baylake*",
