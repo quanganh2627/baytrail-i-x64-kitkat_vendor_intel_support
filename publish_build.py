@@ -86,12 +86,11 @@ def find_ifwis(basedir):
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
                     "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
-                    "ctpscaleht":"ctp_vv2/CTPSCALEHT",
+                    "ctp7160":"ctp_vv2/ctp7160",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "saltbay_pr0":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
-                    "saltbay_lnp":"saltbay_pr0 saltbay_pr0/DBG saltbay_pr0/PSH",
+                    "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                    "bodegabay":"bodegabay*",
+                    "bodegabay":"bodegabay bodegabay/DBG",
                     "baylake":"baylake*",
                     "baylake_iafw":"baylake*"}[bld_prod]
 
@@ -362,10 +361,11 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_xml_file("flash-fru.xml")
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=fru)
-            if bld_prod not in ["saltbay_pr0","saltbay_lnp","saltbay_pr1","bodegabay"]:
+            if bld_prod not in ["saltbay_lnp","saltbay_pr1","bodegabay"]:
                 token_filename = "token.bin"
                 stub_token=os.path.join(product_out, token_filename)
-                os.system("touch " + stub_token)
+                # create a token with dummy data to make phone flash tool happy
+                os.system("echo 'dummy token' > " + stub_token)
                 f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
                 f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
             f.add_command("fastboot oem fru set $fru_value" , "Flash FRU value on device", xml_filter=fru)

@@ -79,15 +79,15 @@ def update_fill_list(l, d):
                 (GPT means mouting with label or uuid)
                 Feature disabled until all patches merged
     Input   :
-                emmc: dictionary with eMMC parameters
-                      (emmc key in JSON)
+                storage: dictionary with storage parameters
+                      (storage key in JSON)
                 global_data: dictionary with global parameters
                              (global key in JSON)
                 os_mount: dictionary with partition to be mounted for each OS
     Output  :   None
     Return  :   tuple: Fstab lines (list), and associated indentation dictionary
 """
-def generate_gpt_fstab_file(emmc, global_data, os_mount):
+def generate_gpt_fstab_file(storage, global_data, os_mount):
 
     recovery_lines = list()
     fill = dict()
@@ -103,9 +103,9 @@ def generate_gpt_fstab_file(emmc, global_data, os_mount):
             display_mount_point = "/%s" % partition_name
 
         current_line = list()
-        current_line.append("%sp%d" % (emmc["base_name"], partition["id"]))
+        current_line.append(global_data["partition_format"] % (storage["base_name"], partition["id"]))
         # temporary disabled
-        #current_line.append("%s%s" % (global_data["gpt"]["base_name_label"], display_partition_name))
+        #current_line.append(global_data["partition_format"] % (global_data["gpt"]["base_name_label"], display_partition_name))
         current_line.append("\t")
         current_line.append("%s" % (display_mount_point))
         current_line.append("\t")
@@ -125,15 +125,15 @@ def generate_gpt_fstab_file(emmc, global_data, os_mount):
     Role    :   Generate a "MBR" fstab file
                 (MBR means mouting with block id)
     Input   :
-                emmc: dictionary with eMMC parameters
-                      (emmc key in JSON)
+                storage: dictionary with storage parameters
+                      (storage key in JSON)
                 global_data: dictionary with global parameters
                              (global key in JSON)
                 os_mount: dictionary with partition to be mounted for each OS
     Output  :   None
     Return  :   tuple: Fstab lines (list), and associated indentation dictionary
 """
-def generate_mbr_fstab_file(emmc, global_data, os_mount):
+def generate_mbr_fstab_file(storage, global_data, os_mount):
 
     recovery_lines = list()
     fill = dict()
@@ -152,7 +152,7 @@ def generate_mbr_fstab_file(emmc, global_data, os_mount):
 
         partition_id = partition["id"]
 
-        current_line.append("%sp%d" % (emmc["base_name"], partition_id))
+        current_line.append(global_data[""] % (storage["base_name"], partition_id))
         current_line.append("\t")
         current_line.append("%s" % (display_mount_point))
         current_line.append("\t")
@@ -174,21 +174,21 @@ def generate_mbr_fstab_file(emmc, global_data, os_mount):
                 File pushed on target, and fastboot command reads it to
                 apply partition scheme.
     Input   :
-                emmc: dictionary with eMMC parameters
-                      (emmc key in JSON)
+                storage: dictionary with storage parameters
+                      (storage key in JSON)
                 global_data: dictionary with global parameters
                              (global key in JSON)
     Output  :   None
     Return  :   Partition file lines (list)
 """
-def generate_gpt_partition_file(emmc, global_data):
+def generate_gpt_partition_file(storage, global_data):
 
     gpt_commands = list()
 
-    gpt_commands.append("create -z %s" % (emmc["base_name"]))
-    gpt_commands.append("create %s" % (emmc["base_name"]))
-    gpt_commands.append("boot -p %s" % (emmc["base_name"]))
-    gpt_commands.append("reload %s" % (emmc["base_name"]))
+    gpt_commands.append("create -z %s" % (storage["base_name"]))
+    gpt_commands.append("create %s" % (storage["base_name"]))
+    gpt_commands.append("boot -p %s" % (storage["base_name"]))
+    gpt_commands.append("reload %s" % (storage["base_name"]))
 
     lba_start_offset = global_data["gpt"]["lba_start_offset"]
     lba_end_offset = global_data["gpt"]["lba_end_offset"]
@@ -224,12 +224,12 @@ def generate_gpt_partition_file(emmc, global_data):
             partition_label,
             partition["try"],
             partition["priority"],
-            emmc["base_name"]))
+            storage["base_name"]))
 
         if isinstance( partition_size, int ):
             lba_start_offset += partition_size
 
-    gpt_commands.append("reload %s" % (emmc["base_name"]))
+    gpt_commands.append("reload %s" % (storage["base_name"]))
 
     return gpt_commands
 
@@ -238,15 +238,15 @@ def generate_gpt_partition_file(emmc, global_data):
     Role    :   Generate a "MBR" partition file for fastboot OS
                 File part of the fastboot OS, used to erase & partition
     Input   :
-                emmc: dictionary with eMMC parameters
-                      (emmc key in JSON)
+                storage: dictionary with storage parameters
+                      (storage key in JSON)
                 global_data: dictionary with global parameters
                              (global key in JSON)
     Output  :   None
     Return  :   tuple: Recovery fstab lines (list),
                        and associated indentation dictionary
 """
-def generate_mbr_recovery_fstab_file(emmc, global_data):
+def generate_mbr_recovery_fstab_file(storage, global_data):
 
     fstab_lines = list()
     fill = dict()
@@ -262,7 +262,7 @@ def generate_mbr_recovery_fstab_file(emmc, global_data):
         current_line.append("\t")
         current_line.append("%s" % (partition["fs_type"]))
         current_line.append("\t")
-        current_line.append("%sp%d" % (emmc["base_name"], partition_id))
+        current_line.append(global_data["partition_format"] % (storage["base_name"], partition_id))
         current_line.append("\t")
         current_line.append("length=%d" % (partition["length"]))
         current_line.append("\n")
@@ -363,13 +363,16 @@ else:
             filesystem_json = json_load_override(filesystem_base_file, override_file)
 
         global_data = get_dict_from(storage_json, "globals")
-        emmc_data = get_dict_from(storage_json, "emmc")
+        storage_data = get_dict_from(storage_json, "storage")
         header_data = get_dict_from(storage_json, "header")
         partition_data = get_dict_from(storage_json, "partitions")
         os_data = get_dict_from(filesystem_json, "oses")
 
         if (os.getenv("PART_MOUNT_OUT_FILE")):
             target = os.getenv("PART_MOUNT_OUT_FILE")
+
+        if (os.getenv("STORAGE_BASE_NAME")):
+            storage_data["base_name"] = os.getenv("STORAGE_BASE_NAME")
 
         if (target.endswith("partition.tbl")):
 
@@ -382,7 +385,7 @@ else:
             partition_table_file.write("partition_table=%s\n" % global_data["format_table"])
 
             if global_data["format_table"] == "gpt":
-                gpt_commands = generate_gpt_partition_file(emmc_data, global_data)
+                gpt_commands = generate_gpt_partition_file(storage_data, global_data)
                 for line in gpt_commands:
                     partition_table_file.write(line+"\n")
 
@@ -403,7 +406,7 @@ else:
                 out_file = "%s/%s" % (out_path, v_os["recovery_fstab_dest_file"])
                 if out_file.endswith(target):
                     print "\t%s" % (out_file)
-                    recovery_lines, fill = generate_mbr_recovery_fstab_file(emmc_data, global_data)
+                    recovery_lines, fill = generate_mbr_recovery_fstab_file(storage_data, global_data)
                     fstab_indent(out_file, recovery_lines, fill)
                     sys.exit()
 
@@ -413,11 +416,11 @@ else:
 
                 if out_file.endswith(target):
                     if global_data["format_table"] == "mbr":
-                        fstab_lines, fill = generate_mbr_fstab_file(emmc_data, global_data, v_os)
+                        fstab_lines, fill = generate_mbr_fstab_file(storage_data, global_data, v_os)
                         fstab_indent(out_file, fstab_lines, fill)
 
                     if global_data["format_table"] == "gpt":
-                       fstab_lines, fill = generate_gpt_fstab_file(emmc_data, global_data, v_os)
+                       fstab_lines, fill = generate_gpt_fstab_file(storage_data, global_data, v_os)
                        fstab_indent("%s/%s" % (out_path, v_os["fstab_file"]), fstab_lines, fill)
 
                     sys.exit()
