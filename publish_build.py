@@ -312,10 +312,10 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
                 f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-%s-%s.xml"%(board,modem)])
         # if not, insert flash command in the flash.xml file
         else:
-            f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=120000)
+            f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"],timeout=220000)
         if not bld_skip_nvm:
-           f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=120000)
-           f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
+           f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"],timeout=220000)
+           f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=220000)
 
     f.add_command("fastboot continue", "Reboot system")
 
