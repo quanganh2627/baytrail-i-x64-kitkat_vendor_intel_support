@@ -91,12 +91,16 @@ def find_ifwis(basedir):
                     "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "bodegabay":"bodegabay bodegabay/DBG",
-                    "baylake":"baylake*",
-                    "baylake_iafw":"baylake*"}[bld_prod]
+                    "baylake":"baylake/byt_t",
+                    "byt_t_ffrd10":"baylake/byt_t",
+                    "byt_t_ffrd8":"baylake/byt_t",
+                    "byt_m_crb":"baylake/byt_m",
+                    }[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
         for ifwiglob in ifwiglobs.split(" "):
             gl = os.path.join(basedir, ifwi_base_dir,ifwiglob)
+            base_ifwi = ifwiglob.split("/")[0]
             for ifwidir in glob.glob(gl):
                 # When the ifwi directory is placed within a subdir, we shall
                 # take the subdir in the board name
@@ -104,21 +108,33 @@ def find_ifwis(basedir):
                 board = ifwidir.split("/")[nameindex]
                 for idx in range(nameindex+1, 0):
                     board = board + '_' + ifwidir.split("/")[idx]
-                fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
-                osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
-                softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
-                xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
-                ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
+
+                if glob.glob(os.path.join(ifwidir,"capsule.bin")):
+                    ifwi = get_link_path(os.path.join(ifwidir,"dediprog.bin"))
+                    capsule = get_link_path(os.path.join(ifwidir,"capsule.bin"))
+                else:
+                    fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
+                    osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
+                    softfuse = get_link_path(os.path.join(ifwidir,"soft_fuse.bin"))
+                    xxrdnx = get_link_path(os.path.join(ifwidir,"dnx_xxr.bin"))
+                    ifwi = get_link_path(os.path.join(ifwidir,"ifwi.bin"))
                 ifwiversion = os.path.basename(ifwi)
                 ifwiversion = os.path.splitext(ifwiversion)[0]
                 print "   found ifwi %s for board %s in %s"%(ifwiversion, board, ifwidir)
                 if ifwiversion != "None":
-                    ifwis[board] = dict(ifwiversion = ifwiversion,
-                                        ifwi = ifwi,
-                                        fwdnx = fwdnx,
-                                        osdnx = osdnx,
-                                        softfuse = softfuse,
-                                        xxrdnx = xxrdnx)
+                    if glob.glob(os.path.join(ifwidir,"capsule.bin")):
+                        ifwis[board] = dict(ifwiversion = ifwiversion,
+                                            ifwi = ifwi,
+                                            capsule = capsule,
+                                            softfuse = "None",
+                                            xxrdnx = "None")
+                    else:
+                        ifwis[board] = dict(ifwiversion = ifwiversion,
+                                            ifwi = ifwi,
+                                            fwdnx = fwdnx,
+                                            osdnx = osdnx,
+                                            softfuse = softfuse,
+                                            xxrdnx = xxrdnx)
     return ifwis
 
 def get_publish_conf():
@@ -245,16 +261,20 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
 
     for board, args in ifwis.items():
-        f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
-                                 ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
+        if args.has_key("capsule"):
+            f.add_codegroup("CAPSULE",(("CAPSULE_"+board.upper(), args["capsule"], args["ifwiversion"]),))
+        else:
+            f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
+                                     ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
     f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
 
     for board, args in ifwis.items():
-        f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
-        f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+        if not args.has_key("capsule"):
+            f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+            f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
     f.add_command("fastboot flash system $system_file", "Flashing system", timeout=300000)
@@ -273,6 +293,17 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
            f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"],timeout=120000)
 
     f.add_command("fastboot continue", "Reboot system")
+
+    # build the flash-capsule.xml
+    for board, args in ifwis.items():
+        if args.has_key("capsule"):
+            f.add_xml_file("flash-capsule.xml")
+            f_capsule = ["flash-capsule.xml"]
+            f.xml_header("fastboot", bld, "1", xml_filter=f_capsule)
+            f.add_codegroup("CAPSULE",(("CAPSULE_"+board.upper(), args["capsule"], args["ifwiversion"]),), xml_filter=f_capsule)
+            f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Attempt flashing ifwi "+board, xml_filter=f_capsule)
+            f.add_command("fastboot continue", "Reboot", xml_filter=f_capsule)
+
     f.finish()
 
     # build the ota flashfile
@@ -317,12 +348,19 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_gpflag(0x80000245, xml_filter=softfuse_files)
             f.add_gpflag(0x80000145, xml_filter=default_files)
         else:
-            f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000045, xml_filter=default_files)
+            if args.has_key("capsule"):
+                f.xml_header("fastboot", bld, "1")
+            else:
+                f.xml_header("system", bld, "1")
+                f.add_gpflag(0x80000045, xml_filter=default_files)
 
-        default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
-                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                        ("OS_DNX", args["osdnx"], args["ifwiversion"]))
+        if args.has_key("capsule"):
+            default_ifwi = (("CAPSULE", args["capsule"], args["ifwiversion"]),
+                            ("DEDIPROG",  args["ifwi"], args["ifwiversion"]),)
+        else:
+            default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
+                            ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                            ("OS_DNX", args["osdnx"], args["ifwiversion"]))
 
         ifwis_dict = {}
         for xml_file in f.xml.keys():
@@ -341,9 +379,25 @@ def publish_blankphone(basedir, bld, buildnumber):
         for xml_file in f.xml.keys():
             f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter=[xml_file])
 
-        f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
+        if args.has_key("capsule"):
+            fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
+            f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
+            f.add_file("KERNEL", os.path.join(product_out,"recovery.img"), buildnumber)
+            f.add_file("RECOVERY", os.path.join(product_out,"boot.bin"), buildnumber)
+            f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+        else:
+            f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
+
 
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
+        if args.has_key("capsule"):
+            f.add_command("fastboot boot $fastboot_file", "Downloading fastboot")
+            f.add_command("fastboot continue", "Booting image")
+            f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
+            f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+            f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
+            f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
+
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
@@ -372,12 +426,13 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
             f.add_raw_file(fru_configs, xml_filter=fru)
 
-        # Creation of a "flash IFWI only" xml
-        flash_IFWI = "flash-IFWI-only.xml"
-        f.add_xml_file(flash_IFWI)
-        f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
-        f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
-        f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
+        if not args.has_key("capsule"):
+            # Creation of a "flash IFWI only" xml
+            flash_IFWI = "flash-IFWI-only.xml"
+            f.add_xml_file(flash_IFWI)
+            f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
+            f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
+            f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
 	# Create a dedicated flash file for buildbot
 	# Use EraseFactory for redhookbay if it exists.
