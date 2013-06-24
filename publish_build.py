@@ -449,8 +449,6 @@ def publish_blankphone(basedir, bld, buildnumber):
 	# TO BE REMOVED ONCE NEW IFWI MAPPING IS TOTALLY MERGED
 
 	# Keep compatibility with ACS and keep old blankphone names
-	if board == "vb_vv_b0_b1":
-		shutil.copyfile(os.path.join(blankphone_dir, "vb_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "victoriabay-blankphone.zip"))
 	if board == "ctp_vv_b0_b1":
 		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv2-blankphone.zip"))
 	if board == "ctp_vv":
