@@ -12,6 +12,7 @@ from subprocess import Popen, PIPE
 bldpub = None
 ifwi_external_dir = "prebuilts/intel/vendor/intel/fw/prebuilts/ifwi"
 ifwi_private_dir = "vendor/intel/fw/PRIVATE/ifwi"
+ulpmc_private_dir = "vendor/intel/fw/PRIVATE/ulpmc"
 
 def get_link_path(gl):
     print "gl=",gl
@@ -115,6 +116,7 @@ def find_ifwis(basedir):
                 if glob.glob(os.path.join(ifwidir,"capsule.bin")):
                     ifwi = get_link_path(os.path.join(ifwidir,"dediprog.bin"))
                     capsule = get_link_path(os.path.join(ifwidir,"capsule.bin"))
+                    ulpmc = get_link_path(os.path.join(ulpmc_private_dir,"ULPMC_FW_PR1.bin"))
                 else:
                     fwdnx = get_link_path(os.path.join(ifwidir,"dnx_fwr.bin"))
                     osdnx = get_link_path(os.path.join(ifwidir,"dnx_osr.bin"))
@@ -138,6 +140,9 @@ def find_ifwis(basedir):
                                             osdnx = osdnx,
                                             softfuse = softfuse,
                                             xxrdnx = xxrdnx)
+
+                if bld_prod in ["byt_t_ffrd10"]:
+                    ifwis[board]["ulpmc"]=ulpmc
     return ifwis
 
 def get_publish_conf():
@@ -265,7 +270,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
 
     for board, args in ifwis.items():
         if args.has_key("capsule"):
-            f.add_codegroup("CAPSULE",(("CAPSULE_"+board.upper(), args["capsule"], args["ifwiversion"]),))
+            f.add_codegroup("CAPSULE",(("CAPSULE", args["capsule"], args["ifwiversion"]),))
+            if args.has_key("ulpmc"):
+                f.add_codegroup("ULPMC",(("ULPMC", args["ulpmc"], args["ifwiversion"]),))
         else:
             f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
                                      ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
@@ -278,6 +285,10 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         if not args.has_key("capsule"):
             f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
             f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+        else:
+            if args.has_key("ulpmc"):
+                f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc")
+
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
     f.add_command("fastboot flash system $system_file", "Flashing system", timeout=300000)
