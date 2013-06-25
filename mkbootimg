@@ -61,6 +61,8 @@ if [[   "$BOARD" == "mrfl_vp" \
 fi
 
 if [[   "$BOARD" == "baylake" \
+     || "$BOARD" == "byt_t_ffrd10" \
+     || "$BOARD" == "byt_t_ffrd8" \
      || "$BOARD" == "byt_m_crb" \
    ]]; then
     BOOTSTUB=${BOOTSTUB}_byt
