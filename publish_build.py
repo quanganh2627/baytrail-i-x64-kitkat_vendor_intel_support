@@ -280,7 +280,11 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
             f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
-    f.add_command("fastboot flash system $system_file", "Flashing system", timeout=300000)
+    if bld == "byt_m_crb":
+        system_flash_timeout=700000
+    else:
+        system_flash_timeout=300000
+    f.add_command("fastboot flash system $system_file", "Flashing system", timeout=system_flash_timeout)
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
 
     if bld_flash_modem:
@@ -319,7 +323,11 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         f.add_command("adb root", "As root user")
         f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
         f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
-        f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update", timeout=300000)
+        if bld == "byt_m_crb":
+               ota_push_timeout = 1000000
+	else :
+               ota_push_timeout = 300000
+        f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update", timeout=ota_push_timeout)
         f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
         f.finish()
 
@@ -394,8 +402,6 @@ def publish_blankphone(basedir, bld, buildnumber):
 
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
         if args.has_key("capsule"):
-            f.add_command("fastboot boot $fastboot_file", "Downloading fastboot")
-            f.add_command("fastboot continue", "Booting image")
             f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
             f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
             f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
@@ -405,7 +411,11 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
 
-        tag = "-EraseFactory"
+        if args.has_key("capsule"):
+            tag = "flash.xml -EraseFactory"
+        else:
+            tag = "-EraseFactory"
+
         xml_tag_list = [i for i in f.xml.keys() if tag in i]
         f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
 
