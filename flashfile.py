@@ -1,4 +1,4 @@
-import os,sys
+import os, sys
 
 class FlashFile:
     """a class to generate a flashfile zip
@@ -12,9 +12,9 @@ class FlashFile:
     def copy_xml_file(self, source, target):
         if self.xml.has_key(source):
            self.xml[target] = self.xml[source]
-	   return True
-	else:
-	    return False
+           return True
+        else:
+           return False
 
     def add_xml_file(self, xmlfilename):
         if not self.xml.has_key(xmlfilename):
@@ -66,7 +66,7 @@ class FlashFile:
                 <version>%(version)s</version>
             </file>"""%locals()
             self.filenames.append(filename)
-        xml += "</code_group>"
+        xml += "\n        </code_group>"
         return xml
 
     def add_codegroup(self, type, files, xml_filter=[]):
@@ -76,6 +76,22 @@ class FlashFile:
 
     def add_file(self, filetype, filename, version,xml_filter=[]):
         self.add_codegroup(filetype, ((filetype, filename, version),),xml_filter=xml_filter)
+
+    def add_buildproperties_in_xml(self, buildprop, xml):
+        xml += '\n        <buildproperties>'
+        with open (buildprop, 'r') as f:
+            for line in f.readlines():
+                if not line.startswith("#") and line.count("=") == 1:
+                    prop = line.strip().split("=")[0]
+                    value = line.strip().split("=")[1]
+                    xml += '\n            <property name="%(prop)s" value="%(value)s"/>'%locals()
+        xml += '\n        </buildproperties>'
+        return xml
+
+    def add_buildproperties(self, buildprop, xml_filter=[]):
+        def f(xml):
+            return self.add_buildproperties_in_xml(buildprop, xml)
+        self.apply_f_to_all_valid_xml(f, xml_filter)
 
     def add_command_in_xml(self, command, description, xml, timeout, retry, mandatory):
         if False: # disabled code in case phoneflashtool is not ready
