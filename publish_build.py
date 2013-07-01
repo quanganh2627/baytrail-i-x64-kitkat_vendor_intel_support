@@ -167,6 +167,7 @@ def do_we_publish_extra_build(bld_variant,extra_build):
         return True
 
 def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
+    board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
