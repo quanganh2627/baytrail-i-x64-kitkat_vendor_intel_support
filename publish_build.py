@@ -574,13 +574,23 @@ def publish_external(basedir, bld, bld_variant):
                 write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
                 v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
                                               [("PROD", "*CRAK_PROD.bin"),
-                                               ("..", "PROD", "*CRAK_PROD.bin")]
+                                               ("..", "PROD", "*CRAK_PROD.bin"),
+                                               ("PROD", "*EXT.bin")]
                                               )
                 v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                                   [("..", "..", "Android.mk"),
-                                                    ("..", "..", "..", "Android.mk")])
-                write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
-                write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
+                                                   [("..", "Android.mk"),
+                                                    ("..", "..", "Android.mk"),
+                                                    ("..", "..", "..", "Android.mk")]
+                                                   )
+                if v.has_key("fwdnx"):
+                    write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
+                if v.has_key("osdnx"):
+                    write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
+                if v.has_key("capsule"):
+                    write_ifwi_bin(k, v["capsule"], "capsule.bin")
+                    v["capsule"] = find_sibling_file(v["capsule"], "prod capsule",
+                                                  [("PROD", "*EXT.cap")])
+                    write_ifwi_bin(k, v["capsule"], "capsule-prod.bin")
                 write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
                 write_ifwi_bin(k, v["androidmk"], "Android.mk")
             commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
