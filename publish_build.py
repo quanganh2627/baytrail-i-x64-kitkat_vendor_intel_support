@@ -138,6 +138,9 @@ def find_ifwis(basedir):
                                             osdnx = osdnx,
                                             softfuse = softfuse,
                                             xxrdnx = xxrdnx)
+                ulpmc = get_build_options(key='ULPMC_BINARY')
+                if (glob.glob(ulpmc)):
+                    ifwis[board]["ulpmc"] = ulpmc
     return ifwis
 
 def get_publish_conf():
@@ -264,6 +267,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
 
     for board, args in ifwis.items():
+        if args.has_key("ulpmc"):
+            f.add_codegroup("ULPMC",(("ULPMC", args["ulpmc"], args["ifwiversion"]),))
         if args.has_key("capsule"):
             f.add_codegroup("CAPSULE",(("CAPSULE_"+board.upper(), args["capsule"], args["ifwiversion"]),))
         else:
@@ -278,6 +283,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         if not args.has_key("capsule"):
             f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
             f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+        if args.has_key("ulpmc"):
+            f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
+
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
     if bld == "byt_m_crb":
