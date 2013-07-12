@@ -85,8 +85,8 @@ def find_ifwis(basedir):
                     "salitpa":"salitpa",
                     "yukkabeach":"yukkabeach",
                     "victoriabay":"victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
-                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
-                    "redhookbay_next":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv_b0_b1 ctp_vv3 ctp_vv",
+                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                    "redhookbay_next":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                     "ctp7160":"vb_vv_b0_b1",
                     "ctpscalelt":"ctp_vv2/CTPSCALELT",
                     "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
@@ -458,17 +458,6 @@ def publish_blankphone(basedir, bld, buildnumber):
 
         f.finish()
 
-	# TEMPORARY MODIFICATION FOR BZ 9642 INTEGRATION
-	# TO BE REMOVED ONCE NEW IFWI MAPPING IS TOTALLY MERGED
-
-	# Keep compatibility with ACS and keep old blankphone names
-	if board == "ctp_vv_b0_b1":
-		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv_b0_b1-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv2-blankphone.zip"))
-	if board == "ctp_vv":
-		shutil.copyfile(os.path.join(blankphone_dir, "ctp_vv-blankphone.zip"), os.path.join(blankphone_dir, "ctp_vv3-blankphone.zip"))
-	#
-	# END
-	#
 
 def publish_modem(basedir, bld):
     # environment variables
@@ -574,13 +563,23 @@ def publish_external(basedir, bld, bld_variant):
                 write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
                 v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
                                               [("PROD", "*CRAK_PROD.bin"),
-                                               ("..", "PROD", "*CRAK_PROD.bin")]
+                                               ("..", "PROD", "*CRAK_PROD.bin"),
+                                               ("PROD", "*EXT.bin")]
                                               )
                 v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                                   [("..", "..", "Android.mk"),
-                                                    ("..", "..", "..", "Android.mk")])
-                write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
-                write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
+                                                   [("..", "Android.mk"),
+                                                    ("..", "..", "Android.mk"),
+                                                    ("..", "..", "..", "Android.mk")]
+                                                   )
+                if v.has_key("fwdnx"):
+                    write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
+                if v.has_key("osdnx"):
+                    write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
+                if v.has_key("capsule"):
+                    write_ifwi_bin(k, v["capsule"], "capsule.bin")
+                    v["capsule"] = find_sibling_file(v["capsule"], "prod capsule",
+                                                  [("PROD", "*EXT.cap")])
+                    write_ifwi_bin(k, v["capsule"], "capsule-prod.bin")
                 write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
                 write_ifwi_bin(k, v["androidmk"], "Android.mk")
             commonandroidmk = find_sibling_file(v["ifwi"], "Android.mk",
