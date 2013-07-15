@@ -367,7 +367,9 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_gpflag(0x80000245, xml_filter=softfuse_files)
             f.add_gpflag(0x80000145, xml_filter=default_files)
         else:
-            if args.has_key("capsule"):
+            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+                f.xml_header("fastboot_dnx", bld, "1")
+            elif args.has_key("capsule"):
                 f.xml_header("fastboot", bld, "1")
             else:
                 f.xml_header("system", bld, "1")
@@ -410,6 +412,10 @@ def publish_blankphone(basedir, bld, buildnumber):
 
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
         if args.has_key("capsule"):
+            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+                f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
+                f.add_command("fastboot continue", "Booting on fastboot image")
+                f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
             f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
             f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
             f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
