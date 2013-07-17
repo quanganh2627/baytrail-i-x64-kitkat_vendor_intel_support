@@ -190,7 +190,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
-    publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
+    publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
     if not bld_skip_nvm:
@@ -232,7 +232,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"flash.xml")
 
     f.xml_header("fastboot", bld, "1")
-    f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.bin"), buildnumber)
+    f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.img"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
     if bld_flash_modem:
         if board_modem_flashless:
@@ -404,7 +404,7 @@ def publish_blankphone(basedir, bld, buildnumber):
             fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
             f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
             f.add_file("KERNEL", os.path.join(product_out,"recovery.img"), buildnumber)
-            f.add_file("RECOVERY", os.path.join(product_out,"boot.bin"), buildnumber)
+            f.add_file("RECOVERY", os.path.join(product_out,"boot.img"), buildnumber)
             f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
         else:
             f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
@@ -514,7 +514,7 @@ def publish_kernel(basedir, bld, bld_variant):
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
-    publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
+    publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
 
 def generateAllowedPrebuiltsList(customer):
     """return a list of private paths that:
