@@ -138,6 +138,9 @@ def find_ifwis(basedir):
                                             osdnx = osdnx,
                                             softfuse = softfuse,
                                             xxrdnx = xxrdnx)
+                ulpmc = get_build_options(key='ULPMC_BINARY')
+                if (glob.glob(ulpmc)):
+                    ifwis[board]["ulpmc"] = ulpmc
     return ifwis
 
 def get_publish_conf():
@@ -264,6 +267,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
 
     for board, args in ifwis.items():
+        if args.has_key("ulpmc"):
+            f.add_codegroup("ULPMC",(("ULPMC", args["ulpmc"], args["ifwiversion"]),))
         if args.has_key("capsule"):
             f.add_codegroup("CAPSULE",(("CAPSULE_"+board.upper(), args["capsule"], args["ifwiversion"]),))
         else:
@@ -278,6 +283,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         if not args.has_key("capsule"):
             f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
             f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+        if args.has_key("ulpmc"):
+            f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
+
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
     if bld == "byt_m_crb":
@@ -359,7 +367,9 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_gpflag(0x80000245, xml_filter=softfuse_files)
             f.add_gpflag(0x80000145, xml_filter=default_files)
         else:
-            if args.has_key("capsule"):
+            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+                f.xml_header("fastboot_dnx", bld, "1")
+            elif args.has_key("capsule"):
                 f.xml_header("fastboot", bld, "1")
             else:
                 f.xml_header("system", bld, "1")
@@ -402,6 +412,10 @@ def publish_blankphone(basedir, bld, buildnumber):
 
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
         if args.has_key("capsule"):
+            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+                f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
+                f.add_command("fastboot continue", "Booting on fastboot image")
+                f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
             f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
             f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
             f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")

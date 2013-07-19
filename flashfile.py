@@ -77,7 +77,7 @@ class FlashFile:
     def add_file(self, filetype, filename, version,xml_filter=[]):
         self.add_codegroup(filetype, ((filetype, filename, version),),xml_filter=xml_filter)
 
-    def add_command_in_xml(self, command, description, xml, timeout, retry):
+    def add_command_in_xml(self, command, description, xml, timeout, retry, mandatory):
         if False: # disabled code in case phoneflashtool is not ready
             for k,v in self.filenames_dict.items():
                 command = command.replace("$"+k, v)
@@ -87,12 +87,13 @@ class FlashFile:
             <timeout>%(timeout)s</timeout>
             <retry>%(retry)s</retry>
             <description>%(description)s</description>
+            <mandatory>%(mandatory)s</mandatory>
         </command>"""%locals()
         return xml
 
-    def add_command(self, command, description, xml_filter=[], timeout=60000, retry=2):
+    def add_command(self, command, description, xml_filter=[], timeout=60000, retry=2, mandatory=1):
         def f(xml):
-            return self.add_command_in_xml( command, description, xml, timeout, retry)
+            return self.add_command_in_xml( command, description, xml, timeout, retry, mandatory)
         self.apply_f_to_all_valid_xml(f,xml_filter)
 
     def finish(self):
