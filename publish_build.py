@@ -118,7 +118,7 @@ def find_ifwis(basedir, board_soc):
     if not(isvirtualplatorm):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                     "ctp7160": "vb_vv_b0_b1",
+                     "ctp7160": "vb_vv_b0_b1 cpa_v3_vv cpa_v3_vv_b0_b1",
                      "ctpscalelt": "ctp_vv2/CTPSCALELT",
                      "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
