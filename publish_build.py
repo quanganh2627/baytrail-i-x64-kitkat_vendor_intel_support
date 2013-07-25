@@ -348,7 +348,7 @@ def publish_blankphone(basedir, bld, buildnumber):
         xml_tag_list = [i for i in f.xml.keys() if tag not in i]
         f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
 
-        for i in "system cache config logs spare data".split():
+        for i in "system cache config logs data".split():
             f.add_command("fastboot erase "+i, "erase %s partition"%(i))
         f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
 
