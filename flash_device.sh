@@ -151,7 +151,7 @@ function main {
     fi
     if [ ! -f "$_boot_gz" ]; then
         echo -n >&2 "$_cmd: Can not find $_boot_gz. "
-        _boot_gz=boot.bin
+        _boot_gz=boot.img
         echo >&2 "Trying $_boot_gz. "
     fi
 

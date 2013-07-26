@@ -190,7 +190,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
-    publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
+    publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
     if not bld_skip_nvm:
@@ -232,7 +232,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         f = FlashFile(os.path.join(flashfile_dir,  "build-"+bld_variant,"%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" %locals()),"flash.xml")
 
     f.xml_header("fastboot", bld, "1")
-    f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.bin"), buildnumber)
+    f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.img"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
     if bld_flash_modem:
         if board_modem_flashless:
@@ -367,7 +367,9 @@ def publish_blankphone(basedir, bld, buildnumber):
             f.add_gpflag(0x80000245, xml_filter=softfuse_files)
             f.add_gpflag(0x80000145, xml_filter=default_files)
         else:
-            if args.has_key("capsule"):
+            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+                f.xml_header("fastboot_dnx", bld, "1")
+            elif args.has_key("capsule"):
                 f.xml_header("fastboot", bld, "1")
             else:
                 f.xml_header("system", bld, "1")
@@ -402,7 +404,7 @@ def publish_blankphone(basedir, bld, buildnumber):
             fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
             f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
             f.add_file("KERNEL", os.path.join(product_out,"recovery.img"), buildnumber)
-            f.add_file("RECOVERY", os.path.join(product_out,"boot.bin"), buildnumber)
+            f.add_file("RECOVERY", os.path.join(product_out,"boot.img"), buildnumber)
             f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
         else:
             f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
@@ -410,6 +412,10 @@ def publish_blankphone(basedir, bld, buildnumber):
 
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
         if args.has_key("capsule"):
+            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+                f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
+                f.add_command("fastboot continue", "Booting on fastboot image")
+                f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
             f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
             f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
             f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
@@ -419,7 +425,10 @@ def publish_blankphone(basedir, bld, buildnumber):
         f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
         f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
 
-        tag = "-EraseFactory"
+        if bld == "byt_m_crb":
+            tag = "flash.xml -EraseFactory"
+        else:
+            tag = "-EraseFactory"
 
         xml_tag_list = [i for i in f.xml.keys() if tag in i]
         f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
@@ -505,7 +514,7 @@ def publish_kernel(basedir, bld, bld_variant):
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
-    publish_file(locals(), "%(product_out)s/boot.bin", fastboot_dir)
+    publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
 
 def generateAllowedPrebuiltsList(customer):
     """return a list of private paths that:
