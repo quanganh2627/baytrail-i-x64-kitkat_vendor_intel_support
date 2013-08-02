@@ -417,8 +417,12 @@ def publish_blankphone(basedir, bld, buildnumber):
                 f.add_command("fastboot continue", "Booting on fastboot image")
                 f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
             f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
-            f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
-            f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
+            if bld == "byt_m_crb":
+                f.add_command("fastboot flash boot $fastboot_file", "Flashing boot")
+                f.add_command("fastboot flash recovery $fastboot_file", "Flashing recovery")
+            else:
+                f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+                f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
             f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
         f.add_command("fastboot oem start_partitioning", "Start partitioning")
