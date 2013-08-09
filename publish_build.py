@@ -274,6 +274,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         else:
             f.add_codegroup("FIRMWARE",(("IFWI_"+board.upper(), args["ifwi"], args["ifwiversion"]),
                                      ("FW_DNX_"+board.upper(),  args["fwdnx"], args["ifwiversion"])))
+
+    f.add_buildproperties("%(product_out)s/system/build.prop" %locals())
+
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
@@ -316,6 +319,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
             f_capsule = ["flash-capsule.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=f_capsule)
             f.add_codegroup("CAPSULE",(("CAPSULE_"+board.upper(), args["capsule"], args["ifwiversion"]),), xml_filter=f_capsule)
+            f.add_buildproperties("%(product_out)s/system/build.prop" %locals(), xml_filter=f_capsule)
             f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Attempt flashing ifwi "+board, xml_filter=f_capsule)
             f.add_command("fastboot continue", "Reboot", xml_filter=f_capsule)
 
@@ -328,6 +332,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         #the ofafile is optionally published, therefore
         #we use the one that is in out to be included in the flashfile
         f.add_file("OTA", otafile_path_in_out, buildnumber)
+        f.add_buildproperties("%(product_out)s/system/build.prop" %locals())
         f.add_command("adb root", "As root user")
         f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
         f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
@@ -409,8 +414,10 @@ def publish_blankphone(basedir, bld, buildnumber):
         else:
             f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
 
-
         f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
+
+        f.add_buildproperties("%(product_out)s/system/build.prop" %locals())
+
         if args.has_key("capsule"):
             if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
                 f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
