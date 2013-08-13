@@ -414,8 +414,8 @@ def publish_blankphone(basedir, bld, buildnumber):
         if args.has_key("capsule"):
             fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
             f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
-            f.add_file("KERNEL", os.path.join(product_out,"recovery.img"), buildnumber)
-            f.add_file("RECOVERY", os.path.join(product_out,"boot.img"), buildnumber)
+            f.add_file("KERNEL", os.path.join(product_out,"boot.img"), buildnumber)
+            f.add_file("RECOVERY", os.path.join(product_out,"recovery.img"), buildnumber)
             f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
         else:
             f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
