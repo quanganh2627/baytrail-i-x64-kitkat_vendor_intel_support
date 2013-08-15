@@ -93,11 +93,11 @@ def find_ifwis(basedir):
                     "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "saltbay_pr1_next":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                     "bodegabay":"bodegabay bodegabay/DBG",
-                    "baylake":"baytrail/byt_t",
-                    "baylake_next":"baytrail/byt_t",
-                    "byt_t_ffrd10":"baytrail/byt_t",
-                    "byt_t_ffrd8":"baytrail/byt_t",
-                    "byt_m_crb":"baytrail/byt_m",
+                    "baylake":"baylake/byt_t",
+                    "baylake_next":"baylake/byt_t",
+                    "byt_t_ffrd10":"baylake/byt_t",
+                    "byt_t_ffrd8":"baylake/byt_t",
+                    "byt_m_crb":"baylake/byt_m",
                     }[bld_prod]
 
         print "look for ifwis in the tree for %s"%bld_prod
