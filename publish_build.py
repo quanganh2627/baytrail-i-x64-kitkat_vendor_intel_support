@@ -167,6 +167,7 @@ def do_we_publish_extra_build(bld_variant,extra_build):
         return True
 
 def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
+    board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
@@ -178,6 +179,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
     publish_full_ota_flashfile = do_we_publish_extra_build(bld_variant, 'full_ota_flashfile')
     board_modem_flashless = get_build_options(key='BOARD_MODEM_FLASHLESS', key_type='boolean')
+    sparse_disabled = get_build_options(key='SPARSE_DISABLED', key_type='boolean')
     if bld_flash_modem:
         bldModemDico=dict(item.split(':') for item in bldModemDicosrc.split(','))
 
@@ -203,7 +205,10 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     if bld_supports_droidboot:
         publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
-        system_img_path_in_out = os.path.join(product_out,"system.img.gz")
+        if sparse_disabled:
+          system_img_path_in_out = os.path.join(product_out,"system.img.gz")
+        else:
+          system_img_path_in_out = os.path.join(product_out,"system.img")
     else:
         publish_file(locals(), "%(product_out)s/recovery.img.POS.bin", fastboot_dir, enforce=False)
         system_img_path_in_out = os.path.join(product_out,"system.tar.gz")
