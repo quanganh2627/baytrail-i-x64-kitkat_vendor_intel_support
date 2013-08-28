@@ -122,6 +122,10 @@ def generate_gpt_fstab_file(storage, global_data, os_mount):
         recovery_lines.append(global_data["usbcard"]["fstab_entry"])
         update_fill_list(current_line, fill)
 
+    if (global_data["sdcard"]["used"]) == 1:
+        recovery_lines.append(global_data["sdcard"]["fstab_entry"])
+        update_fill_list(current_line, fill)
+
     return recovery_lines, fill
 
 """
