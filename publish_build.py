@@ -79,28 +79,28 @@ def find_ifwis(basedir):
     else:
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
-    if bld_prod not in ["mrfl_vp","mrfl_hvp","moor_hvp","moor_sle","crc_hvp"]:
-        ifwiglobs = {"blackbay":"mfld_pr*",
-                    "lexington":"mfld_gi*",
-                    "salitpa":"salitpa",
-                    "yukkabeach":"yukkabeach",
-                    "victoriabay":"victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
-                    "redhookbay":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                    "redhookbay_next":"ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                    "ctp7160":"vb_vv_b0_b1",
-                    "ctpscalelt":"ctp_vv2/CTPSCALELT",
-                    "saltbay_lnp":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                    "saltbay_pr1":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                    "saltbay_pr1_next":"saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                    "bodegabay":"bodegabay bodegabay/DBG",
-                    "baylake":"baylake/byt_t",
-                    "baylake_next":"baylake/byt_t",
-                    "byt_t_ffrd10":"baylake/byt_t",
-                    "byt_t_ffrd8":"baylake/byt_t",
-                    "byt_m_crb":"baylake/byt_m",
-                    }[bld_prod]
+    if bld_prod not in ["mrfl_vp", "mrfl_hvp", "moor_hvp", "moor_sle", "crc_hvp"]:
+        ifwiglobs = {"blackbay": "mfld_pr*",
+                     "lexington": "mfld_gi*",
+                     "salitpa": "salitpa",
+                     "yukkabeach": "yukkabeach",
+                     "victoriabay": "victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
+                     "redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "ctp7160": "vb_vv_b0_b1",
+                     "ctpscalelt": "ctp_vv2/CTPSCALELT",
+                     "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
+                     "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
+                     "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
+                     "bodegabay": "bodegabay bodegabay/DBG",
+                     "baylake": "baytrail/byt_t",
+                     "baylake_next": "baytrail/byt_t",
+                     "byt_t_ffrd10": "baytrail/byt_t",
+                     "byt_t_ffrd8": "baytrail/byt_t",
+                     "byt_m_crb": "baytrail/byt_m",
+                     }[bld_prod]
 
-        print "look for ifwis in the tree for %s"%bld_prod
+        print "look for ifwis in the tree for %s" % bld_prod
         for ifwiglob in ifwiglobs.split(" "):
             gl = os.path.join(basedir, ifwi_base_dir,ifwiglob)
             base_ifwi = ifwiglob.split("/")[0]
@@ -290,6 +290,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         if not args.has_key("capsule"):
             f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
             f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+        elif bld == "byt_m_crb":
+            f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule")
         if args.has_key("ulpmc"):
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
 
