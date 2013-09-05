@@ -31,6 +31,8 @@ def get_build_options(key, key_type=None, default_value=None):
         value = os.environ[key]
         if key_type == 'boolean':
             return value.lower() in "true yes".split()
+        elif key_type == 'hex':
+            return int(value, 16)
         else:
             return value
     except KeyError:
@@ -408,6 +410,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
 def publish_blankphone(basedir, bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
+    gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
     product_out = os.path.join(basedir, "out/target/product", bld)
     blankphone_dir = os.path.join(basedir, bldpub, "flash_files/blankphone")
     partition_filename = "partition.tbl"
@@ -430,8 +433,8 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
                 f.add_xml_file(softfuse_f)
 
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000245, xml_filter=softfuse_files)
-            f.add_gpflag(0x80000145, xml_filter=default_files)
+            f.add_gpflag(gpflag | 0x00000200, xml_filter=softfuse_files)
+            f.add_gpflag(gpflag | 0x00000100, xml_filter=default_files)
         else:
             if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
                 f.xml_header("fastboot_dnx", bld, "1")
@@ -439,7 +442,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
                 f.xml_header("fastboot", bld, "1")
             else:
                 f.xml_header("system", bld, "1")
-                f.add_gpflag(0x80000045, xml_filter=default_files)
+                f.add_gpflag(gpflag, xml_filter=default_files)
 
         if "capsule" in args:
             default_ifwi = (("CAPSULE", args["capsule"], args["ifwiversion"]),
@@ -531,7 +534,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
             flash_IFWI = "flash-IFWI-only.xml"
             f.add_xml_file(flash_IFWI)
             f.xml_header("system", bld, "1", xml_filter=[flash_IFWI])
-            f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
+            f.add_gpflag((gpflag & 0xFFFFFFF8) | 0x00000102, xml_filter=[flash_IFWI])
             f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
         # Create a dedicated flash file for buildbot
