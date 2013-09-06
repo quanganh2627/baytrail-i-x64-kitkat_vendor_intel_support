@@ -290,6 +290,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         if not args.has_key("capsule"):
             f.add_command("fastboot flash dnx $fw_dnx_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
             f.add_command("fastboot flash ifwi $ifwi_%s_file"%(board.lower()), "Attempt flashing ifwi "+board)
+        elif bld == "byt_m_crb" or bld == "byt_t_ffrd10":
+            f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule")
         if args.has_key("ulpmc"):
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
 
