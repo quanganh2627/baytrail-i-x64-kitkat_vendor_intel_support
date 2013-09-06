@@ -1,4 +1,5 @@
 import os, sys
+import shutil
 
 class FlashFile:
     """a class to generate a flashfile zip
@@ -138,6 +139,13 @@ class FlashFile:
             os.system("zip -j %(outzip)s %(fn)s"%locals())
         for flashxml in flashxmls:
             os.unlink(flashxml)
+
+        # REVERTME: temporarily support old blankphone and new blankphone name for baytrail
+        #           This will be removed after buildbot update
+        zip_base = os.path.basename(outzip)
+        if zip_base.startswith("baytrail_") and zip_base.endswith("-blankphone.zip"):
+            cp_zip = os.path.join(os.path.dirname(outzip), zip_base.replace("baytrail_", "baylake_"))
+            shutil.copyfile(outzip, cp_zip)
 
     """
     Role: append content of a specified file
