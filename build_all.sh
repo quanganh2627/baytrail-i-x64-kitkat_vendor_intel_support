@@ -28,21 +28,6 @@ BOARDS="$BOARDS full_x86"		# QEMU/emulator bootable disk
 BOARDS="$BOARDS vbox"			# installer_vdi for virtualbox
 BOARDS="$BOARDS android_disk"		# Bootable disk for virtualbox
 
-# MFLD targets
-BOARDS="$BOARDS mfld_pr2"
-BOARDS="$BOARDS mfld_gi"
-BOARDS="$BOARDS salitpa"
-BOARDS="$BOARDS yukkabeach"
-
-# CTP targets
-BOARDS="$BOARDS victoriabay"
-BOARDS="$BOARDS ctp_pr1"
-
-# MRFL targets
-BOARDS="$BOARDS mrfl_vp"
-BOARDS="$BOARDS mrfl_hvp"
-BOARDS="$BOARDS mrfl_sle"
-
 # ARM builds (keep us honest)
 BOARDS="$BOARDS full"
 
@@ -258,12 +243,7 @@ for i in $BOARDS; do
     target="droid"
     lunch=full_x86
     ;;
-
-  mfld_pr2 | victoriabay | ctp_pr1 | mfld_gi | yukkabeach | salitpa | mrfl_vp | mrfl_hvp | mrfl_sle)
-    target="$i"
-    lunch=$target
-    ;;
-
+  
   * )
     echo >&2 "Target unknown. Guessing with target=\"droid $i\", lunch=\"$target\""
     target="droid $i"

@@ -48,11 +48,7 @@ echo $CMDLINE > $CMDLINE_FILE
 BOOTSTUB=vendor/intel/support/bootstub
 
 
-if [[   "$BOARD" == "mrfl_vp" \
-     || "$BOARD" == "mrfl_hvp" \
-     || "$BOARD" == "mrfl_sle" \
-     || "$BOARD" == "saltbay" \
-     || "$BOARD" == "bodegabay" \
+if [[   "$BOARD" == "saltbay" \
      || "$BOARD" == "moor_hvp" \
      || "$BOARD" == "moor_sle" \
      || "$BOARD" == "crc_hvp" \

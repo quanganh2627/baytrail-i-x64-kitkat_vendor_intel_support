@@ -113,20 +113,14 @@ def find_ifwis(basedir, board_soc):
     else:
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
-    if bld_prod not in ["mrfl_vp", "mrfl_hvp", "moor_hvp", "moor_sle", "crc_hvp"]:
-        ifwiglobs = {"blackbay": "mfld_pr*",
-                     "lexington": "mfld_gi*",
-                     "salitpa": "salitpa",
-                     "yukkabeach": "yukkabeach",
-                     "victoriabay": "victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
-                     "redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+    if bld_prod not in ["moor_hvp", "moor_sle", "crc_hvp"]:
+        ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "ctp7160": "vb_vv_b0_b1",
                      "ctpscalelt": "ctp_vv2/CTPSCALELT",
                      "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "bodegabay": "bodegabay bodegabay/DBG",
                      "baylake": "baytrail/byt_t",
                      "baylake_next": "baytrail/byt_t",
                      "byt_t_ffrd10": "baytrail/byt_t",
@@ -135,6 +129,7 @@ def find_ifwis(basedir, board_soc):
                      }[bld_prod]
 
         print "look for ifwis in the tree for %s" % bld_prod
+
         for ifwiglob in ifwiglobs.split(" "):
             gl = os.path.join(basedir, ifwi_base_dir, ifwiglob)
             base_ifwi = ifwiglob.split("/")[0]
@@ -515,7 +510,8 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
             f.add_xml_file("flash-fru.xml")
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=fru)
-            if bld_prod not in ["saltbay_lnp", "saltbay_pr1", "bodegabay"]:
+
+            if bld_prod not in ["saltbay_lnp","saltbay_pr1"]:
                 token_filename = "token.bin"
                 stub_token = os.path.join(product_out, token_filename)
                 # create a token with dummy data to make phone flash tool happy
