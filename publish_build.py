@@ -21,7 +21,7 @@ def get_link_path(gl):
     elif os.path.exists(gl):
         return os.path.realpath(gl)
     else:
-        print "No file for %s in directory %s" % (os.path.basename(gl),
+        print "\tNo file for %s in directory %s" % (os.path.basename(gl),
                                                   os.path.dirname(gl))
         return "None"
 
@@ -31,6 +31,8 @@ def get_build_options(key, key_type=None, default_value=None):
         value = os.environ[key]
         if key_type == 'boolean':
             return value.lower() in "true yes".split()
+        elif key_type == 'hex':
+            return int(value, 16)
         else:
             return value
     except KeyError:
@@ -75,27 +77,25 @@ def publish_file(args, src, dest, enforce=True):
                                            enforce=enforce)
 
 
-def find_stitched_ifwis(basedir, board_soc, ifwi_base_dir):
+def find_stitched_ifwis(basedir, ifwi_base_dir):
     ifwis = {}
 
-    gl = os.path.join(basedir, ifwi_base_dir, "ifwi*")
+    gl = os.path.join(basedir, ifwi_base_dir, "*/ifwi*")
     for ifwidir in glob.glob(gl):
-        if os.path.exists(os.path.join(basedir, ifwi_private_dir, board_soc, "dnx")):
-            dnxdir = os.path.join(basedir, ifwi_private_dir, board_soc, "dnx")
-        else:
-            dnxdir = os.path.join(basedir, ifwi_external_dir, "dnx")
-
         ifwi_name = os.path.splitext(os.path.basename(ifwidir))[0]
         board_name = ifwi_name.replace("ifwi_", "")
-        with open(os.path.join(os.path.dirname(ifwidir), "version"), "r") as fo:
-            ifwiversion = fo.readline()[:-1]
-            print "\tfound Stitched ifwi %s version:%s in %s" % (ifwi_name, ifwiversion, ifwidir)
-            ifwis[board_name] = dict(ifwiversion=ifwiversion,
-                                     ifwi=ifwidir,
-                                     fwdnx=get_link_path(os.path.join(dnxdir, "dnx_fwr.bin")),
-                                     osdnx=get_link_path(os.path.join(dnxdir, "dnx_osr.bin")),
-                                     softfuse=get_link_path(os.path.join(ifwidir, "soft_fuse.bin")),
-                                     xxrdnx=get_link_path(os.path.join(dnxdir, "dnx_xxr.bin")))
+        if os.path.exists(os.path.join(os.path.dirname(ifwidir), "version")):
+            with open(os.path.join(os.path.dirname(ifwidir), "version"), "r") as fo:
+                ifwiversion = fo.readline()[:-1]
+        else:
+            ifwiversion = os.path.splitext(os.path.basename(ifwidir))[0]
+        print "->> found Stitched ifwi %s version:%s in %s" % (ifwi_name, ifwiversion, ifwidir)
+        ifwis[board_name] = dict(ifwiversion=ifwiversion,
+                                 ifwi=ifwidir,
+                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_fwr.bin")),
+                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_osr.bin")),
+                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), "soft_fuse.bin")),
+                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_xxr.bin")))
     return ifwis
 
 
@@ -104,7 +104,7 @@ def find_ifwis(basedir, board_soc):
     ifwi_out_dir = os.path.join('out/target/product', bld, 'ifwi')
     if os.path.exists(os.path.join(basedir, ifwi_out_dir, 'version')):
         """ Stitched ifwi availlable. Prebuilt ifwi remain in the legacy path"""
-        return find_stitched_ifwis(basedir, board_soc, ifwi_out_dir)
+        return find_stitched_ifwis(basedir, ifwi_out_dir)
     """ walk the ifwi directory for matching ifwi
     return a dict indexed by boardname, with all the information in it"""
     ifwis = {}
@@ -113,10 +113,12 @@ def find_ifwis(basedir, board_soc):
     else:
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
-    if bld_prod not in ["moor_hvp", "moor_sle", "crc_hvp"]:
+    # Filter on _vp, _vp_next, _hvp, _hvp_next, _sle, _sle_next
+    isvirtualplatorm = re.match('.*_(vp|hvp|sle)($|\s|_next($|\s))', bld_prod)
+    if not(isvirtualplatorm):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                     "ctp7160": "vb_vv_b0_b1",
+                     "ctp7160": "vb_vv_b0_b1 cpa_v3_vv cpa_v3_vv_b0_b1",
                      "ctpscalelt": "ctp_vv2/CTPSCALELT",
                      "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
@@ -329,8 +331,9 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
         if "capsule" in args:
             f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
         else:
-            f.add_codegroup("FIRMWARE", (("IFWI_" + board.upper(), args["ifwi"], args["ifwiversion"]),
-                                        ("FW_DNX_" + board.upper(),  args["fwdnx"], args["ifwiversion"])))
+            if "PROD" not in args["ifwi"]:
+                f.add_codegroup("FIRMWARE", (("IFWI_" + board.upper(), args["ifwi"], args["ifwiversion"]),
+                                            ("FW_DNX_" + board.upper(),  args["fwdnx"], args["ifwiversion"])))
 
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
@@ -341,8 +344,11 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     for board, args in ifwis.items():
         if not "capsule" in args:
-            f.add_command("fastboot flash dnx $fw_dnx_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
-            f.add_command("fastboot flash ifwi $ifwi_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
+            if "PROD" not in args["ifwi"]:
+                f.add_command("fastboot flash dnx $fw_dnx_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
+                f.add_command("fastboot flash ifwi $ifwi_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
+        elif bld == "byt_m_crb":
+            f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule")
         if "ulpmc" in args:
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
 
@@ -404,6 +410,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
 def publish_blankphone(basedir, bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
+    gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
     product_out = os.path.join(basedir, "out/target/product", bld)
     blankphone_dir = os.path.join(basedir, bldpub, "flash_files/blankphone")
     partition_filename = "partition.tbl"
@@ -426,8 +433,8 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
                 f.add_xml_file(softfuse_f)
 
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000245, xml_filter=softfuse_files)
-            f.add_gpflag(0x80000145, xml_filter=default_files)
+            f.add_gpflag(gpflag | 0x00000200, xml_filter=softfuse_files)
+            f.add_gpflag(gpflag | 0x00000100, xml_filter=default_files)
         else:
             if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
                 f.xml_header("fastboot_dnx", bld, "1")
@@ -435,7 +442,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
                 f.xml_header("fastboot", bld, "1")
             else:
                 f.xml_header("system", bld, "1")
-                f.add_gpflag(0x80000045, xml_filter=default_files)
+                f.add_gpflag(gpflag, xml_filter=default_files)
 
         if "capsule" in args:
             default_ifwi = (("CAPSULE", args["capsule"], args["ifwiversion"]),
@@ -527,7 +534,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
             flash_IFWI = "flash-IFWI-only.xml"
             f.add_xml_file(flash_IFWI)
             f.xml_header("system", bld, "1", xml_filter=[flash_IFWI])
-            f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
+            f.add_gpflag((gpflag & 0xFFFFFFF8) | 0x00000102, xml_filter=[flash_IFWI])
             f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
         # Create a dedicated flash file for buildbot
@@ -628,7 +635,8 @@ def publish_stitched_ifwi(basedir, ifwis, board_soc, z):
         for k, v in ifwis.items():
             write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
             v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                                [("", "Android.mk")])
+                                                [("", "Android.mk"),
+                                                 ("..", "Android.mk")])
             write_ifwi_bin(k, v["androidmk"], "Android.mk")
 
             v["version"] = find_sibling_file(v["ifwi"], "version",
@@ -636,19 +644,15 @@ def publish_stitched_ifwi(basedir, ifwis, board_soc, z):
             write_ifwi_bin(k, v["version"], "version")
 
             if "fwdnx" in v:
-                write_ifwi_bin("dnx", v["fwdnx"], "dnx_fwr.bin")
+                write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
             if "osdnx" in v:
-                write_ifwi_bin("dnx", v["osdnx"], "dnx_osr.bin")
+                write_ifwi_bin(k, v["osdnx"], "dnx_osr.bin")
             if "capsule" in v:
                 write_ifwi_bin(k, v["capsule"], "capsule.bin")
                 v["capsule"] = find_sibling_file(v["capsule"], "prod capsule",
                                                  [("PROD", "*EXT.cap")])
                 write_ifwi_bin(k, v["capsule"], "capsule-prod.bin")
-        commonandroidmk = find_sibling_file(v["fwdnx"], "external_Android.mk",
-                                            [("..", "..", "common", "external_Android.mk"),
-                                             ("..", "..", "..", "common", "external_Android.mk"),
-                                             ("..", "..", "..", "..", "common", "external_Android.mk")])
-        write_ifwi_bin("common", commonandroidmk, "Android.mk")
+        write_ifwi_bin("common", os.path.join(ifwi_private_dir, "common", "external_Android.mk"), "Android.mk")
     z.close()
 
 

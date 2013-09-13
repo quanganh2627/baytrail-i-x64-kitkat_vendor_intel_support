@@ -4,11 +4,20 @@
 # $3 is bzImage path
 # $4 is initrd path
 # $5 is spi uart disable flag (0: default, 1: disable)
-# $6 is spi controller (0: SPI0(Moorestown) 1: SPI1(Medfield))
+# $6 is spi controller (0:auto-detect based on SoC, 1:SPI1 (Penwell, Cloverview), 2:SPI2 (Tangier, Anniedale)
 # $7 is output image
 
 if [ $# -lt 7 ]; then
-	echo "usage: nand.sh cmdline_path bootstub_path bzImage_path initrd_path spi_suppress_flag(0: output, 1: suppress) spi_type(0: Moorestown 1:Medfield) output_image"
+	echo -e ""
+	echo -e "usage: $(basename $0) cmdline_path bootstub_path bzImage_path initrd_path spi_suppress_flag spi_type output_image"
+	echo -e ""
+	echo -e "  spi_suppress_flag:\t0 to enable output messages"
+	echo -e "\t\t\t1 to suppress output messages"
+	echo -e ""
+	echo -e "  spi_type:\t\t0 auto-detect based on SoC"
+	echo -e "\t\t\t1 for SPI1 (Penwell, Cloverview)"
+	echo -e "\t\t\t2 for SPI2 (Tangier, Anniedale)"
+	echo -e ""
 	exit 1
 fi
 
@@ -57,7 +66,7 @@ printf $binstr | dd of=$7 bs=1 seek=1024 conv=notrunc
 binstring `stat -L -c %s $4`
 printf $binstr | dd of=$7 bs=1 seek=1028 conv=notrunc
 binstring "$5"
-printf $binstr | dd of=$7 bs=1 seek=1032 conv=notrunc # 
+printf $binstr | dd of=$7 bs=1 seek=1032 conv=notrunc
 binstring "$6"
 printf $binstr | dd of=$7 bs=1 seek=1036 conv=notrunc
 
