@@ -90,12 +90,13 @@ def find_stitched_ifwis(basedir, ifwi_base_dir):
         else:
             ifwiversion = os.path.splitext(os.path.basename(ifwidir))[0]
         print "->> found Stitched ifwi %s version:%s in %s" % (ifwi_name, ifwiversion, ifwidir)
+        path_ifwi_name = ifwi_name.replace("ifwi_", "")
         ifwis[board_name] = dict(ifwiversion=ifwiversion,
                                  ifwi=ifwidir,
-                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_fwr.bin")),
-                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_osr.bin")),
-                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), "soft_fuse.bin")),
-                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_xxr.bin")))
+                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_fwr_', path_ifwi_name,'.bin']))),
+                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_osr_', path_ifwi_name, '.bin']))),
+                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['soft_fuse_', path_ifwi_name, '.bin']))),
+                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_xxr_', path_ifwi_name, '.bin']))))
     return ifwis
 
 
