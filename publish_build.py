@@ -90,12 +90,13 @@ def find_stitched_ifwis(basedir, ifwi_base_dir):
         else:
             ifwiversion = os.path.splitext(os.path.basename(ifwidir))[0]
         print "->> found Stitched ifwi %s version:%s in %s" % (ifwi_name, ifwiversion, ifwidir)
+        path_ifwi_name = ifwi_name.replace("ifwi_", "")
         ifwis[board_name] = dict(ifwiversion=ifwiversion,
                                  ifwi=ifwidir,
-                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_fwr.bin")),
-                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_osr.bin")),
-                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), "soft_fuse.bin")),
-                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_xxr.bin")))
+                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_fwr_', path_ifwi_name,'.bin']))),
+                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_osr_', path_ifwi_name, '.bin']))),
+                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['soft_fuse_', path_ifwi_name, '.bin']))),
+                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_xxr_', path_ifwi_name, '.bin']))))
     return ifwis
 
 
@@ -120,9 +121,6 @@ def find_ifwis(basedir, board_soc):
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "ctp7160": "vb_vv_b0_b1 cpa_v3_vv cpa_v3_vv_b0_b1",
                      "ctpscalelt": "ctp_vv2/CTPSCALELT",
-                     "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "baylake": "baytrail/byt_t",
                      "baylake_next": "baytrail/byt_t",
                      "byt_t_ffrd10": "baytrail/byt_t",
@@ -226,17 +224,13 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
-    bldModemDicosrc = get_build_options(key='FLASH_MODEM_DICO')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
-    bld_skip_nvm = get_build_options(key='SKIP_NVM', key_type='boolean')
+    bld_flash_modem_nvm = not(get_build_options(key='SKIP_NVM', key_type='boolean'))
     publish_ota_target_files = do_we_publish_extra_build(bld_variant, 'ota_target_files')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
     publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
     publish_full_ota_flashfile = do_we_publish_extra_build(bld_variant, 'full_ota_flashfile')
-    board_modem_flashless = get_build_options(key='BOARD_MODEM_FLASHLESS', key_type='boolean')
     sparse_disabled = get_build_options(key='SPARSE_DISABLED', key_type='boolean')
-    if bld_flash_modem:
-        bldModemDico = dict(item.split(':') for item in bldModemDicosrc.split(','))
 
     product_out = os.path.join(basedir, "out/target/product", bld)
     fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
@@ -250,13 +244,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
-    if not bld_skip_nvm:
-        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
-    if bld_flash_modem and not board_modem_flashless:
-        for files in os.listdir(product_out + "/obj/ETC/modem_version_intermediates/"):
-            if files.endswith(".txt"):
-                print "publishing " + files
-                publish_file(locals(), "%(product_out)s/obj/ETC/modem_version_intermediates/" + files, fastboot_dir, enforce=False)
+
     if bld_supports_droidboot:
         publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
@@ -277,46 +265,19 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
         publish_file(locals(), "%(product_out)s/obj/PACKAGING/target_files_intermediates/%(targetfile)s", ota_inputs_dir, enforce=False)
     ifwis = find_ifwis(basedir, board_soc)
 
+    f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
     if bld_flash_modem:
-        f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "no-modem-reflash.xml")
-        # if we have different modem, prepare a flash file for each one
-        if len(bldModemDico) > 1 and not board_modem_flashless:
-            for board, modem in bldModemDico.iteritems():
-                xmlFileName = "flash-%s-%s.xml" % (board, modem)
-                f.add_xml_file(xmlFileName)
-        # if not, use a single flash.xml
-        else:
-            f.add_xml_file("flash.xml")
-    else:
-        f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
+               f.add_xml_file("no-modem-reflash.xml")
 
     f.xml_header("fastboot", bld, "1")
     f.add_file("KERNEL", os.path.join(fastboot_dir, "boot.img"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir, "recovery.img"), buildnumber)
-    if bld_flash_modem:
-        if board_modem_flashless:
-            publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_flashless.zip", fastboot_dir, enforce=False)
-            f.add_file("MODEM", os.path.join(fastboot_dir, "modem_flashless.zip"), buildnumber)
-        else:
-            for board, modem in bldModemDico.iteritems():
-                # if we have different modems, declare them in their respective flash file
-                if len(bldModemDico) > 1:
-                    f.add_file("MODEM", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s.bin" % locals(), buildnumber, xml_filter=["flash-%s-%s.xml" % (board, modem)])
-                    modemsrc = "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin"
-                    modemsrcl = glob.glob(modemsrc)
-                    if len(modemsrcl) == 1:
-                        f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" % locals(), buildnumber, xml_filter=["flash-%s-%s.xml" % (board, modem)])
-                # if not, declare it in the flash.xml file
-                else:
-                    f.add_file("MODEM", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s.bin" % locals(), buildnumber, xml_filter=["flash.xml"])
-                    modem_src_dir = os.path.join(product_out, "obj/ETC/modem_intermediates/")
-                    modemsrc = modem_src_dir + "/radio_firmware_" + modem + "_debug.bin"
-                    modemsrcl = glob.glob(modemsrc)
-                    print modemsrc + " len %d" % (len(modemsrcl),)
-                    if len(modemsrcl) == 1:
-                        f.add_file("MODEM_DEBUG", "%(product_out)s/obj/ETC/modem_intermediates/radio_firmware_%(modem)s_debug.bin" % locals(), buildnumber, xml_filter=["flash.xml"])
 
-        if not bld_skip_nvm:
+    if bld_flash_modem:
+        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem.zip", fastboot_dir, enforce=False)
+        f.add_file("MODEM", os.path.join(fastboot_dir, "modem.zip"), buildnumber)
+        if bld_flash_modem_nvm:
+            publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
             f.add_file("MODEM_NVM", os.path.join(fastboot_dir, "modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
@@ -362,14 +323,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
 
     if bld_flash_modem:
-        # if we have different modems, insert flash command in respective flash file
-        if len(bldModemDico) > 1:
-            for board, modem in bldModemDico.iteritems():
-                f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash-%s-%s.xml" % (board, modem)])
-        # if not, insert flash command in the flash.xml file
-        else:
-            f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"], timeout=220000)
-        if not bld_skip_nvm:
+        f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"], timeout=220000)
+        if bld_flash_modem_nvm:
             f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"], timeout=220000)
             f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"], timeout=220000)
     f.add_command("fastboot continue", "Reboot system")
@@ -552,36 +507,17 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
 def publish_modem(basedir, bld):
     # environment variables
     board_have_modem = get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
-    bld_skip_nvm = get_build_options(key='SKIP_NVM', key_type='boolean')
+    publish_modem_nvm = not(get_build_options(key='SKIP_NVM', key_type='boolean'))
     if not board_have_modem:
         print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld,)
         return 0
 
-    bldModemDicosrc = get_build_options(key='FLASH_MODEM_DICO')
-    bldModemDico = dict(item.split(':') for item in bldModemDicosrc.split(','))
-
     modem_dest_dir = os.path.join(basedir, bldpub, "MODEM/")
-    shutil.rmtree(modem_dest_dir, ignore_errors=True)
-    ignore_files = shutil.ignore_patterns('Android.mk', '.git')
-
     product_out = os.path.join(basedir, "out/target/product", bld)
     modem_out_dir = os.path.join(product_out, "system/etc/firmware/modem/")
-    modem_src_dir = os.path.join(product_out, "obj/ETC/modem_intermediates/")
-    modem_version_src_dir = os.path.join(product_out, "obj/ETC/modem_version_intermediates/")
 
-    board_modem_flashless = get_build_options(key='BOARD_MODEM_FLASHLESS', key_type='boolean')
-
-    if board_modem_flashless:
-        publish_file(locals(), modem_out_dir + "modem_flashless.zip", modem_dest_dir)
-    else:
-        for board, modem in bldModemDico.iteritems():
-            publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + ".bin", modem_dest_dir + modem)
-            publish_file(locals(), modem_src_dir + "radio_firmware_" + modem + "_debug.bin", modem_dest_dir + modem, enforce=False)
-            for files in os.listdir(modem_version_src_dir):
-                if files.endswith(".txt"):
-                    publish_file(locals(), modem_version_src_dir + files, modem_dest_dir + modem)
-
-    if not bld_skip_nvm:
+    publish_file(locals(), modem_out_dir + "modem.zip", modem_dest_dir)
+    if publish_modem_nvm:
         publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
 
