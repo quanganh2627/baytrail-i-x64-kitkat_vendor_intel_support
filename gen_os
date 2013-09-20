@@ -278,7 +278,7 @@ class IsuHandler(NoneHandler):
             isu_cmd = ['ssh', _SIGNER, isu_prog, '-k', cert_file]
         else:
             logging_debug("Signature is performed on localhost")
-            isu_prog = os.path.join(self.ISU_HOME, self.ISU_PROG)
+            isu_prog = os.path.join(HOST_OUT_EXECUTABLES, self.ISU_PROG)
             cert_file = os.path.join(self.ISU_HOME, self.ISU_CERT)
             isu_cmd = [isu_prog, '-k', cert_file]
         img_hash, img_size = self.gethash(), self.getsize()
