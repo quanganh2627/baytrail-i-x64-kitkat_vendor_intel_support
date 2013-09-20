@@ -118,14 +118,10 @@ def find_ifwis(basedir, board_soc):
     if not(isvirtualplatorm):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "redhookbay_lnp": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "ctp7160": "vb_vv_b0_b1 cpa_v3_vv cpa_v3_vv_b0_b1",
-                     "ctpscalelt": "ctp_vv2/CTPSCALELT",
-                     "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "baylake": "baytrail/byt_t",
                      "baylake_next": "baytrail/byt_t",
-                     "byt_t_ffrd10": "baytrail/byt_t",
                      "byt_t_ffrd8": "baytrail/byt_t",
                      "byt_m_crb": "baytrail/byt_m",
                      }[bld_prod]
