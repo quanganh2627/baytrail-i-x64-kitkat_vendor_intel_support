@@ -511,7 +511,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=fru)
 
-            if bld_prod not in ["saltbay_lnp","saltbay_pr1"]:
+            if bld_prod not in ["saltbay_lnp","saltbay"]:
                 token_filename = "token.bin"
                 stub_token = os.path.join(product_out, token_filename)
                 # create a token with dummy data to make phone flash tool happy
