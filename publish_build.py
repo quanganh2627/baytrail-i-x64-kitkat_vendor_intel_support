@@ -90,12 +90,13 @@ def find_stitched_ifwis(basedir, ifwi_base_dir):
         else:
             ifwiversion = os.path.splitext(os.path.basename(ifwidir))[0]
         print "->> found Stitched ifwi %s version:%s in %s" % (ifwi_name, ifwiversion, ifwidir)
+        path_ifwi_name = ifwi_name.replace("ifwi_", "")
         ifwis[board_name] = dict(ifwiversion=ifwiversion,
                                  ifwi=ifwidir,
-                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_fwr.bin")),
-                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_osr.bin")),
-                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), "soft_fuse.bin")),
-                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), "dnx_xxr.bin")))
+                                 fwdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_fwr_', path_ifwi_name,'.bin']))),
+                                 osdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_osr_', path_ifwi_name, '.bin']))),
+                                 softfuse=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['soft_fuse_', path_ifwi_name, '.bin']))),
+                                 xxrdnx=get_link_path(os.path.join(os.path.dirname(ifwidir), ''.join(['dnx_xxr_', path_ifwi_name, '.bin']))))
     return ifwis
 
 
@@ -118,14 +119,10 @@ def find_ifwis(basedir, board_soc):
     if not(isvirtualplatorm):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "redhookbay_lnp": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "ctp7160": "vb_vv_b0_b1 cpa_v3_vv cpa_v3_vv_b0_b1",
-                     "ctpscalelt": "ctp_vv2/CTPSCALELT",
-                     "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "baylake": "baytrail/byt_t",
                      "baylake_next": "baytrail/byt_t",
-                     "byt_t_ffrd10": "baytrail/byt_t",
                      "byt_t_ffrd8": "baytrail/byt_t",
                      "byt_m_crb": "baytrail/byt_m",
                      }[bld_prod]
@@ -310,7 +307,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
             if "PROD" not in args["ifwi"]:
                 f.add_command("fastboot flash dnx $fw_dnx_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
                 f.add_command("fastboot flash ifwi $ifwi_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
-        elif bld == "byt_m_crb":
+        else:
             f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule")
         if "ulpmc" in args:
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
