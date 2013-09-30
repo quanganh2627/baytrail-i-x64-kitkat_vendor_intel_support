@@ -333,6 +333,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
 
 
 def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
+    target_name = get_build_options(key='GENERIC_TARGET_NAME')
+
     # Get publish options
     publish_inputs = do_we_publish_extra_build(bld_variant, 'ota_target_files')
     publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
@@ -342,11 +344,11 @@ def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
     pub_dir_full_ota = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
 
     product_out = os.path.join(basedir, "out/target/product", bld)
-    full_ota_basename = "%(bld_prod)s-ota-%(buildnumber)s.zip" % locals()
+    full_ota_basename = "%(target_name)s-ota-%(buildnumber)s.zip" % locals()
     full_ota_file = os.path.join(product_out, full_ota_basename)
 
     inputs_out = "%(product_out)s/obj/PACKAGING/target_files_intermediates" % locals()
-    inputs_basename = "%(bld_prod)s-target_files-%(buildnumber)s.zip" % locals()
+    inputs_basename = "%(target_name)s-target_files-%(buildnumber)s.zip" % locals()
     inputs_file = os.path.join(inputs_out, inputs_basename)
 
     # Publish
@@ -371,7 +373,7 @@ def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
     pub_dir_flashfiles = os.path.join(basedir, bldpub, "flash_files")
 
     product_out = os.path.join(basedir, "out/target/product", bld)
-    full_ota_basename = "%(bld_prod)s-ota-%(buildnumber)s.zip" % locals()
+    full_ota_basename = "%(target_name)s-ota-%(buildnumber)s.zip" % locals()
     full_ota_file = os.path.join(product_out, full_ota_basename)
 
     # build the ota flashfile
