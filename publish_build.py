@@ -120,7 +120,7 @@ def find_ifwis(basedir, board_soc):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_lnp": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                     "ctp7160": "vb_vv_b0_b1 cpa_v3_vv cpa_v3_vv_b0_b1",
+                     "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
                      "baylake": "baytrail/byt_t",
                      "baylake_next": "baytrail/byt_t",
                      "byt_t_ffrd8": "baytrail/byt_t",
@@ -221,22 +221,16 @@ def do_we_publish_extra_build(bld_variant, extra_build):
 def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
-    bld_supports_ota_flashfile = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
     bld_flash_modem_nvm = not(get_build_options(key='SKIP_NVM', key_type='boolean'))
-    publish_ota_target_files = do_we_publish_extra_build(bld_variant, 'ota_target_files')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
-    publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
-    publish_full_ota_flashfile = do_we_publish_extra_build(bld_variant, 'full_ota_flashfile')
     sparse_disabled = get_build_options(key='SPARSE_DISABLED', key_type='boolean')
 
     product_out = os.path.join(basedir, "out/target/product", bld)
     fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
+    iafw_dir = os.path.join(basedir, bldpub, "iafw")
     flashfile_dir = os.path.join(basedir, bldpub, "flash_files")
-    ota_inputs_dir = os.path.join(basedir, bldpub, "ota_inputs", bld_variant)
-    otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip" % locals()
-    targetfile = "%(bld_prod)s-target_files-%(buildnumber)s.zip" % locals()
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
@@ -257,11 +251,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     if publish_system_img:
         publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
-    otafile_path_in_out = os.path.join(product_out, otafile)
-    if publish_full_ota:
-        publish_file_without_formatting(otafile_path_in_out, fastboot_dir, enforce=False)
-    if bld_variant.find("user") >= 0 and publish_ota_target_files:
-        publish_file(locals(), "%(product_out)s/obj/PACKAGING/target_files_intermediates/%(targetfile)s", ota_inputs_dir, enforce=False)
+    publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw.bin", iafw_dir, enforce=False)
     ifwis = find_ifwis(basedir, board_soc)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
@@ -341,24 +331,75 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f.finish()
 
+
+def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
+    target_name = get_build_options(key='GENERIC_TARGET_NAME')
+
+    # Get publish options
+    publish_inputs = do_we_publish_extra_build(bld_variant, 'ota_target_files')
+    publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
+
+    # Set paths
+    pub_dir_inputs = os.path.join(basedir, bldpub, "ota_inputs", bld_variant)
+    pub_dir_full_ota = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
+
+    product_out = os.path.join(basedir, "out/target/product", bld)
+    full_ota_basename = "%(target_name)s-ota-%(buildnumber)s.zip" % locals()
+    full_ota_file = os.path.join(product_out, full_ota_basename)
+
+    inputs_out = "%(product_out)s/obj/PACKAGING/target_files_intermediates" % locals()
+    inputs_basename = "%(target_name)s-target_files-%(buildnumber)s.zip" % locals()
+    inputs_file = os.path.join(inputs_out, inputs_basename)
+
+    # Publish
+    if publish_full_ota:
+        publish_file_without_formatting(full_ota_file, pub_dir_full_ota, enforce=False)
+
+    if publish_inputs and bld_variant.find("user") >= 0:
+        publish_file_without_formatting(inputs_file, pub_dir_inputs, enforce=False)
+
+
+def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
+    # Get values from environment variables
+    supported = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
+    published = do_we_publish_extra_build(bld_variant, 'full_ota_flashfile')
+    target_name = get_build_options(key='GENERIC_TARGET_NAME')
+
+    if not supported or not published:
+        print "Do not publish ota flashfile"
+        return
+
+    # Set paths
+    pub_dir_flashfiles = os.path.join(basedir, bldpub, "flash_files")
+
+    product_out = os.path.join(basedir, "out/target/product", bld)
+    full_ota_basename = "%(target_name)s-ota-%(buildnumber)s.zip" % locals()
+    full_ota_file = os.path.join(product_out, full_ota_basename)
+
     # build the ota flashfile
-    if bld_supports_ota_flashfile and publish_full_ota_flashfile:
-        f = FlashFile(os.path.join(flashfile_dir, "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-ota-%(buildnumber)s.zip" % locals()), "flash.xml")
-        f.xml_header("ota", bld, "1")
-        # the ofafile is optionally published, therefore
-        # we use the one that is in out to be included in the flashfile
-        f.add_file("OTA", otafile_path_in_out, buildnumber)
-        f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
-        f.add_command("adb root", "As root user")
-        f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
-        f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
-        if bld == "byt_m_crb":
-            ota_push_timeout = 1000000
-        else:
-            ota_push_timeout = 300000
-        f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update", timeout=ota_push_timeout)
-        f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
-        f.finish()
+    f = FlashFile(os.path.join(pub_dir_flashfiles,
+                               "build-" + bld_variant,
+                               "%(target_name)s-%(bld_variant)s-ota-%(buildnumber)s.zip" % locals()),
+                  "flash.xml")
+    f.xml_header("ota", bld, "1")
+    f.add_file("OTA", full_ota_file, buildnumber)
+    f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
+    f.add_command("adb root", "As root user")
+    f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
+    f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
+    if bld == "byt_m_crb":
+        ota_push_timeout = 1000000
+    else:
+        ota_push_timeout = 300000
+    f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update", timeout=ota_push_timeout)
+    f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip",
+                  "Trigger os update")
+    f.finish()
+
+
+def publish_ota(basedir, bld, bld_variant, bld_prod, buildnumber):
+    publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber)
+    publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber)
 
 
 def publish_blankphone(basedir, bld, buildnumber, board_soc):
@@ -472,7 +513,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, "1", xml_filter=fru)
 
-            if bld_prod not in ["saltbay_lnp","saltbay_pr1"]:
+            if bld_prod not in ["saltbay_lnp","saltbay"]:
                 token_filename = "token.bin"
                 stub_token = os.path.join(product_out, token_filename)
                 # create a token with dummy data to make phone flash tool happy
@@ -665,31 +706,53 @@ def publish_external(basedir, bld, bld_variant, board_soc):
                                                  ("..", "..", "..", "..", "common", "external_Android.mk")])
             write_ifwi_bin("common", commonandroidmk, "Android.mk")
         z.close()
+
+
 if __name__ == '__main__':
-    # parse options
-    basedir = sys.argv[1]
-    bld_prod = sys.argv[2].lower()
-    bld = sys.argv[3].lower()
-    bld_variant = sys.argv[4]
-    buildnumber = sys.argv[5]
-    board_soc = sys.argv[6]
+    # Arguments from the command line
+    goal = sys.argv[1]
+    basedir = sys.argv[2]
+    bld_prod = sys.argv[3].lower()
+    bld = sys.argv[4].lower()
+    bld_variant = sys.argv[5]
+    buildnumber = sys.argv[6]
+    board_soc = sys.argv[7]
+
+    # Arguments from the environment
+    bootonly_flashfile = get_build_options(key='FLASHFILE_BOOTONLY',
+                                           key_type='boolean',
+                                           default_value=False)
+    external_release = get_build_options(key='EXTERNAL_BINARIES',
+                                         key_type='boolean',
+                                         default_value=not bootonly_flashfile)
 
     init_global()
-    bootonly_flashfile = get_build_options(key='FLASHFILE_BOOTONLY', key_type='boolean', default_value=False)
 
+    # When bootonly is set, only accept fastboot_flashfile goal
     if bootonly_flashfile:
-        if bld_variant not in ["blankphone", "modem"]:
+        if goal == "fastboot_flashfile":
             publish_kernel(basedir, bld, bld_variant)
         else:
-            print "nothing to do for this target"
+            print "FLASHFILE_BOOTONLY: Nothing to publish"
+        sys.exit(0)
+
+    # Publish goal
+    if goal == "blankphone":
+        publish_blankphone(basedir, bld, buildnumber, board_soc)
+
+    elif goal == "modem":
+        publish_modem(basedir, bld)
+
+    elif goal == "fastboot_flashfile":
+        if external_release:
+            publish_external(basedir, bld, bld_variant, board_soc)
+        if do_we_publish_bld_variant(bld_variant):
+            publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc)
+
+    elif goal == "ota_flashfile":
+        if do_we_publish_bld_variant(bld_variant):
+            publish_ota(basedir, bld, bld_variant, bld_prod, buildnumber)
+
     else:
-        if bld_variant == "blankphone":
-            publish_blankphone(basedir, bld, buildnumber, board_soc)
-        elif bld_variant == "modem":
-            publish_modem(basedir, bld)
-        else:
-            external_release = get_build_options(key='EXTERNAL_BINARIES', key_type='boolean', default_value=not bootonly_flashfile)
-            if external_release:
-                publish_external(basedir, bld, bld_variant, board_soc)
-            if do_we_publish_bld_variant(bld_variant):
-                publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc)
+        print "Unsupported publish goal [%s]" % goal
+        sys.exit(1)
