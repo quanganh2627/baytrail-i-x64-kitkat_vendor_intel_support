@@ -300,7 +300,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
         else:
             f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule")
         if "ulpmc" in args:
-            f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", mandatory=0)
+            f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", retry=3, mandatory=0)
 
     f.add_command("fastboot erase cache", "Erasing cache")
     f.add_command("fastboot erase system", "Erasing system")
@@ -467,8 +467,8 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
         if "capsule" in args:
             fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
             f.add_file("FASTBOOT", os.path.join(product_out, "droidboot.img"), buildnumber)
-            f.add_file("KERNEL", os.path.join(product_out, "recovery.img"), buildnumber)
-            f.add_file("RECOVERY", os.path.join(product_out, "boot.img"), buildnumber)
+            f.add_file("KERNEL", os.path.join(product_out, "boot.img"), buildnumber)
+            f.add_file("RECOVERY", os.path.join(product_out, "recovery.img"), buildnumber)
             f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
         else:
             f.add_codegroup("BOOTLOADER", (("KBOOT", recoveryimg, buildnumber),))
