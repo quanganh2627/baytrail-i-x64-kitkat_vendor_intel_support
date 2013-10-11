@@ -51,6 +51,7 @@ def logging_debug(*args):
 system, _, _, _, machine = os.uname()
 if 'Linux' in system and '86' in machine:
     HOST_OUT_EXECUTABLES = os.path.join('out', 'host', 'linux-x86', 'bin')
+    HOST_OUT_CERT = os.path.join('out', 'host', 'linux-x86', 'etc', 'cert')
 else:
     raise SystemError("Unsupported platform: %s %s" % (system, machine))
 
@@ -85,7 +86,8 @@ def _env(varname):
 
 # Bring the signing environment to handlers that support signing.
 _SIGNATURE_BY_SIGNER = _env('USE_SIGNER')
-_SIGNATURE_REQUESTED = _env('LOCAL_SIGN') or _SIGNATURE_BY_SIGNER
+_SIGNATURE_LOCALLY = _env('LOCAL_SIGN')
+_SIGNATURE_REQUESTED = _SIGNATURE_LOCALLY or _SIGNATURE_BY_SIGNER
 try:
     _SIGNER = "%s@%s" % (os.environ['SIGNER_LOGIN'], os.environ['SIGNER_SERVER'])
 except:
@@ -257,17 +259,17 @@ class IsuHandler(NoneHandler):
     # e.g. through os.path.expanduser(): it's going to expand to the HOME
     # environment variable, or the current user's home directory, whereas it
     # shall be the SIGNER_LOGIN home directory on the SIGNER_SERVER.
-    ISU_HOME = os.path.join('vendor', 'intel', 'tools/intel_signing_utility')
     ISU_HOME_ON_SIGNER = os.path.join('~', 'intel_signing_utility')
-    ISU_PROG = os.path.join('isu_stream')
-    ISU_CERT = os.path.join('c0_234.pem')
+    ISU_PROG = 'isu_stream'
+    ISU_CERT = 'OS_priv.pem'
+    ISU_PLATFORM = '1'
 
     def _sign(self):
         # ISU will be called in stream mode.  We communicate the image hash and
         # size to the child process and get back the VRL header.  The mechanic
         # is the same whether we want to sign the image locally or use a signing
         # server, except the script is run through ssh in the latter case.
-        if _SIGNATURE_BY_SIGNER:
+        if _SIGNATURE_BY_SIGNER and not _SIGNATURE_LOCALLY:
             logging_debug("Signature is delegated to %s", _SIGNER)
             if _SIGNER is None:
                 raise EnvironmentError("Please, set both environment variables: "
@@ -275,12 +277,12 @@ class IsuHandler(NoneHandler):
             # Update paths to what they are supposed to be on the server.
             isu_prog = os.path.join(self.ISU_HOME_ON_SIGNER, self.ISU_PROG)
             cert_file = os.path.join(self.ISU_HOME_ON_SIGNER, self.ISU_CERT)
-            isu_cmd = ['ssh', _SIGNER, isu_prog, '-k', cert_file]
+            isu_cmd = ['ssh', _SIGNER, isu_prog, '-k', cert_file,'-p', self.ISU_PLATFORM]
         else:
             logging_debug("Signature is performed on localhost")
             isu_prog = os.path.join(HOST_OUT_EXECUTABLES, self.ISU_PROG)
-            cert_file = os.path.join(self.ISU_HOME, self.ISU_CERT)
-            isu_cmd = [isu_prog, '-k', cert_file]
+            cert_file = os.path.join(HOST_OUT_CERT, self.ISU_CERT)
+            isu_cmd = [isu_prog, '-k', cert_file,'-p', self.ISU_PLATFORM]
         img_hash, img_size = self.gethash(), self.getsize()
         logging_debug("Image information: size=%X  hash=%s", img_size, img_hash)
         retcode, signature, err = _run(isu_cmd,
@@ -304,6 +306,17 @@ class IsuHandler(NoneHandler):
             self._sign()
         super(IsuHandler, self).stitch(output_file)
 
+@Stitch.register('baylake')
+class BaylakeHandler(IsuHandler):
+
+    # Intel Signing Utility.
+    # CAUTION: resist the temptation to expand the ISU_HOME_ON_SIGNER path here,
+    # e.g. through os.path.expanduser(): it's going to expand to the HOME
+    # environment variable, or the current user's home directory, whereas it
+    # shall be the SIGNER_LOGIN home directory on the SIGNER_SERVER.
+    ISU_CERT_HOME = os.path.join('vendor', 'intel', 'PRIVATE/cert')
+    ISU_CERT = 'OS_priv.pem'
+    ISU_PLATFORM = '2'
 
 def main():
     logging.basicConfig(format=("%(filename)s: %(levelname)s: %(message)s"),
@@ -325,13 +338,18 @@ def main():
     cmd_parser.add_argument('--sign-with', choices=Stitch.choices(), default='none',
                             dest='handler_name', metavar='signing-method',
                             help="Signing method to use")
+    cmd_parser.add_argument('--product', default='none',
+                            dest='product', metavar='product',
+                            help="Product")
     args = cmd_parser.parse_args()
     try:
         # XXX: THIS TEST SHALL BE REMOVED ONCE XFSTK-STITCHER SUPPORTS
         #      platformXML FOR ALL PLATFORMS
         if args.type == "MRFLDA0":
             args.handler_name = 'merrifield'
-
+        baylake_products = ["baylake", "byt_t_ffrd10", "byt_t_ffrd8", "byt_m_crb"]
+        if args.product in baylake_products:
+            args.handler_name = 'baylake'
         stitch_handler = Stitch.get(args.handler_name)
         with stitch_handler(args.input_file, args.definition, args.type) as h:
             h.stitch(args.output_file)
