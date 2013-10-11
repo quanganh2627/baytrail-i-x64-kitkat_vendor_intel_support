@@ -431,7 +431,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
             f.add_gpflag(gpflag | 0x00000200, xml_filter=softfuse_files)
             f.add_gpflag(gpflag | 0x00000100, xml_filter=default_files)
         else:
-            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+            if bld == "baylake" or bld == "byt_t_ffrd8":
                 f.xml_header("fastboot_dnx", bld, "1")
             elif "capsule" in args:
                 f.xml_header("fastboot", bld, "1")
@@ -478,7 +478,7 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
         f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
         if "capsule" in args:
-            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+            if bld == "baylake" or bld == "byt_t_ffrd8":
                 f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
                 f.add_command("fastboot continue", "Booting on fastboot image")
                 f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
