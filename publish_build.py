@@ -828,7 +828,8 @@ if __name__ == '__main__':
             print "FLASHFILE_BOOTONLY: Nothing to publish"
         sys.exit(0)
 
-    bios_type = get_build_options(key='TARGET_BIOS_TYPE')
+    bios_type = get_build_options(key='TARGET_BIOS_TYPE',
+				  default_value='uefi')
 
     # Publish goal
     if goal == "blankphone":
