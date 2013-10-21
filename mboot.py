@@ -64,11 +64,19 @@ def unpack_ramdisk(fname, outdir):
     os.mkdir(outdir)
     call('cpio -i < ../' + fname, edir=outdir)
 
+# unpack boot.img to options.dir
+# caution, if using default directory tmp_boot_unpack
+# it is remove with rmtree() before unpacking
 def unpack_bootimg(fname):
+    if options.dir == 'tmp_boot_unpack' and os.path.exists(options.dir):
+        print 'Removing ', options.dir
+        shutil.rmtree(options.dir)
+
     print 'Unpacking ', fname
     if options.dir:
         print 'into ', options.dir
-        os.mkdir(options.dir)
+        if not os.path.exists(options.dir):
+            os.mkdir(options.dir)
 
     f = open(fname, 'r')
 
