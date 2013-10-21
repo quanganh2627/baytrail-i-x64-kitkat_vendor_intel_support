@@ -559,7 +559,7 @@ def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
             f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
         publish_partitioning_commands(f, bld, buildnumber, partition_filename,
-                                      [ "system", "cache", "config", "logs", "spare", "data" ]);
+                                      [ "system", "cache", "config", "logs", "data" ]);
 
         fru_configs = get_build_options(key='FRU_CONFIGS')
         if os.path.exists(fru_configs):
@@ -629,7 +629,7 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
     publish_partitioning_commands(f, bld, buildnumber, os.path.split(part_file)[1],
-                                  [ "system", "cache", "config", "logs", "spare", "data" ])
+                                  [ "system", "cache", "config", "logs", "data" ])
 
     publish_flash_target2file(f, target2file)
 
