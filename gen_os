@@ -260,8 +260,9 @@ class IsuHandler(NoneHandler):
     # environment variable, or the current user's home directory, whereas it
     # shall be the SIGNER_LOGIN home directory on the SIGNER_SERVER.
     ISU_HOME_ON_SIGNER = os.path.join('~', 'intel_signing_utility')
+    HOST_OUT_CERT = os.path.join('vendor', 'intel', 'PRIVATE/cert')
     ISU_PROG = 'isu_stream'
-    ISU_CERT = 'OS_priv.pem'
+    ISU_CERT = 'c0_234.pem'
     ISU_PLATFORM = '1'
 
     def _sign(self):
@@ -281,7 +282,7 @@ class IsuHandler(NoneHandler):
         else:
             logging_debug("Signature is performed on localhost")
             isu_prog = os.path.join(HOST_OUT_EXECUTABLES, self.ISU_PROG)
-            cert_file = os.path.join(HOST_OUT_CERT, self.ISU_CERT)
+            cert_file = os.path.join(self.HOST_OUT_CERT, self.ISU_CERT)
             isu_cmd = [isu_prog, '-k', cert_file,'-p', self.ISU_PLATFORM]
         img_hash, img_size = self.gethash(), self.getsize()
         logging_debug("Image information: size=%X  hash=%s", img_size, img_hash)
