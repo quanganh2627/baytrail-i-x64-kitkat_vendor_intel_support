@@ -218,7 +218,7 @@ def do_we_publish_extra_build(bld_variant, extra_build):
         return True
 
 
-def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
+def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
@@ -302,8 +302,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
         if "ulpmc" in args:
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", retry=3, mandatory=0)
 
-    f.add_command("fastboot erase cache", "Erasing cache")
-    f.add_command("fastboot erase system", "Erasing system")
+    publish_erase_partitions(f, [ "cache", "system" ])
+
     if bld == "byt_m_crb":
         system_flash_timeout = 700000
     else:
@@ -331,6 +331,55 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f.finish()
 
+def publish_attach_modem_files (f, directory, buildnumber):
+    if get_build_options(key='FLASH_MODEM', key_type='boolean'):
+        f.add_xml_file("no-modem-reflash.xml")
+        publish_file(locals(), "%s/system/etc/firmware/modem/modem.zip",
+                     directory, enforce=False)
+        f.add_file("MODEM", os.path.join(directory, "modem.zip"), buildnumber)
+        if not(get_build_options(key='SKIP_NVM', key_type='boolean')):
+            publish_file(locals(), "%s/system/etc/firmware/modem/modem_nvm.zip",
+                         directory, enforce=False)
+            f.add_file("MODEM_NVM", os.path.join(directory, "modem_nvm.zip"), buildnumber)
+
+def publish_flash_modem_files(f):
+    if get_build_options(key='FLASH_MODEM', key_type='boolean'):
+        f.add_command("fastboot flash radio $modem_file", "Flashing modem.",
+                      xml_filter=["flash.xml"], timeout=220000)
+        if not(get_build_options(key='SKIP_NVM', key_type='boolean')):
+            f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm.",
+                          xml_filter=["flash.xml"], timeout=220000)
+            f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm.",
+                          xml_filter=["flash.xml"], timeout=220000)
+
+def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
+    product_out = os.path.join(basedir, "out/target/product", bld)
+    fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images")
+    target2file = [ ("ESP", "esp"), ("fastboot", "droidboot"), ("boot", "boot" ),
+                    ("recovery", "recovery"), ("system", "system") ]
+    bldx = get_build_options(key='GENERIC_TARGET_NAME')
+    flashfile_dir = os.path.join(basedir, bldpub, "flash_files")
+
+    f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant,
+                               "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
+    if get_build_options(key='FLASH_MODEM', key_type='boolean'):
+        f.add_xml_file("no-modem-reflash.xml")
+    f.xml_header("fastboot", bld, "1")
+
+    publish_attach_modem_files(f, fastboot_dir, buildnumber)
+    publish_attach_target2file(f, product_out, buildnumber, target2file)
+
+    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+
+    f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
+
+    publish_erase_partitions(f, [ "cache", "system" ]);
+
+    publish_flash_target2file(f, target2file)
+    publish_flash_modem_files(f)
+
+    f.add_command("fastboot continue", "Rebooting now.")
+    f.finish()
 
 def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
     target_name = get_build_options(key='GENERIC_TARGET_NAME')
@@ -357,7 +406,6 @@ def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
 
     if publish_inputs and bld_variant.find("user") >= 0:
         publish_file_without_formatting(inputs_file, pub_dir_inputs, enforce=False)
-
 
 def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
     # Get values from environment variables
@@ -396,13 +444,32 @@ def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
                   "Trigger os update")
     f.finish()
 
-
 def publish_ota(basedir, bld, bld_variant, bld_prod, buildnumber):
     publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber)
     publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber)
 
+def publish_erase_partitions (f, partitions):
+    for part in partitions:
+        f.add_command("fastboot erase " + part, "Erase '%s' partition." % part)
 
-def publish_blankphone(basedir, bld, buildnumber, board_soc):
+def publish_partitioning_commands(f, bld, buildnumber, filename, erase_list):
+    f.add_command("fastboot oem start_partitioning", "Start partitioning.")
+    f.add_command("fastboot flash /tmp/%s $partition_table_file" % (filename,), "Push the new partition table to the device.")
+    f.add_command("fastboot oem partition /tmp/%s" % (filename), "Apply the new partition scheme.")
+
+    if bld == "byt_m_crb":
+        tag = "flash.xml -EraseFactory"
+    else:
+        tag = "-EraseFactory"
+
+    xml_tag_list = [i for i in f.xml.keys() if tag in i]
+    f.add_command("fastboot erase %s" % ("factory",), "Erase '%s' partition." % ("factory",), xml_filter=xml_tag_list)
+
+    publish_erase_partitions(f, erase_list);
+
+    f.add_command("fastboot oem stop_partitioning", "Stop partitioning.")
+
+def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
@@ -491,21 +558,8 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
                 f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
             f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
-        f.add_command("fastboot oem start_partitioning", "Start partitioning")
-        f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename,), "Push partition table on device")
-        f.add_command("fastboot oem partition /tmp/%s" % (partition_filename,), "Apply partition on device")
-
-        if bld == "byt_m_crb":
-            tag = "flash.xml -EraseFactory"
-        else:
-            tag = "-EraseFactory"
-
-        xml_tag_list = [i for i in f.xml.keys() if tag in i]
-        f.add_command("fastboot erase %s" % ("factory",), "erase %s partition" % ("factory",), xml_filter=xml_tag_list)
-
-        for i in "system cache config logs spare data".split():
-            f.add_command("fastboot erase " + i, "erase %s partition" % (i,))
-        f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
+        publish_partitioning_commands(f, bld, buildnumber, partition_filename,
+                                      [ "system", "cache", "config", "logs", "spare", "data" ]);
 
         fru_configs = get_build_options(key='FRU_CONFIGS')
         if os.path.exists(fru_configs):
@@ -543,6 +597,44 @@ def publish_blankphone(basedir, bld, buildnumber, board_soc):
                 f.copy_xml_file("flash.xml", "flash-buildbot.xml")
         f.finish()
 
+def publish_attach_target2file(f, path, buildnumber, target2file):
+    for target_file in target2file:
+        f.add_file(target_file[1],
+                   os.path.join(path, "%s.img" % target_file[1]), buildnumber)
+
+def publish_flash_target2file(f, target2file):
+    for target_file in target2file:
+        flash_timeout = 420000 if target_file[0] == "system" else 60000
+        f.add_command("fastboot flash %s $%s_file" % ( target_file[0] ,target_file[1]),
+                      "Flashing '%s' image." % target_file[0], timeout=flash_timeout)
+
+def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
+    product_out = os.path.join(basedir, "out/target/product", bld)
+    fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images")
+    target2file = [ ("ESP", "esp"), ("fastboot", "droidboot") ]
+
+    blankphone_dir = os.path.join(basedir, bldpub, "flash_files/blankphone")
+    bldx = get_build_options(key='GENERIC_TARGET_NAME')
+    f = FlashFile(os.path.join(blankphone_dir, bldx + "-blankphone.zip"), "flash.xml")
+    f.add_xml_file("flash-EraseFactory.xml")
+    f.xml_header("fastboot", bld, "1")
+
+    publish_attach_target2file(f, product_out, buildnumber, target2file)
+
+    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+
+    part_file = os.path.join(product_out, "partition.tbl")
+    f.add_codegroup("CONFIG", (("PARTITION_TABLE", part_file, buildnumber),))
+
+    f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
+
+    publish_partitioning_commands(f, bld, buildnumber, os.path.split(part_file)[1],
+                                  [ "system", "cache", "config", "logs", "spare", "data" ])
+
+    publish_flash_target2file(f, target2file)
+
+    f.copy_xml_file("flash.xml", "flash-buildbot.xml")
+    f.finish()
 
 def publish_modem(basedir, bld):
     # environment variables
@@ -736,10 +828,12 @@ if __name__ == '__main__':
             print "FLASHFILE_BOOTONLY: Nothing to publish"
         sys.exit(0)
 
+    bios_type = get_build_options(key='TARGET_BIOS_TYPE',
+				  default_value='uefi')
+
     # Publish goal
     if goal == "blankphone":
-        publish_blankphone(basedir, bld, buildnumber, board_soc)
-
+        locals()["publish_blankphone_" + bios_type](basedir, bld, buildnumber, board_soc)
     elif goal == "modem":
         publish_modem(basedir, bld)
 
@@ -747,7 +841,7 @@ if __name__ == '__main__':
         if external_release:
             publish_external(basedir, bld, bld_variant, board_soc)
         if do_we_publish_bld_variant(bld_variant):
-            publish_build(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc)
+            locals()["publish_build_" + bios_type](basedir, bld, bld_variant, bld_prod, buildnumber, board_soc)
 
     elif goal == "ota_flashfile":
         if do_we_publish_bld_variant(bld_variant):

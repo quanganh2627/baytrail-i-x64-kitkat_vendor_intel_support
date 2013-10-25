@@ -206,6 +206,9 @@ def generate_gpt_partition_file(storage, global_data):
     for partition_name in sorted(partition_data.keys(), key=lambda y: (partition_data[y]['id'])):
         partition = get_dict_from(partition_data, partition_name)
         partition_uuid = "%s%s" % (global_data["gpt"]["uuid_prefix"], partition["uuid"])
+        #If concatenation is over 36 chars, ignore prefix
+        if len(partition_uuid) > 36 :
+            partition_uuid = "%s" % (partition["uuid"])
         partition_size_hint = partition["length"]
 
 
