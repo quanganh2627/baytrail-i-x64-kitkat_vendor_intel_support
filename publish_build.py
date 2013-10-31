@@ -256,15 +256,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
     if bld_flash_modem:
-        f.add_xml_file("no-modem-reflash.xml")
-
-    # if we have a capsule create a file to not flash it
-    for board, args in ifwis.items():
-        if args["capsule"] is not "None":
-            f.add_xml_file("no-capsule-reflash.xml");
-            # if we have a capsule and a modem create a file to not flash them
-            if bld_flash_modem:
-                f.add_xml_file("no-modem-no-capsule-reflash.xml")
+               f.add_xml_file("no-modem-reflash.xml")
 
     f.xml_header("fastboot", bld, "1")
     f.add_file("KERNEL", os.path.join(fastboot_dir, "boot.img"), buildnumber)
@@ -272,10 +264,10 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     if bld_flash_modem:
         publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem.zip", fastboot_dir, enforce=False)
-        f.add_file("MODEM", os.path.join(fastboot_dir, "modem.zip"), buildnumber, xml_filter=["flash.xml","no-capsule-reflash.xml"])
+        f.add_file("MODEM", os.path.join(fastboot_dir, "modem.zip"), buildnumber)
         if bld_flash_modem_nvm:
             publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
-            f.add_file("MODEM_NVM", os.path.join(fastboot_dir, "modem_nvm.zip"), buildnumber, xml_filter=["flash.xml","no-capsule-reflash.xml"])
+            f.add_file("MODEM_NVM", os.path.join(fastboot_dir, "modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir, "droidboot.img"), buildnumber)
@@ -287,7 +279,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
         if "ulpmc" in args:
             f.add_codegroup("ULPMC", (("ULPMC", args["ulpmc"], args["ifwiversion"]),))
         if "capsule" in args:
-            f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),), xml_filter=["flash.xml","no-modem-reflash.xml"])
+            f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
         else:
             if "PROD" not in args["ifwi"]:
                 f.add_codegroup("FIRMWARE", (("IFWI_" + board.upper(), args["ifwi"], args["ifwiversion"]),
@@ -306,7 +298,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
                 f.add_command("fastboot flash dnx $fw_dnx_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
                 f.add_command("fastboot flash ifwi $ifwi_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board)
         else:
-            f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule", xml_filter=["flash.xml","no-modem-reflash.xml"])
+            f.add_command("fastboot flash capsule $capsule_%s_file"%(board.lower()), "Flashing capsule")
         if "ulpmc" in args:
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", retry=3, mandatory=0)
 
@@ -320,10 +312,10 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
 
     if bld_flash_modem:
-        f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml","no-capsule-reflash.xml"], timeout=220000)
+        f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"], timeout=220000)
         if bld_flash_modem_nvm:
-            f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml","no-capsule-reflash.xml"], timeout=220000)
-            f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml","no-capsule-reflash.xml"], timeout=220000)
+            f.add_command("fastboot flash /tmp/modem_nvm.zip $modem_nvm_file", "Flashing modem nvm", xml_filter=["flash.xml"], timeout=220000)
+            f.add_command("fastboot oem nvm apply /tmp/modem_nvm.zip", "Applying modem nvm", xml_filter=["flash.xml"], timeout=220000)
     f.add_command("fastboot continue", "Reboot system")
 
     # build the flash-capsule.xml
