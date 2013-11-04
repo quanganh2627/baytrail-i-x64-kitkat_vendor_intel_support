@@ -121,8 +121,8 @@ def find_ifwis(basedir, board_soc):
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_lnp": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
-                     "baylake": "baytrail/byt_t",
-                     "baylake_next": "baytrail/byt_t",
+                     "baylake": "baytrail/baylake",
+                     "baylake_next": "baytrail/baylake",
                      "byt_t_ffrd8": "baytrail/byt_t",
                      "byt_m_crb": "baytrail/byt_m",
                      }[bld_prod]
