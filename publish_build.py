@@ -115,7 +115,7 @@ def find_ifwis(basedir, board_soc):
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
     # Filter on _vp, _vp_next, _hvp, _hvp_next, _sle, _sle_next
-    isvirtualplatorm = re.match('.*_(vp|hvp|sle)($|\s|_next($|\s))', bld_prod)
+    isvirtualplatorm = re.match('.*_(vp|hvp|sle|crv2)($|\s|_next($|\s))', bld_prod)
     if not(isvirtualplatorm):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
