@@ -591,7 +591,7 @@ def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
         # Use EraseFactory for redhookbay if it exists.
         # Use flash.xml for all other
         # Make sure indentation lines up
-        if bld == "redhookbay":
+        if bld_prod == "redhookbay":
                 if not f.copy_xml_file("flash-EraseFactory.xml", "flash-buildbot.xml"):
                     f.copy_xml_file("flash.xml", "flash-buildbot.xml")
         else:
