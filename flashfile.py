@@ -113,6 +113,15 @@ class FlashFile:
         self.apply_f_to_all_valid_xml(f,xml_filter)
 
     def finish(self):
+        def get_compression_level():
+            try:
+                value = int(os.environ['FLASHFILE_COMPRESSION_LEVEL'])
+                if value < 0 or value > 9:
+                    return 1
+                return value
+            except (KeyError,ValueError):
+                return 1
+
         os.system("mkdir -p "+os.path.dirname(self.filename))
         flashxmls = []
         for (flashname,xml) in self.xml.items():
@@ -132,10 +141,11 @@ class FlashFile:
         outzip = self.filename
         if os.path.exists(outzip):
             os.unlink(outzip)
-        print "creating flashfile:", outzip
+        compression = get_compression_level()
+        print "creating flashfile:", outzip, 'at compression level', compression
         for fn in self.filenames:
             # -j option for zip is to ignore directories, and just put the file in the root of the zip
-            os.system("zip -j %(outzip)s %(fn)s"%locals())
+            os.system("zip -j -%(compression)d %(outzip)s %(fn)s"%locals())
         for flashxml in flashxmls:
             os.unlink(flashxml)
 
