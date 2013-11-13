@@ -332,14 +332,14 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     f.finish()
 
-def publish_attach_modem_files (f, directory, buildnumber):
+def publish_attach_modem_files (f, product_out, directory, buildnumber):
     if get_build_options(key='FLASH_MODEM', key_type='boolean'):
         f.add_xml_file("no-modem-reflash.xml")
-        publish_file(locals(), "%s/system/etc/firmware/modem/modem.zip",
+        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem.zip",
                      directory, enforce=False)
         f.add_file("MODEM", os.path.join(directory, "modem.zip"), buildnumber)
         if not(get_build_options(key='SKIP_NVM', key_type='boolean')):
-            publish_file(locals(), "%s/system/etc/firmware/modem/modem_nvm.zip",
+            publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip",
                          directory, enforce=False)
             f.add_file("MODEM_NVM", os.path.join(directory, "modem_nvm.zip"), buildnumber)
 
@@ -367,7 +367,7 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
         f.add_xml_file("no-modem-reflash.xml")
     f.xml_header("fastboot", bld, "1")
 
-    publish_attach_modem_files(f, fastboot_dir, buildnumber)
+    publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
