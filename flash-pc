@@ -1,0 +1,239 @@
+#!/bin/bash
+
+set -e
+
+USE_USERDATA_IMG=
+FLASH_USERDATA=
+NO_REBOOT=
+REBOOT_BOOTLOADER=
+FLASH_KERNEL=
+FLASH_DROIDBOOT=
+FLASH_RECOVERY=
+FLASH_SYSTEM=
+FLASH_BOOTLOADER=
+FLASH_CACHE=
+FASTBOOT_EXTRA_ARGS=
+CUSTOM_PRODUCT_OUT=
+FLASHING_IMAGE=
+FORCE=
+
+BOOTLOADER_FILE=
+BOOTLOADER_DEFAULT_FILE=dbupdate.bin
+
+while [ $# -gt 0 ]; do
+    case $1 in
+        -t | --tcp-host )
+            FASTBOOT_EXTRA_ARGS="$FASTBOOT_EXTRA_ARGS -t $2"
+            shift
+            ;;
+        -o | --android-out )
+            CUSTOM_PRODUCT_OUT="$2"
+            shift
+            ;;
+        -U | --userdata-image )
+            USE_USERDATA_IMG=1
+            FLASH_USERDATA=1
+            FLASHING_IMAGE=1
+            ;;
+        -u | --userdata )
+            FLASH_USERDATA=1
+            ;;
+        -r | --no-reboot )
+            NO_REBOOT=1
+            ;;
+        -k | --kernel )
+            FLASH_KERNEL=1
+            FLASHING_IMAGE=1
+            ;;
+        -d | --droidboot )
+            FLASH_DROIDBOOT=1
+            FLASHING_IMAGE=1
+            ;;
+        -D | --droidboot-reboot )
+            FLASH_DROIDBOOT=1
+            REBOOT_BOOTLOADER=1
+            FLASHING_IMAGE=1
+            ;;
+        -y | --recovery )
+            FLASH_RECOVERY=1
+            FLASHING_IMAGE=1
+            ;;
+        -s | --system )
+            FLASH_SYSTEM=1
+            FLASHING_IMAGE=1
+            ;;
+        -b | --bootloader )
+            FLASH_BOOTLOADER=1
+            FLASHING_IMAGE=1
+            ;;
+        -i | --bootloader-file )
+            BOOTLOADER_FILE=$2
+            shift
+            ;;
+        -c | --cache )
+            FLASH_CACHE=1
+            ;;
+        -l | --clear )
+            FLASH_USERDATA=1
+            FLASH_CACHE=1
+            ;;
+        -a | --all )
+            FLASH_KERNEL=1
+            FLASH_SYSTEM=1
+            FLASH_RECOVERY=1
+            FLASHING_IMAGE=1
+            ;;
+        -A | --all-with-clear )
+            FLASH_KERNEL=1
+            FLASH_SYSTEM=1
+            FLASH_CACHE=1
+            FLASH_USERDATA=1
+            FLASH_RECOVERY=1
+            FLASHING_IMAGE=1
+            ;;
+        -f | --force )
+            FORCE=1
+            ;;
+        -h | --help )
+            echo "Usage: $0 <flags>"
+            echo "Flashes images to Android device using fastboot"
+            echo "Available flags"
+            echo "  -t --tcp-host         Sets -t argument for fastboot remote host"
+            echo "  -o --android-out      Set path to 'out' directory"
+            echo "  -r --no-reboot        Don't reboot when finished"
+            echo "  -f --force            Skip sanity checks before flashing"
+            echo "  -k --kernel           Flash Android kernel image"
+            echo "  -d --droidboot        Flash Droidboot image"
+            echo "  -D --droidboot-reboot Flash Droidboot image and reboot into new Droidboot"
+            echo "  -y --recovery         Flash recovery image"
+            echo "  -s --system           Flash system image"
+            echo "  -b --bootloader       Flash bootloader"
+            echo "  -i --bootloader-file  Specify bootloader image file name"
+            echo "  -c --cache            Erase /cache partition"
+            echo "  -u --userdata         Erase /data partition"
+            echo "  -U --userdata-image   Flash userdata.img instead of erasing data (implies -u)"
+            echo "  -l --clear            Erase /cache and /data"
+            echo "  -a --all              Equivalent to -k -y -s (Droidboot & bootloader intentionally omitted)"
+            echo "  -A --all-with-clear   Equivalent to -a -l"
+            echo
+            echo "Typical users will want -a or -A"
+            exit 0
+    esac
+    shift
+done
+
+FASTBOOT="fastboot $FASTBOOT_EXTRA_ARGS"
+
+# Checks for where to find images
+if [ -n "$CUSTOM_PRODUCT_OUT" ]; then
+    export ANDROID_PRODUCT_OUT=$CUSTOM_PRODUCT_OUT
+    unset TARGET_PRODUCT
+fi
+
+if [ -z "$ANDROID_PRODUCT_OUT" ]; then
+    export ANDROID_PRODUCT_OUT=.
+fi
+
+if [ ! -e "$ANDROID_PRODUCT_OUT" ]; then
+    echo "error: no such file or directory: $ANDROID_PRODUCT_OUT"
+    exit 1
+fi
+
+if [ ! -r "$ANDROID_PRODUCT_OUT" ]; then
+    echo "error: permission denied: $ANDROID_PRODUCT_OUT"
+    exit 1
+fi
+
+if [ ! -d "$ANDROID_PRODUCT_OUT" ]; then
+    echo "error: not a directory: $ANDROID_PRODUCT_OUT"
+    exit 1
+fi
+
+echo "Using images from $ANDROID_PRODUCT_OUT"
+
+# Pre-flash sanity checks
+if [ -z "$FORCE" ] ; then
+    if [ -n "$FLASHING_IMAGE" -a -n "$TARGET_PRODUCT" ]; then
+        echo "Checking device product type..."
+        DEVICE_PRODUCT=`$FASTBOOT getvar product 2>&1 | sed q | cut -f2  -d' '`
+        if [ "$DEVICE_PRODUCT" != "$TARGET_PRODUCT" ]; then
+            echo "Refusing to flash $TARGET_PRODUCT images onto a $DEVICE_PRODUCT"
+            echo "If you really want to do this, use -f"
+            exit 1
+        fi
+    fi
+fi
+
+fflash() {
+    # Simple function that sends the flash subcommand via fasboot.
+    # Second argument, the file, is relative to the $ANDROID_PRODUCT_OUT
+    # location.
+    # Arguments: <partition> <file> [<optional message>]
+    echo "Flashing ${3:-${1}} partition..."
+    $FASTBOOT flash ${1} $ANDROID_PRODUCT_OUT/${2}
+}
+
+fflash_cond() {
+    # Conditionally calls the flashing function.
+    # Arguments: <condition> <partition> <file> [<optional message>]
+    if [ "${1}" ]; then
+        shift
+        fflash "${@}"
+    fi
+}
+
+ferase() {
+    # Similar to fflash, sends the erase command for a partition.
+    # Arguments: <partition> [<optional message>]
+    echo "Flashing ${2:-${1}} partition..."
+    $FASTBOOT erase ${1}
+}
+
+ferase_cond() {
+    # Conditionally calls the erasing function
+    # Arguments: <condition> <partition> [<optional message>]
+    if [ "${1}" ]; then
+        shift
+        ferase "${@}"
+    fi
+}
+
+fflasherase_cond() {
+    # Conditionally erases a partition before flashing it. The entire block is
+    # also called only if the first condition parameter is true.
+    # Arguments: <condition> <erase condition> <partition> <file> [<message>]
+    if [ "${1}" ]; then
+        shift
+        if [ "${1}" ]; then
+            shift
+            fflash "${@}"
+        else
+            shift
+            ferase "${1}"
+        fi
+    fi
+    shift
+}
+
+# Ok, lets go!
+ferase_cond "${FLASH_CACHE}" cache
+fflasherase_cond "${FLASH_USERDATA}" "${USE_USERDATA_IMG}" data userdata.img
+fflash_cond "${FLASH_BOOTLOADER}" bootloader ${BOOTLOADER_FILE:-${BOOTLOADER_DEFAULT_FILE}} "EFI System"
+fflash_cond "${FLASH_KERNEL}" boot boot.img "Android kernel"
+fflash_cond "${FLASH_RECOVERY}" recovery recovery.img "recovery kernel"
+fflash_cond "${FLASH_SYSTEM}" system:type=gzip system.img.gz
+fflash_cond "${FLASH_DROIDBOOT}" fastboot droidboot.img "Droidboot kernel"
+
+if [ -n "$REBOOT_BOOTLOADER" ]; then
+    echo "Rebooting back into Droidboot..."
+    $FASTBOOT reboot-bootloader
+else
+    if [ -z "$NO_REBOOT" ]; then
+        echo "Rebooting device..."
+        $FASTBOOT reboot &
+        sleep 3
+        kill %1
+    fi
+fi
+
+echo "All done."
