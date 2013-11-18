@@ -1,11 +1,10 @@
 #!/bin/bash
 # build nand boot recovery image for android
-PLTTYPE=MFDC0
 SPIFLAG=0
 
 TEMP=`getopt \
          -o c:r:k:o:p:t:s:b:f:y: \
-         --long cmdline:,ramdisk:,kernel:,output:,product:,type:,sign-with:,bootstub:,spi-flag:,plt-type: \
+         --long cmdline:,ramdisk:,kernel:,output:,type:,sign-with:,bootstub:,spi-flag: \
          -n '$0' \
          --  "$@"`
 
@@ -17,12 +16,10 @@ while true ; do
         --ramdisk) INITRD=$2; shift 2;;
         --kernel) BZIMAGE=$2; shift 2;;
         --output) OUT=$2; shift 2;;
-        --product) BOARD=$2; shift 2;;
         --bootstub) BOOTSTUB=$2; shift 2;;
         --sign-with) SIGN_WITH=${2,,}; shift 2;;
         --type) TYPE=$2; shift 2;;
         --spi-flag) SPIFLAG=$2; shift 2;;
-        --plt-type) PLTTYPE=$2; shift 2;;
         --) shift ; break ;;
     esac
 done
@@ -40,7 +37,7 @@ if [ -z "$IMGNAME" ]; then
     exit 1
 fi
 if [ -z "$SIGN_WITH" ]; then
-    SIGN_WITH="none"
+    SIGN_WITH="xfstk"
 fi
 
 UNSIGNED_OUT=${TARG}/${IMGNAME}.unsigned
@@ -95,7 +92,7 @@ UPPER_TYPE=${TYPE^^}
 TMPFILE=`mktemp /tmp/gen-os.tmp.XXX`
 
 GEN_OS=vendor/intel/support/gen_os
-GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --platform-type $PLTTYPE --sign-with $SIGN_WITH --product $BOARD"
+GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --sign-with $SIGN_WITH"
 $GEN_OS_CMD 2>${TMPFILE}
 if [ $? -ne 0 ]; then
 	echo -e "$GEN_OS_CMD: error\n$(cat ${TMPFILE})" >&2
@@ -107,7 +104,7 @@ rm -f ${TMPFILE}
 case "$TYPE" in
     combined|fastboot|droidboot)
         # Only generate POS version for these image types.
-        GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --platform-type $PLTTYPE --sign-with $SIGN_WITH --product $BOARD"
+        GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --sign-with $SIGN_WITH"
         $GEN_OS_CMD 2>$TMPFILE
 			if [ $? -ne 0 ]; then
 				echo -e  "$GEN_OS_CMD: error\n$(cat $TMPFILE)" >&2
