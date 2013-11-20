@@ -302,7 +302,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         system_flash_timeout=700000
     else:
         system_flash_timeout=300000
-    f.add_command("fastboot flash system $system_file", "Flashing system", timeout=system_flash_timeout)
+    f.add_command("fastboot flash system:type=gzip $system_file", "Flashing system", timeout=system_flash_timeout)
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
 
     if bld_flash_modem:
