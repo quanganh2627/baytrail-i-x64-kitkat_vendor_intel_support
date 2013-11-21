@@ -4,6 +4,7 @@ import sys
 import hashlib
 import os
 import subprocess
+import zipfile
 
 print "#!/bin/bash"
 print "adb shell mount -o remount,rw /"
@@ -12,25 +13,36 @@ print "adb shell mount -t vfat /dev/block/sda1 /mnt/bootloader"
 
 print "set -e"
 
+tfp = zipfile.ZipFile(sys.argv[1], "r")
+
 def get_hash_and_size(filename):
-    h = hashlib.sha1(open(filename).read()).hexdigest()
-    s = os.stat(filename).st_size
+    fd = tfp.open(filename)
+    data = fd.read()
+    fd.close()
+    h = hashlib.sha1(data).hexdigest()
+    s = len(data)
     return (h, s)
 
-def from_outdir(filename):
-    out = os.environ['OUT']
-    return os.path.join(out, filename)
-
 def get_build_date():
-    bd = subprocess.check_output("cat $OUT/system/build.prop | grep ro.build.date.utc | cut -d= -f2", shell=True)
-    return bd
+    ret = None
+    fd = tfp.open("SYSTEM/build.prop")
+    for line in fd.readlines():
+        st = line.split("=")
+        if len(st) != 2:
+            continue
+        if st[0] == "ro.build.date.utc":
+            ret = st[1]
+            break
+    return ret
 
-for f in ["efi/gummiboot.efi", "efi/shim.efi"]:
-    h, s = get_hash_and_size(from_outdir(f))
+# TODO just glob all .efi files
+for f in ["RADIO/gummiboot.efi", "RADIO/shim.efi"]:
+    h, s = get_hash_and_size(f)
     print "adb shell applypatch -c /mnt/bootloader/%s %s" % (os.path.basename(f), h)
 
-for f,n in [("recovery.img","sda4"), ("boot.img","sda3"), ("droidboot.img","sda11")]:
-    h, s = get_hash_and_size(from_outdir(f))
+# TODO read device node name from recovery.fstab
+for f,n in [("BOOTABLE_IMAGES/recovery.img","sda4"), ("BOOTABLE_IMAGES/boot.img","sda3"), ("BOOTABLE_IMAGES/fastboot.img","sda11")]:
+    h, s = get_hash_and_size(f)
     print "adb shell applypatch -c EMMC:/dev/block/%s:%s:%s" % (n,s,h)
 
 print "BD_ACTUAL=`adb shell getprop ro.build.date.utc | awk 'END{print}' | tr -d [:space:]`"
