@@ -36,7 +36,7 @@ def call(cmd, edir=''):
 def write_file(fname, data, odir=True):
     if odir and options.dir:
         fname = os.path.join(options.dir, fname)
-    print 'Writing ', fname
+    print 'Write  ', fname
     out = open(fname, 'w')
     out.write(data)
     out.close()
@@ -44,7 +44,7 @@ def write_file(fname, data, odir=True):
 def read_file(fname, odir=True):
     if odir and options.dir:
         fname = os.path.join(options.dir, fname)
-    print 'Reading ', fname
+    print 'Read   ', fname
     f = open(fname, 'r')
     data = f.read()
     f.close()
@@ -64,20 +64,8 @@ def unpack_ramdisk(fname, outdir):
     os.mkdir(outdir)
     call('cpio -i < ../' + fname, edir=outdir)
 
-# unpack boot.img to options.dir
-# caution, if using default directory tmp_boot_unpack
-# it is remove with rmtree() before unpacking
-def unpack_bootimg(fname):
-    if options.dir == 'tmp_boot_unpack' and os.path.exists(options.dir):
-        print 'Removing ', options.dir
-        shutil.rmtree(options.dir)
-
-    print 'Unpacking ', fname
-    if options.dir:
-        print 'into ', options.dir
-        if not os.path.exists(options.dir):
-            os.mkdir(options.dir)
-
+#Intel legacy format
+def unpack_bootimg_intel(fname):
     f = open(fname, 'r')
 
     sig = f.read(512)
@@ -86,8 +74,8 @@ def unpack_bootimg(fname):
 
     kernelsize, ramdisksize = struct.unpack('II', cmdline_block[1024:1032])
 
-    print 'kernel size', kernelsize
-    print 'ramdisk size', ramdisksize
+    print 'kernel size  ', kernelsize
+    print 'ramdisk size ', ramdisksize
 
     kernel = f.read(kernelsize)
     ramdisk = f.read(ramdisksize)
@@ -104,8 +92,62 @@ def unpack_bootimg(fname):
     write_file('ramdisk.cpio.gz', ramdisk)
 
     f.close()
-
     unpack_ramdisk('ramdisk.cpio.gz', os.path.join(options.dir, 'extracted_ramdisk'))
+
+def skip_pad(f, pgsz):
+    npg = ((f.tell() / pgsz) + 1)
+    f.seek(npg * pgsz)
+
+#Google mkbootimg standard format
+def unpack_bootimg_google(fname):
+    f = open(fname, 'r')
+
+    header = f.read(64)
+    kernelsize = struct.unpack('I',header[8:12])[0]
+    ramdisksize = struct.unpack('I',header[16:20])[0]
+    pagesize = struct.unpack('I',header[36:40])[0]
+    sigsize = struct.unpack('I',header[40:44])[0]
+
+    print 'kernel size  ', kernelsize
+    print 'ramdisk size ', ramdisksize
+    print 'page size    ', pagesize
+    print 'sig size     ', sigsize
+
+    cmdline = f.read(512)
+    checksum = f.read(32)
+    cmdline += f.read(1024)
+    skip_pad(f, pagesize)
+    kernel = f.read(kernelsize)
+    skip_pad(f, pagesize)
+    ramdisk = f.read(ramdisksize)
+    skip_pad(f, pagesize)
+
+    cmdline = cmdline.rstrip('\x00')
+
+    write_file('cmdline.txt', cmdline)
+    write_file('kernel', kernel)
+    write_file('ramdisk.cpio.gz', ramdisk)
+
+    f.close()
+    unpack_ramdisk('ramdisk.cpio.gz', os.path.join(options.dir, 'extracted_ramdisk'))
+
+def unpack_bootimg(fname):
+    if options.dir == 'tmp_boot_unpack' and os.path.exists(options.dir):
+        print 'Removing ', options.dir
+        shutil.rmtree(options.dir)
+
+    print 'Unpacking', fname, 'into', options.dir
+    if options.dir:
+        if not os.path.exists(options.dir):
+            os.mkdir(options.dir)
+
+    f = open(fname, 'r')
+    magic = f.read(8)
+    f.close()
+    if magic == 'ANDROID!':
+        unpack_bootimg_google(fname)
+    else:
+        unpack_bootimg_intel(fname)
 
 def pack_ramdisk(dname):
     dname = os.path.join(options.dir, dname)
@@ -113,7 +155,7 @@ def pack_ramdisk(dname):
     call('find . | cpio -o -H newc > ../ramdisk.cpio', dname)
     call('gzip -f ramdisk.cpio', options.dir)
 
-def pack_bootimg(fname):
+def pack_bootimg_intel(fname):
     pack_ramdisk('extracted_ramdisk')
     kernel = read_file('kernel')
     ramdisk = read_file('ramdisk.cpio.gz')

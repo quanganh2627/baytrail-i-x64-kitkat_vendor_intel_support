@@ -127,7 +127,7 @@ class Stitch(object):
             raise ValueError("Unknown handler: %s" % name)
 
 
-@Stitch.register('none')
+@Stitch.register('xfstk')
 class NoneHandler(object):
 
     CHUNK_SIZE = 8192   # Size of blocks sent to sha.update().
@@ -138,11 +138,10 @@ class NoneHandler(object):
     STITCH_CONFIG = os.path.join(STITCH_SHARE, 'ConfigFile_os.txt')
     STITCH_PROG = os.path.join(HOST_OUT_EXECUTABLES, 'xfstk-stitcher')
 
-    def __init__(self, image_file, platform_definition, platform_type=None):
+    def __init__(self, image_file, platform_definition):
         self.image_files = [image_file]
         self.is_signed = False
         self.platform_definition = platform_definition
-        self.platform_type = platform_type
         self.stitch_config_file = None
         self.stitch_platform_file = None
 
@@ -217,7 +216,6 @@ class NoneHandler(object):
         output_file = os.path.abspath(output_file)
 
         self.set_stitch_info(ImageName=output_file,
-                             PlatformType=self.platform_type,
                              # CAUTION: minus 'p' for platformXML
                              platformXML=self.stitch_platform_file)
         logging_debug("Stitching image %s...", self.image_files[self.is_signed])
@@ -232,14 +230,14 @@ class NoneHandler(object):
 
 # XXX: THIS HANDLER SHALL BE REMOVED ONCE XFSTK-STITCHER SUPPORTS platformXML
 #      FOR ALL PLATFORMS
-@Stitch.register('merrifield')
-class MerrifieldHandler(NoneHandler):
+@Stitch.register('xfstk_no_xml')
+class XfstkNoXmlHandler(NoneHandler):
 
     def stitch(self, output_file):
         output_file = os.path.abspath(output_file)
 
         self.set_stitch_info(ImageName=output_file,
-                             PlatformType=self.platform_type,
+                             PlatformType='MRFLDA0',
                              # CAUTION: minus 'p' for platformXML
                              platformXML=self.stitch_platform_file)
 
@@ -307,8 +305,8 @@ class IsuHandler(NoneHandler):
             self._sign()
         super(IsuHandler, self).stitch(output_file)
 
-@Stitch.register('baylake')
-class BaylakeHandler(IsuHandler):
+@Stitch.register('isu_plat2')
+class IsuPlat2Handler(IsuHandler):
 
     # Intel Signing Utility.
     # CAUTION: resist the temptation to expand the ISU_HOME_ON_SIGNER path here,
@@ -332,26 +330,13 @@ def main():
     cmd_parser.add_argument('--xml', type=os.path.basename, required=True,
                             dest='definition', metavar='xml-name',
                             help="XML platform definition")
-    cmd_parser.add_argument('--platform-type',
-                            dest='type', metavar='platform-type',
-                            help="Platform type")
-    cmd_parser.add_argument('--sign-with', choices=Stitch.choices(), default='none',
+    cmd_parser.add_argument('--sign-with', choices=Stitch.choices(), default='xfstk',
                             dest='handler_name', metavar='signing-method',
                             help="Signing method to use")
-    cmd_parser.add_argument('--product', default='none',
-                            dest='product', metavar='product',
-                            help="Product")
     args = cmd_parser.parse_args()
     try:
-        # XXX: THIS TEST SHALL BE REMOVED ONCE XFSTK-STITCHER SUPPORTS
-        #      platformXML FOR ALL PLATFORMS
-        if args.type == "MRFLDA0":
-            args.handler_name = 'merrifield'
-        baylake_products = ["baylake", "byt_t_ffrd10", "byt_t_ffrd8", "byt_m_crb"]
-        if args.product in baylake_products:
-            args.handler_name = 'baylake'
         stitch_handler = Stitch.get(args.handler_name)
-        with stitch_handler(args.input_file, args.definition, args.type) as h:
+        with stitch_handler(args.input_file, args.definition) as h:
             h.stitch(args.output_file)
     except Exception, e:
         logging.error(e)

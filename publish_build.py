@@ -115,7 +115,7 @@ def find_ifwis(basedir, board_soc):
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
     # Filter on _vp, _vp_next, _hvp, _hvp_next, _sle, _sle_next
-    isvirtualplatorm = re.match('.*_(vp|hvp|sle|crv2)($|\s|_next($|\s))', bld_prod)
+    isvirtualplatorm = re.match('.*_(vp|hvp|sle)($|\s|_next($|\s))', bld_prod)
     if not(isvirtualplatorm):
         ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                      "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
@@ -124,6 +124,7 @@ def find_ifwis(basedir, board_soc):
                      "baylake": "baytrail/baylake",
                      "baylake_next": "baytrail/baylake",
                      "byt_t_ffrd8": "baytrail/byt_t",
+                     "byt_t_crv2": "baytrail/byt_t",
                      "byt_m_crb": "baytrail/byt_m",
                      }[bld_prod]
 
@@ -559,7 +560,7 @@ def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
             f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
         publish_partitioning_commands(f, bld, buildnumber, partition_filename,
-                                      [ "system", "cache", "config", "logs", "data" ]);
+                                      [ "system", "cache", "config", "logs", "spare", "data" ]);
 
         fru_configs = get_build_options(key='FRU_CONFIGS')
         if os.path.exists(fru_configs):
@@ -629,7 +630,7 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
     publish_partitioning_commands(f, bld, buildnumber, os.path.split(part_file)[1],
-                                  [ "system", "cache", "config", "logs", "data" ])
+                                  [ "system", "cache", "config", "logs", "spare", "data" ])
 
     publish_flash_target2file(f, target2file)
 
