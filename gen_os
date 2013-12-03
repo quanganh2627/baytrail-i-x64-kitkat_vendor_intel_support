@@ -126,7 +126,9 @@ class Stitch(object):
         except:
             raise ValueError("Unknown handler: %s" % name)
 
-
+#
+# Below handler is for products with no signature
+#
 @Stitch.register('xfstk')
 class NoneHandler(object):
 
@@ -136,7 +138,7 @@ class NoneHandler(object):
     STITCH_HOME = os.path.join('vendor', 'intel', 'tools/xfstk-stitcher')
     STITCH_SHARE = os.path.join(STITCH_HOME, 'share', 'xfstk-stitcher')
     STITCH_CONFIG = os.path.join(STITCH_SHARE, 'ConfigFile_os.txt')
-    STITCH_PROG = os.path.join(HOST_OUT_EXECUTABLES, 'xfstk-stitcher')
+    STITCH_PROG = os.path.join(HOST_OUT_EXECUTABLES, 'xfstk-stitcher-external-wrapper')
 
     def __init__(self, image_file, platform_definition):
         self.image_files = [image_file]
@@ -228,21 +230,93 @@ class NoneHandler(object):
             raise RuntimeError(err)
 
 
-# XXX: THIS HANDLER SHALL BE REMOVED ONCE XFSTK-STITCHER SUPPORTS platformXML
-#      FOR ALL PLATFORMS
 @Stitch.register('xfstk_no_xml')
 class XfstkNoXmlHandler(NoneHandler):
 
     def stitch(self, output_file):
         output_file = os.path.abspath(output_file)
-
         self.set_stitch_info(ImageName=output_file,
                              PlatformType='MRFLDA0',
                              # CAUTION: minus 'p' for platformXML
                              platformXML=self.stitch_platform_file)
-
         logging_debug("Stitching image %s...", self.image_files[self.is_signed])
         stitch_cmd = [self.STITCH_PROG, '-c', self.stitch_config_file]
+        retcode, out, err = _run(stitch_cmd)
+        logging.info(out)
+        if retcode:
+            raise RuntimeError(err)
+
+@Stitch.register('xfstk_full_sign')
+class XfstkFullSignHandler(object):
+
+    STITCH_PROG = os.path.join(HOST_OUT_EXECUTABLES, 'xfstk-stitcher-external-wrapper')
+    STITCH_CONFIG = ('Kernel_recipe.txt')
+
+    CI_CRED_PATH = os.path.join('vendor', 'intel', 'fw', 'PRIVATE', 'ifwi', 'common', 'keys')
+    CI_KEY = os.path.join(CI_CRED_PATH, 'pkcs12Storage.p12')
+    CI_PASSWD = os.path.join(CI_CRED_PATH, 'CI_pkcs12Storage.p12Password.txt')
+
+    def __init__(self, image_file, platform_definition, cert_path):
+        self.image_files = [image_file]
+        self.is_signed = False
+        self.platform_definition = platform_definition
+        self.stitch_config_file = None
+        self.stitch_platform_file = None
+        self.cert_path = cert_path
+
+    def __enter__(self):
+        self.workdir = tempfile.mkdtemp()
+
+        # Copy the configuration file and the definition file for the
+        # stitcher so we can update to local paths
+        os_recipe_file = os.path.join(self.cert_path, self.STITCH_CONFIG)
+        self.stitch_config_file = os.path.join(self.workdir, self.STITCH_CONFIG)
+        shutil.copy(os_recipe_file, self.stitch_config_file)
+
+        xml_template_file = file_pathname(os.path.join(self.cert_path, self.platform_definition))
+        self.stitch_platform_file = os.path.join(self.workdir, self.platform_definition)
+        shutil.copy(xml_template_file, self.stitch_platform_file)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        shutil.rmtree(self.workdir)
+        print "Exit"
+
+    def set_stitch_info(self, signed_image):
+        # The stitcher definition file shall be updated with the correct
+        # location of xml file, output file and credentials
+        with open(self.stitch_config_file, 'r') as f:
+            config = f.read()
+
+        patt = 'platformXML = kernel.xml'
+        repl = 'platformXML = %s' % self.stitch_platform_file
+        config = re.sub(patt, repl, config)
+
+        patt = 'ImageName = boot.img'
+        repl = 'ImageName = %s' % signed_image
+        config = re.sub(patt, repl, config)
+
+        patt = 'pkcs12StorageFile = CI_Key.key'
+        repl = 'pkcs12StorageFile = %s' % self.CI_KEY
+        config = re.sub(patt, repl, config)
+
+        with open(self.stitch_config_file, 'w') as f:
+            f.write(config)
+        # The xml file shall be updated with the correct
+        # location of input file and correct images attributes
+        elem_tree = ElementTree.parse(self.stitch_platform_file)
+        tree = elem_tree.getroot()
+        for elem in tree.getiterator('image_filepath'):
+            elem.text = self.image_files[self.is_signed]
+        with open(self.stitch_platform_file, 'w') as f:
+            elem_tree.write(f)
+
+    def stitch(self, output_file):
+        output_file = os.path.abspath(output_file)
+        self.set_stitch_info(output_file)
+        print "Stitching image ...", self.image_files[self.is_signed]
+        stitch_cmd = [self.STITCH_PROG, '-c', self.stitch_config_file, '-Y', '-p', self.CI_PASSWD]
+        print "Exe ", stitch_cmd
         retcode, out, err = _run(stitch_cmd)
         logging.info(out)
         if retcode:
@@ -333,11 +407,26 @@ def main():
     cmd_parser.add_argument('--sign-with', choices=Stitch.choices(), default='xfstk',
                             dest='handler_name', metavar='signing-method',
                             help="Signing method to use")
+    cmd_parser.add_argument('--cert-path', required=True,
+                            dest='cert_path', metavar='certificates',
+                            help="Path to certificates")
     args = cmd_parser.parse_args()
     try:
         stitch_handler = Stitch.get(args.handler_name)
-        with stitch_handler(args.input_file, args.definition) as h:
-            h.stitch(args.output_file)
+        # Add here the dependency between signing method and certificates
+        # Not ideal but keeps this script generic
+        handlers_sign = ["xfstk_full_sign"]
+        if args.handler_name in handlers_sign:
+          print "Signing", args.cert_path
+          with stitch_handler(args.input_file, args.definition, args.cert_path) as h:
+             h.stitch(args.output_file)
+
+        handlers = ["xfstk", "xfstk_no_xml", "isu", "isu_plat2"]
+        if args.handler_name in handlers:
+          print "Not signing"
+          with stitch_handler(args.input_file, args.definition) as h:
+             h.stitch(args.output_file)
+
     except Exception, e:
         logging.error(e)
         return 1
