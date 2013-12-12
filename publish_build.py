@@ -188,11 +188,14 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_variant)
     otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip"%locals()
     targetfile = "%(bld_prod)s-target_files-%(buildnumber)s.zip"%locals()
+    host_out=os.path.join(basedir,"out/host/linux-x86/bin")
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
     publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
+    publish_file(locals(), "%(host_out)s/adb", fastboot_dir, enforce=False)
+    publish_file(locals(), "%(host_out)s/fastboot", fastboot_dir, enforce=False)
     system_img_path_in_out = None
     if not bld_skip_nvm:
        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_nvm.zip", fastboot_dir, enforce=False)
@@ -239,6 +242,8 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.xml_header("fastboot", bld, "1")
     f.add_file("KERNEL", os.path.join(fastboot_dir,"boot.img"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir,"recovery.img"), buildnumber)
+    f.add_file("FASTBOOTEXE", os.path.join(fastboot_dir,"fastboot"), buildnumber)
+    f.add_file("ADB", os.path.join(fastboot_dir,"adb"), buildnumber)
     if bld_flash_modem:
         if board_modem_flashless:
             publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem_flashless.zip", fastboot_dir, enforce=False)
