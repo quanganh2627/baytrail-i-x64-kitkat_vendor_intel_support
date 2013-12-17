@@ -817,7 +817,7 @@ if __name__ == '__main__':
                                            default_value=False)
     external_release = get_build_options(key='EXTERNAL_BINARIES',
                                          key_type='boolean',
-                                         default_value=not bootonly_flashfile)
+                                         default_value=False)
 
     init_global()
 
