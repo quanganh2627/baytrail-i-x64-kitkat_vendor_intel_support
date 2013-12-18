@@ -124,8 +124,7 @@ def find_ifwis(basedir, board_soc):
                      "baylake": "baytrail/baylake",
                      "baylake_next": "baytrail/baylake",
                      "byt_t_ffrd8": "baytrail/byt_t",
-                     "byt_t_crv2": "baytrail/byt_t",
-                     "byt_m_crb": "baytrail/byt_m",
+                     "byt_t_crv2": "baytrail/byt_crv2",
                      }[bld_prod]
 
         print "look for ifwis in the tree for %s" % bld_prod
@@ -305,10 +304,8 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     publish_erase_partitions(f, [ "cache", "system" ])
 
-    if bld == "byt_m_crb":
-        system_flash_timeout = 700000
-    else:
-        system_flash_timeout = 300000
+    system_flash_timeout = 300000
+
     f.add_command("fastboot flash system $system_file", "Flashing system", timeout=system_flash_timeout)
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
 
@@ -436,10 +433,9 @@ def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.add_command("adb root", "As root user")
     f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
     f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
-    if bld == "byt_m_crb":
-        ota_push_timeout = 1000000
-    else:
-        ota_push_timeout = 300000
+
+    ota_push_timeout = 300000
+
     f.add_command("adb push $ota_file /cache/ota.zip", "Pushing update", timeout=ota_push_timeout)
     f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip",
                   "Trigger os update")
@@ -458,10 +454,7 @@ def publish_partitioning_commands(f, bld, buildnumber, filename, erase_list):
     f.add_command("fastboot flash /tmp/%s $partition_table_file" % (filename,), "Push the new partition table to the device.")
     f.add_command("fastboot oem partition /tmp/%s" % (filename), "Apply the new partition scheme.")
 
-    if bld == "byt_m_crb":
-        tag = "flash.xml -EraseFactory"
-    else:
-        tag = "-EraseFactory"
+    tag = "-EraseFactory"
 
     xml_tag_list = [i for i in f.xml.keys() if tag in i]
     f.add_command("fastboot erase %s" % ("factory",), "Erase '%s' partition." % ("factory",), xml_filter=xml_tag_list)
@@ -551,12 +544,8 @@ def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
                 f.add_command("fastboot continue", "Booting on fastboot image")
                 f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
             f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
-            if bld == "byt_m_crb":
-                f.add_command("fastboot flash boot $fastboot_file", "Flashing boot")
-                f.add_command("fastboot flash recovery $fastboot_file", "Flashing recovery")
-            else:
-                f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
-                f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
+            f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+            f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
             f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
         publish_partitioning_commands(f, bld, buildnumber, partition_filename,
