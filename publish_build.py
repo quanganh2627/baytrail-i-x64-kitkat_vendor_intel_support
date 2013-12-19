@@ -620,9 +620,10 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     f = FlashFile(os.path.join(blankphone_dir, bldx + "-blankphone.zip"), "flash.xml")
     f.add_xml_file("flash-EraseFactory.xml")
-    f.xml_header("fastboot", bld, "1")
+    f.xml_header("fastboot_dnx", bld, "1")
 
     publish_attach_target2file(f, product_out, buildnumber, target2file)
+    f.add_file("osloader", os.path.join(product_out, "efilinux.efi"), buildnumber);
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
@@ -630,6 +631,11 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
     f.add_codegroup("CONFIG", (("PARTITION_TABLE", part_file, buildnumber),))
 
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
+
+    f.add_command("fastboot flash osloader $osloader_file",
+                  "Uploading EFI OSLoader image.")
+    f.add_command("fastboot boot $droidboot_file", "Uploading fastboot image.")
+    f.add_command("sleep", "Sleep for 25 seconds.", timeout=25000)
 
     publish_partitioning_commands(f, bld, buildnumber, os.path.split(part_file)[1],
                                   ["system", "cache", "config", "logs", "data"])
