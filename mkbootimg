@@ -4,7 +4,7 @@ SPIFLAG=0
 
 TEMP=`getopt \
          -o c:r:k:o:p:t:s:b:f:y: \
-         --long cmdline:,ramdisk:,kernel:,output:,type:,sign-with:,bootstub:,spi-flag: \
+         --long xen_cmdline:,xen:,cmdline:,ramdisk:,kernel:,output:,type:,sign-with:,bootstub:,vxe-fw:,sps-image:,spi-flag: \
          -n '$0' \
          --  "$@"`
 
@@ -12,8 +12,12 @@ eval set -- "$TEMP"
 while true ; do
     echo "+++++ case $1 +++++"
     case "$1" in
+        --xen) XEN="$2"; shift 2;;
+        --xen_cmdline) XEN_CMDLINE="$2"; shift 2;;
         --cmdline) CMDLINE="$2"; shift 2;;
         --ramdisk) INITRD=$2; shift 2;;
+        --vxe-fw) VXEFW=$2; shift 2;;
+        --sps-image) SPSIMAGE=$2; shift 2;;
         --kernel) BZIMAGE=$2; shift 2;;
         --output) OUT=$2; shift 2;;
         --bootstub) BOOTSTUB=$2; shift 2;;
@@ -59,12 +63,27 @@ if [ ! -e "${CMDLINE_FILE}" ]; then
     exit 1
 fi
 
-if [ -z "${BOOTSTUB}" ]; then
-    echo "error: bootstub file not provided"
-    exit 1
+if [ -n "$XEN" ]; then
+    XEN_CMDLINE_FILE=${TARG}/${IMGNAME}_xen_cmdline
+    echo $XEN_CMDLINE > $XEN_CMDLINE_FILE
+
+    if [ ! -e ${VXEFW} ]; then
+        echo "error: VXE FW image file ${VXEFW} does not exist"
+        exit 1
+    fi
+
+    if [ ! -e ${SPSIMAGE} ]; then
+        echo "error: SPS image file ${SPSIMAGE} does not exist"
+        exit 1
+    fi
+
+    if [ ! -e ${XEN} ]; then
+        echo "error: xen file ${XEN} does not exist"
+        exit 1
+    fi
 fi
 
-if [ ! -e ${BOOTSTUB} ]; then
+if [ ! -e "${BOOTSTUB}" ]; then
     echo "error: bootstub file ${BOOTSTUB} does not exist"
     exit 1
 fi
@@ -77,17 +96,25 @@ fi
 echo "Creating image \`${OUT}'for FSTK stitching..."
 
 rm -f ${UNSIGNED_OUT}
-# 0:auto-detect based on SoC, 1:SPI1 (Penwell, Cloverview), 2:SPI2 (Tangier, Anniedale)
-SILICON=0
-./vendor/intel/support/stitch.sh ${CMDLINE_FILE} ${BOOTSTUB} ${BZIMAGE} ${INITRD} ${SPIFLAG} ${SILICON} ${UNSIGNED_OUT}
+
+COMMANDLINE="./vendor/intel/support/stitch.py --kernel-cmdline ${CMDLINE_FILE} --bootstub ${BOOTSTUB} --kernel ${BZIMAGE} --ramdisk ${INITRD} --output ${UNSIGNED_OUT}"
+
+if [ -n "$XEN" ]; then
+    XEN_ARGS="--xen ${XEN} --xen-cmdline ${XEN_CMDLINE_FILE}"
+    DRM_OVER_WIDI_ARGS="--vxe-fw ${VXEFW} --sps-image ${SPSIMAGE}"
+    COMMANDLINE="${COMMANDLINE} ${XEN_ARGS} ${DRM_OVER_WIDI_ARGS}"
+fi
+
+echo Running ${COMMANDLINE}
+${COMMANDLINE}
 
 if [ "0" -ne "$?" ]; then
-    echo "error running stitch.sh for generating ${UNSIGNED_OUT}"
+    echo "error running stitch.py for generating ${UNSIGNED_OUT}"
     exit 1
 fi
-TOP=`pwd`
-# stitch binary
 
+# stitch binary
+TOP=`pwd`
 UPPER_TYPE=${TYPE^^}
 TMPFILE=`mktemp /tmp/gen-os.tmp.XXX`
 
@@ -95,9 +122,9 @@ GEN_OS=vendor/intel/support/gen_os
 GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --sign-with $SIGN_WITH"
 $GEN_OS_CMD 2>${TMPFILE}
 if [ $? -ne 0 ]; then
-	echo -e "$GEN_OS_CMD: error\n$(cat ${TMPFILE})" >&2
-	rm -f ${TMPFILE}
-	exit 1
+    echo -e "$GEN_OS_CMD: error\n$(cat ${TMPFILE})" >&2
+    rm -f ${TMPFILE}
+    exit 1
 fi
 rm -f ${TMPFILE}
 
@@ -106,13 +133,13 @@ case "$TYPE" in
         # Only generate POS version for these image types.
         GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT}.POS.bin --xml ${UPPER_TYPE}.XML --sign-with $SIGN_WITH"
         $GEN_OS_CMD 2>$TMPFILE
-			if [ $? -ne 0 ]; then
-				echo -e  "$GEN_OS_CMD: error\n$(cat $TMPFILE)" >&2
-				rm -f ${TMPFILE}
-				exit 1
-			fi
-			rm -f ${TMPFILE}
-            ;;
+        if [ $? -ne 0 ]; then
+            echo -e  "$GEN_OS_CMD: error\n$(cat $TMPFILE)" >&2
+            rm -f ${TMPFILE}
+            exit 1
+        fi
+        rm -f ${TMPFILE}
+        ;;
 esac
 
 # clean up
