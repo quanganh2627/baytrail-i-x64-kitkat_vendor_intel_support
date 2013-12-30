@@ -371,10 +371,9 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
 
-    # WA : copy and flash capsule file
+    # WA : copy the capsule file
     if os.path.exists(ifwi_private_dir+"/baytrail_edk2/byt_t/capsule.bin"):
        f.add_file("CAPSULE", ifwi_private_dir+"/baytrail_edk2/byt_t/capsule.bin", buildnumber)
-       f.add_command("fastboot flash capsule $capsule_file", "Flashing capsule")
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
@@ -383,6 +382,11 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     publish_erase_partitions(f, ["cache", "system"])
 
     publish_flash_target2file(f, target2file)
+
+    # WA : flash the capsule file
+    if os.path.exists(ifwi_private_dir+"/baytrail_edk2/byt_t/capsule.bin"):
+       f.add_command("fastboot flash capsule $capsule_file", "Flashing capsule")
+
     publish_flash_modem_files(f)
 
     f.add_command("fastboot continue", "Rebooting now.")
