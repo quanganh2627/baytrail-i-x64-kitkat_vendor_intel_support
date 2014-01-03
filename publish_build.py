@@ -93,7 +93,7 @@ def find_ifwis(basedir):
                      "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
                      "bodegabay": "bodegabay bodegabay/DBG",
-                     "baylake": "baytrail/baylake_bayrock",
+                     "baylake": "baytrail/bayrock",
                      "byt_t_ffrd10": "baytrail/byt_t",
                      "byt_t_ffrd8": "baytrail/byt_t",
                      "byt_m_crb": "baytrail/byt_m",
