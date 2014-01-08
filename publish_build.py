@@ -126,6 +126,7 @@ def find_ifwis(basedir, board_soc):
                      "baylake_next": "baytrail/baylake",
                      "byt_t_ffrd8": "baytrail/byt_t",
                      "byt_t_crv2": "baytrail/byt_crv2",
+                     "byt_m_crb": "baytrail/byt_m",
                      }[bld_prod]
 
         print "look for ifwis in the tree for %s" % bld_prod
@@ -250,7 +251,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
         publish_file(locals(), "%(product_out)s/recovery.img.POS.bin", fastboot_dir, enforce=False)
         system_img_path_in_out = os.path.join(product_out, "system.tar.gz")
     if publish_system_img:
-        publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
+        publish_file_without_formatting(system_img_path_in_out, fastboot_dir, enforce=False)
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
     publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw.bin", iafw_dir, enforce=False)
     ifwis = find_ifwis(basedir, board_soc)

@@ -56,16 +56,16 @@ class FlashFile:
     def add_code_group_in_xml(self, type, files, xml):
         xml += '\n        <code_group name="%(type)s">'%locals()
         for filetype, filename, version in files:
-            if not os.path.exists(filename):
-                raise OSError("file notfound :" +filename)
-            self.filenames_dict[filetype.lower()+"_file"] = os.path.basename(filename)
-            filenamebase = os.path.basename(filename)
-            xml +="""
-            <file TYPE="%(filetype)s">
-                <name>%(filenamebase)s</name>
-                <version>%(version)s</version>
-            </file>"""%locals()
-            self.filenames.append(filename)
+            result = os.path.exists(filename)
+            if result:
+                self.filenames_dict[filetype.lower()+"_file"] = os.path.basename(filename)
+                filenamebase = os.path.basename(filename)
+                xml +="""
+                <file TYPE="%(filetype)s">
+                    <name>%(filenamebase)s</name>
+                    <version>%(version)s</version>
+                </file>"""%locals()
+                self.filenames.append(filename)
         xml += "\n        </code_group>"
         return xml
 
