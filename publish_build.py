@@ -138,13 +138,14 @@ def find_ifwis(board_soc):
             kernel_x64_format = get_build_options(key='BOARD_USE_64BIT_KERNEL', default_value='false')
             if kernel_x64_format != "true":
                 ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/ia32",
-                             "cht_rvp": "cherrytrail_edk2/cht_rvp",
+                             "cht_rvp": "no_directory",
                              "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32",
                              "bsw_rvp": "braswell_edk2/bsw_rvp"
                             }[bld_prod]
             else:
                 ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/x64",
-                             "byt_t_ffrd8": "baytrail_edk2/byt_t/x64"
+                             "byt_t_ffrd8": "baytrail_edk2/byt_t/x64",
+                             "cht_rvp": "no_directory"
                             }[bld_prod]
 
         print "looking for ifwis in the tree for %s" % bld_prod
@@ -623,10 +624,19 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     f = FlashFile(os.path.join(blankphone_dir, bldx + "-blankphone.zip"), "flash.xml")
     f.add_xml_file("flash-EraseFactory.xml")
-    f.xml_header("fastboot_dnx", bld, flashfile_version)
+    fastboot_mode = "fastboot_dnx"
+    osloader = True
+
+    if bld == "cht_rvp":
+        fastboot_mode = "fastboot"
+        osloader = False
+
+
+    f.xml_header(fastboot_mode, bld, flashfile_version)
 
     publish_attach_target2file(f, product_out, buildnumber, target2file)
-    f.add_file("osloader", os.path.join(product_out, "efilinux-%s.efi" % bld_variant), buildnumber);
+    if osloader:
+        f.add_file("osloader", os.path.join(product_out, "efilinux-%s.efi" % bld_variant), buildnumber);
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
@@ -648,10 +658,11 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
                             "Uploading Stage 2 IFWI image.", mandatory=0)
               f.add_command("sleep", "Sleep for 5 seconds.", timeout=5000)
 
-    f.add_command("fastboot flash osloader $osloader_file",
-                  "Uploading EFI OSLoader image.")
-    f.add_command("fastboot boot $droidboot_file", "Uploading fastboot image.")
-    f.add_command("sleep", "Sleep for 25 seconds.", timeout=25000)
+    if osloader:
+        f.add_command("fastboot flash osloader $osloader_file",
+                      "Uploading EFI OSLoader image.")
+        f.add_command("fastboot boot $droidboot_file", "Uploading fastboot image.")
+        f.add_command("sleep", "Sleep for 25 seconds.", timeout=25000)
 
     f.add_command("fastboot oem wipe ESP", "Wiping ESP partition.", mandatory=0);
     f.add_command("fastboot oem wipe reserved", "Wiping reserved partition.", mandatory=0);
