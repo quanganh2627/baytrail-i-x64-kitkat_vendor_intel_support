@@ -117,22 +117,16 @@ def find_ifwis(basedir, board_soc):
     # Filter on _vp, _vp_next, _hvp, _hvp_next, _sle, _sle_next
     isvirtualplatorm = re.match('.*_(vp|hvp|sle)($|\s|_next($|\s))', bld_prod)
     if not(isvirtualplatorm):
-        bios_type = get_build_options(key='TARGET_BIOS_TYPE', default_value='uefi')
-        if bios_type != "uefi":
-             ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                          "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                          "redhookbay_lnp": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                          "redhookbay_xen": "ctp_pr[23]/XEN ctp_pr3.1/XEN",
-                          "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
-                          "baylake": "baytrail/baylake",
-                          "baylake_next": "baytrail/baylake",
-                          "byt_t_ffrd8": "baytrail/byt_t"
-                         }[bld_prod]
-        else:
-            ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2",
-                         "cht_rvp": "cherrytrail_edk2/cht_rvp",
-                         "byt_t_ffrd8": "baytrail_edk2/byt_t",
-                        }[bld_prod]
+        ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "redhookbay_lnp": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+                     "redhookbay_xen": "ctp_pr[23]/XEN ctp_pr3.1/XEN",
+                     "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
+                     "baylake": "baytrail/baylake",
+                     "baylake_next": "baytrail/baylake",
+                     "byt_t_ffrd8": "baytrail/byt_t",
+                     "byt_t_crv2": "baytrail/byt_crv2",
+                     }[bld_prod]
 
         print "look for ifwis in the tree for %s" % bld_prod
 
@@ -143,27 +137,27 @@ def find_ifwis(basedir, board_soc):
                 # When the ifwi directory is placed within a subdir, we shall
                 # take the subdir in the board name
                 nameindex = 0 - ifwiglob.count('/') - 1
-
                 board = ifwidir.split("/")[nameindex]
                 for idx in range(nameindex + 1, 0):
                     board = board + '_' + ifwidir.split("/")[idx]
-                ifwi = get_link_path(os.path.join(ifwidir, "dediprog.bin"))
-                capsule = get_link_path(os.path.join(ifwidir, "capsule.bin"))
-                fwdnx = get_link_path(os.path.join(ifwidir, "dnx_fwr.bin"))
-                osdnx = get_link_path(os.path.join(ifwidir, "dnx_osr.bin"))
-                softfuse = get_link_path(os.path.join(ifwidir, "soft_fuse.bin"))
-                stage2 = get_link_path(os.path.join(ifwidir, "stage2.bin"))
-                xxrdnx = get_link_path(os.path.join(ifwidir, "dnx_xxr.bin"))
-                if ifwi == None:
+
+                if glob.glob(os.path.join(ifwidir, "capsule.bin")):
+                    ifwi = get_link_path(os.path.join(ifwidir, "dediprog.bin"))
+                    capsule = get_link_path(os.path.join(ifwidir, "capsule.bin"))
+                else:
+                    fwdnx = get_link_path(os.path.join(ifwidir, "dnx_fwr.bin"))
+                    osdnx = get_link_path(os.path.join(ifwidir, "dnx_osr.bin"))
+                    softfuse = get_link_path(os.path.join(ifwidir, "soft_fuse.bin"))
+                    xxrdnx = get_link_path(os.path.join(ifwidir, "dnx_xxr.bin"))
                     ifwi = get_link_path(os.path.join(ifwidir, "ifwi.bin"))
                 ifwiversion = os.path.basename(ifwi)
                 ifwiversion = os.path.splitext(ifwiversion)[0]
+                print "   found ifwi %s for board %s in %s" % (ifwiversion, board, ifwidir)
                 if ifwiversion != "None":
-                    if glob.glob(os.path.join(ifwidir, "dediprog.bin")):
+                    if glob.glob(os.path.join(ifwidir, "capsule.bin")):
                         ifwis[board] = dict(ifwiversion=ifwiversion,
                                             ifwi=ifwi,
                                             capsule=capsule,
-                                            stage2=stage2,
                                             softfuse="None",
                                             xxrdnx="None")
                     else:
@@ -176,17 +170,14 @@ def find_ifwis(basedir, board_soc):
                         xxrdnx = get_link_path(os.path.join(
                             ifwidir, "dnx_xxr.bin"))
                         ifwi = get_link_path(os.path.join(ifwidir, "ifwi.bin"))
-
                     ifwiversion = os.path.basename(ifwi)
                     ifwiversion = os.path.splitext(ifwiversion)[0]
-                    print "found ifwi %s for board %s in %s" % (ifwiversion, board, ifwidir)
-
+                    print "   found ifwi %s for board %s in %s" % (ifwiversion, board, ifwidir)
                     if ifwiversion is not None:
-                        if glob.glob(os.path.join(ifwidir, "dediprog.bin")):
+                        if glob.glob(os.path.join(ifwidir, "capsule.bin")):
                             ifwis[board] = dict(ifwiversion=ifwiversion,
                                                 ifwi=ifwi,
                                                 capsule=capsule,
-                                                stage2=stage2,
                                                 softfuse="None",
                                                 xxrdnx="None")
                         else:
@@ -380,10 +371,9 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
 
-    ifwis = find_ifwis(basedir, board_soc)
-    for board, args in ifwis.items():
-         if args["capsule"] != "None":
-             f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
+    # WA : copy the capsule file
+    if os.path.exists(ifwi_private_dir+"/baytrail_edk2/byt_t/capsule.bin"):
+       f.add_file("CAPSULE", ifwi_private_dir+"/baytrail_edk2/byt_t/capsule.bin", buildnumber)
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
@@ -393,9 +383,9 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     publish_flash_target2file(f, target2file)
 
-    for board, args in ifwis.items():
-         if args["capsule"] != "None":
-              f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower(),), "Attempt flashing capsule " + board)
+    # WA : flash the capsule file
+    if os.path.exists(ifwi_private_dir+"/baytrail_edk2/byt_t/capsule.bin"):
+       f.add_command("fastboot flash capsule $capsule_file", "Flashing capsule")
 
     publish_flash_modem_files(f)
 
@@ -646,23 +636,13 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
-    ifwis = find_ifwis(basedir, board_soc)
-    for board, args in ifwis.items():
-         if args["ifwi"] !=  "None":
-              f.add_codegroup("FIRMWARE", (("DEDIPROG_" + board.upper(), args["ifwi"], args["ifwiversion"]),))
-         if args["stage2"] !=  "None":
-              f.add_codegroup("stage2", (("stage2_" + board.upper(), args["stage2"], args["ifwiversion"]),))
+    if os.path.exists(ifwi_private_dir+"/baytrail_edk2/byt_t/dediprog.bin"):
+       f.add_file("DEDIPROG", ifwi_private_dir+"/baytrail_edk2/byt_t/dediprog.bin", buildnumber)
 
     part_file = os.path.join(product_out, "partition.tbl")
     f.add_codegroup("CONFIG", (("PARTITION_TABLE", part_file, buildnumber),))
 
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
-
-    for board, args in ifwis.items():
-         if args["stage2"] !=  "None":
-              f.add_command("fastboot flash fw_stage2 $stage2_%s_file" % (board.lower(),),
-                            "Uploading Stage 2 IFWI image.", mandatory=0)
-              f.add_command("sleep", "Sleep for 5 seconds.", timeout=5000)
 
     f.add_command("fastboot flash osloader $osloader_file",
                   "Uploading EFI OSLoader image.")
@@ -811,9 +791,7 @@ def publish_external(basedir, bld, bld_variant, board_soc):
             print >> sys.stderr, "please put the file in:"
             print >> sys.stderr, possibilities
             sys.exit(1)
-
-        bios_type = get_build_options(key='TARGET_BIOS_TYPE', default_value='uefi')
-        if ifwis and bios_type != "uefi":
+        if ifwis:
             for k, v in ifwis.items():
                 write_ifwi_bin(k, v["ifwi"], "ifwi.bin")
                 v["ifwi"] = find_sibling_file(v["ifwi"], "prod ifwi",
