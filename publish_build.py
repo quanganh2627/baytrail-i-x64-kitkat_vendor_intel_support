@@ -185,6 +185,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     product_out=os.path.join(basedir,"out/target/product",bld)
     fastboot_dir=os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
     iafw_dir = os.path.join(basedir, bldpub, "iafw")
+    signing_keys_dir = os.path.join(basedir, bldpub, "signing_keys", bld_variant)
     flashfile_dir=os.path.join(basedir,bldpub,"flash_files")
     ota_inputs_dir=os.path.join(basedir,bldpub,"ota_inputs", bld_variant)
     otafile = "%(bld_prod)s-ota-%(buildnumber)s.zip"%locals()
@@ -221,6 +222,10 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
     if bld_variant.find("user")>=0 and publish_ota_target_files:
         publish_file(locals(), "%(product_out)s/obj/PACKAGING/target_files_intermediates/%(targetfile)s", ota_inputs_dir, enforce=False)
     publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw.bin", iafw_dir, enforce=False)
+    # Publish the kernel module signing keys only for engineering and userdebug builds
+    if bld_variant == "userdebug" or bld_variant == "eng":
+        publish_file(locals(), "%(product_out)s/linux/kernel/signing_key.priv", signing_keys_dir, enforce=False)
+        publish_file(locals(), "%(product_out)s/linux/kernel/signing_key.x509", signing_keys_dir, enforce=False)
     ifwis = find_ifwis(basedir)
 
 
