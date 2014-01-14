@@ -227,6 +227,12 @@ def do_we_publish_extra_build(bld_variant, extra_build):
     else:
         return True
 
+def publish_kernel_keys(product_out, basedir, bld_variant):
+    # Publish the kernel module signing keys only for engineering and userdebug builds
+    if bld_variant == "userdebug" or bld_variant == "eng":
+        signing_keys_dir = os.path.join(basedir, bldpub, "signing_keys", bld_variant)
+        publish_file(locals(), "%(product_out)s/linux/kernel/signing_key.priv", signing_keys_dir, enforce=False)
+        publish_file(locals(), "%(product_out)s/linux/kernel/signing_key.x509", signing_keys_dir, enforce=False)
 
 def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
@@ -244,6 +250,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
+    publish_kernel_keys(product_out, basedir, bld_variant)
     publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
@@ -370,6 +377,7 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
                     ("recovery", "recovery"), ("system", "system")]
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     flashfile_dir = os.path.join(basedir, bldpub, "flash_files")
+    publish_kernel_keys(product_out, basedir, bld_variant)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant,
                                "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
