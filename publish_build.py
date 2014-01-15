@@ -13,6 +13,25 @@ bldpub = None
 ifwi_external_dir = "prebuilts/intel/vendor/intel/fw/prebuilts/ifwi"
 ifwi_private_dir = "vendor/intel/fw/PRIVATE/ifwi"
 
+brdglobs = {"blackbay": "mfld_pr*",
+             "lexington": "mfld_gi*",
+             "salitpa": "salitpa",
+             "yukkabeach": "yukkabeach",
+             "victoriabay": "victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
+             "redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+             "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
+             "ctp7160": "vb_vv_b0_b1",
+             "ctpscalelt": "ctp_vv2/CTPSCALELT",
+             "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
+             "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
+             "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
+             "bodegabay": "bodegabay bodegabay/DBG",
+             "baylake": "baytrail/bayrock",
+             "byt_t_ffrd10": "baytrail/byt_t",
+             "byt_t_ffrd8": "baytrail/byt_t",
+             "byt_m_crb": "baytrail/byt_m",
+             }
+
 def get_link_path(gl):
     print "gl=",gl
     if os.path.islink(gl):
@@ -80,25 +99,7 @@ def find_ifwis(basedir):
         ifwi_base_dir = ifwi_external_dir
     # IFWI for Merrifield/Moorefield VP, HVP and SLE are not published
     if bld_prod not in ["mrfl_vp", "mrfl_hvp", "moor_hvp", "moor_sle", "crc_hvp"]:
-        ifwiglobs = {"blackbay": "mfld_pr*",
-                     "lexington": "mfld_gi*",
-                     "salitpa": "salitpa",
-                     "yukkabeach": "yukkabeach",
-                     "victoriabay": "victoriabay vb_vv_b0_b1 vb_vv vb_pr1-01 vb_pr1",
-                     "redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                     "redhookbay_next": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
-                     "ctp7160": "vb_vv_b0_b1",
-                     "ctpscalelt": "ctp_vv2/CTPSCALELT",
-                     "saltbay_lnp": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "saltbay_pr1_next": "saltbay_pr1 saltbay_pr1/DBG saltbay_pr1/PSH",
-                     "bodegabay": "bodegabay bodegabay/DBG",
-                     "baylake": "baytrail/bayrock",
-                     "byt_t_ffrd10": "baytrail/byt_t",
-                     "byt_t_ffrd8": "baytrail/byt_t",
-                     "byt_m_crb": "baytrail/byt_m",
-                     }[bld_prod]
-
+        ifwiglobs = brdglobs[bld_prod]
         print "look for ifwis in the tree for %s" % bld_prod
         for ifwiglob in ifwiglobs.split(" "):
             gl = os.path.join(basedir, ifwi_base_dir,ifwiglob)
@@ -351,7 +352,7 @@ def publish_build(basedir, bld, bld_variant, bld_prod, buildnumber):
         f.add_command("adb shell am startservice -a com.intel.ota.OtaUpdate -e LOCATION /cache/ota.zip", "Trigger os update")
         f.finish()
 
-def publish_blankphone(basedir, bld, buildnumber):
+def blankphone_full_attach(basedir, bld, buildnumber, ifwis, board, args):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     product_out=os.path.join(basedir,"out/target/product",bld)
@@ -362,134 +363,227 @@ def publish_blankphone(basedir, bld, buildnumber):
         recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
     else:
         recoveryimg = os.path.join(product_out, "recovery.img.POS.bin")
-    ifwis = find_ifwis(basedir)
-    for board, args in ifwis.items():
-        # build the blankphone flashfile
-        f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
-        f.add_xml_file("flash-EraseFactory.xml")
 
-        default_files = f.xml.keys()
+    f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip"%locals()), "flash.xml")
+    f.add_xml_file("flash-EraseFactory.xml")
 
-        if args["softfuse"] != "None":
-            softfuse_files = ["flash-softfuse.xml", "flash-softfuse-EraseFactory.xml"]
-            for softfuse_f in softfuse_files:
-                f.add_xml_file(softfuse_f)
+    default_files = f.xml.keys()
 
+    if args["softfuse"] != "None":
+        softfuse_files = ["flash-softfuse.xml", "flash-softfuse-EraseFactory.xml"]
+        for softfuse_f in softfuse_files:
+            f.add_xml_file(softfuse_f)
+
+        f.xml_header("system", bld, "1")
+        f.add_gpflag(0x80000245, xml_filter=softfuse_files)
+        f.add_gpflag(0x80000145, xml_filter=default_files)
+    else:
+        if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+            f.xml_header("fastboot_dnx", bld, "1")
+        elif args.has_key("capsule"):
+            f.xml_header("fastboot", bld, "1")
+        else:
             f.xml_header("system", bld, "1")
-            f.add_gpflag(0x80000245, xml_filter=softfuse_files)
-            f.add_gpflag(0x80000145, xml_filter=default_files)
-        else:
-            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
-                f.xml_header("fastboot_dnx", bld, "1")
-            elif args.has_key("capsule"):
-                f.xml_header("fastboot", bld, "1")
-            else:
-                f.xml_header("system", bld, "1")
-                f.add_gpflag(0x80000045, xml_filter=default_files)
+            f.add_gpflag(0x80000045, xml_filter=default_files)
 
-        if args.has_key("capsule"):
-            default_ifwi = (("CAPSULE", args["capsule"], args["ifwiversion"]),
-                            ("DEDIPROG",  args["ifwi"], args["ifwiversion"]),)
-        else:
-            default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
-                            ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                            ("OS_DNX", args["osdnx"], args["ifwiversion"]))
+    if args.has_key("capsule"):
+        default_ifwi = (("CAPSULE", args["capsule"], args["ifwiversion"]),
+                        ("DEDIPROG",  args["ifwi"], args["ifwiversion"]),)
+    else:
+        default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
+                        ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                        ("OS_DNX", args["osdnx"], args["ifwiversion"]))
 
-        ifwis_dict = {}
+    ifwis_dict = {}
+    for xml_file in f.xml.keys():
+        ifwis_dict[xml_file] = default_ifwi
+
+    if args["xxrdnx"] != "None":
+        xxrdnx = ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])
         for xml_file in f.xml.keys():
-            ifwis_dict[xml_file] = default_ifwi
+            ifwis_dict[xml_file] += (xxrdnx,)
 
-        if args["xxrdnx"] != "None":
-            xxrdnx = ("XXR_DNX", args["xxrdnx"], args["ifwiversion"])
-            for xml_file in f.xml.keys():
-                ifwis_dict[xml_file] += (xxrdnx,)
+    if args["softfuse"] != "None":
+        softfuse = ("SOFTFUSE", args["softfuse"], args["ifwiversion"])
+        for xml_file in softfuse_files:
+            ifwis_dict[xml_file] += (softfuse,)
 
-        if args["softfuse"] != "None":
-            softfuse = ("SOFTFUSE", args["softfuse"], args["ifwiversion"])
-            for xml_file in softfuse_files:
-                ifwis_dict[xml_file] += (softfuse,)
+    for xml_file in f.xml.keys():
+        f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter=[xml_file])
 
-        for xml_file in f.xml.keys():
-            f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter=[xml_file])
+    if args.has_key("capsule"):
+        fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
+        f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
+        f.add_file("KERNEL", os.path.join(product_out,"boot.img"), buildnumber)
+        f.add_file("RECOVERY", os.path.join(product_out,"recovery.img"), buildnumber)
+        f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+    else:
+        f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
 
-        if args.has_key("capsule"):
-            fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
-            f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
-            f.add_file("KERNEL", os.path.join(product_out,"boot.img"), buildnumber)
-            f.add_file("RECOVERY", os.path.join(product_out,"recovery.img"), buildnumber)
-            f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
-        else:
-            f.add_codegroup("BOOTLOADER",(("KBOOT", recoveryimg, buildnumber),))
+    f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
 
-        f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
+    f.add_buildproperties("%(product_out)s/system/build.prop" %locals())
 
-        f.add_buildproperties("%(product_out)s/system/build.prop" %locals())
-
-        if args.has_key("capsule"):
-            if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
-                f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
-                f.add_command("fastboot continue", "Booting on fastboot image")
-                f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
-            f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
-            if bld == "byt_m_crb":
-                f.add_command("fastboot flash boot $fastboot_file", "Flashing boot")
-                f.add_command("fastboot flash recovery $fastboot_file", "Flashing recovery")
-            else:
-                f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
-                f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
-            f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
-
-        f.add_command("fastboot oem start_partitioning", "Start partitioning")
-        f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
-        f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
-
+    if args.has_key("capsule"):
+        if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+            f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
+            f.add_command("fastboot continue", "Booting on fastboot image")
+            f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
+        f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
         if bld == "byt_m_crb":
-            tag = "flash.xml -EraseFactory"
+            f.add_command("fastboot flash boot $fastboot_file", "Flashing boot")
+            f.add_command("fastboot flash recovery $fastboot_file", "Flashing recovery")
         else:
-            tag = "-EraseFactory"
+            f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+            f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
+        f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
-        xml_tag_list = [i for i in f.xml.keys() if tag in i]
-        f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
+    f.add_command("fastboot oem start_partitioning", "Start partitioning")
+    f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
+    f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
 
-        for i in "system cache config logs spare data".split():
-            f.add_command("fastboot erase "+i, "erase %s partition"%(i))
-        f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
+    if bld == "byt_m_crb":
+        tag = "flash.xml -EraseFactory"
+    else:
+        tag = "-EraseFactory"
 
-        fru_configs = get_build_options(key='FRU_CONFIGS')
-        if os.path.exists(fru_configs):
-            f.add_xml_file("flash-fru.xml")
-            fru = ["flash-fru.xml"]
-            f.xml_header("fastboot", bld, "1", xml_filter=fru)
-            if bld_prod not in ["saltbay_lnp","saltbay_pr1","bodegabay"]:
-                token_filename = "token.bin"
-                stub_token=os.path.join(product_out, token_filename)
-                # create a token with dummy data to make phone flash tool happy
-                os.system("echo 'dummy token' > " + stub_token)
-                f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
-                f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
-            f.add_command("fastboot oem fru set $fru_value" , "Flash FRU value on device", xml_filter=fru)
-            f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
-            f.add_raw_file(fru_configs, xml_filter=fru)
+    xml_tag_list = [i for i in f.xml.keys() if tag in i]
+    f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
 
-        if not args.has_key("capsule"):
-            # Creation of a "flash IFWI only" xml
-            flash_IFWI = "flash-IFWI-only.xml"
-            f.add_xml_file(flash_IFWI)
-            f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
-            f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
-            f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
+    for i in "system cache config logs spare data".split():
+        f.add_command("fastboot erase "+i, "erase %s partition"%(i))
+    f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
+
+    fru_configs = get_build_options(key='FRU_CONFIGS')
+    if os.path.exists(fru_configs):
+        f.add_xml_file("flash-fru.xml")
+        fru = ["flash-fru.xml"]
+        f.xml_header("fastboot", bld, "1", xml_filter=fru)
+        if bld_prod not in ["saltbay_lnp","saltbay_pr1","bodegabay"]:
+            token_filename = "token.bin"
+            stub_token=os.path.join(product_out, token_filename)
+            # create a token with dummy data to make phone flash tool happy
+            os.system("echo 'dummy token' > " + stub_token)
+            f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
+            f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
+        f.add_command("fastboot oem fru set $fru_value" , "Flash FRU value on device", xml_filter=fru)
+        f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
+        f.add_raw_file(fru_configs, xml_filter=fru)
+
+    if not args.has_key("capsule"):
+        # Creation of a "flash IFWI only" xml
+        flash_IFWI = "flash-IFWI-only.xml"
+        f.add_xml_file(flash_IFWI)
+        f.xml_header("system", bld, "1",xml_filter=[flash_IFWI])
+        f.add_gpflag(0x80000142, xml_filter=[flash_IFWI])
+        f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
+
+    # Create a dedicated flash file for buildbot
+    # Use EraseFactory for redhookbay if it exists.
+    # Use flash.xml for all other
+    if bld == "redhookbay":
+        if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
+            f.copy_xml_file("flash.xml","flash-buildbot.xml")
+    else:
+        f.copy_xml_file("flash.xml","flash-buildbot.xml")
+
+    f.finish()
+
+def blankphone_main_attach(basedir, bld, buildnumber):
+    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bldx = get_build_options(key='GENERIC_TARGET_NAME')
+    product_out=os.path.join(basedir,"out/target/product",bld)
+    blankphone_dir=os.path.join(basedir,bldpub,"flash_files/blankphone")
+    partition_filename="partition.tbl"
+    partition_file=os.path.join(product_out, partition_filename)
+    if bld_supports_droidboot:
+        recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
+    else:
+        recoveryimg = os.path.join(product_out, "recovery.img.POS.bin")
+
+    f = FlashFile(os.path.join(blankphone_dir, "%s-blankphone.zip"%(brdglobs[bld_prod].replace('/', '_'))), "flash.xml")
+    f.add_xml_file("flash-EraseFactory.xml")
+
+    default_files = f.xml.keys()
+    if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+        f.xml_header("fastboot_dnx", bld, "1")
+    else:
+        f.xml_header("fastboot", bld, "1")
+
+    fastboot_dir = os.path.join(basedir,bldpub,"fastboot-images", bld_variant)
+    f.add_file("FASTBOOT", os.path.join(product_out,"droidboot.img"), buildnumber)
+    f.add_file("KERNEL", os.path.join(product_out,"boot.img"), buildnumber)
+    f.add_file("RECOVERY", os.path.join(product_out,"recovery.img"), buildnumber)
+    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+
+    f.add_codegroup("CONFIG",(("PARTITION_TABLE", partition_file, buildnumber),))
+    f.add_buildproperties("%(product_out)s/system/build.prop" %locals())
+
+    if bld == "byt_t_ffrd10" or bld == "baylake" or bld == "byt_t_ffrd8":
+        f.add_command("fastboot boot $fastboot_file", "Downloading fastboot image")
+        f.add_command("fastboot continue", "Booting on fastboot image")
+        f.add_command("sleep", "Sleep 25 seconds", timeout=25000)
+    f.add_command("fastboot oem write_osip_header", "Writing OSIP header")
+    if bld == "byt_m_crb":
+        f.add_command("fastboot flash boot $fastboot_file", "Flashing boot")
+        f.add_command("fastboot flash recovery $fastboot_file", "Flashing recovery")
+    else:
+        f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+        f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
+    f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
+
+    f.add_command("fastboot oem start_partitioning", "Start partitioning")
+    f.add_command("fastboot flash /tmp/%s $partition_table_file" % (partition_filename), "Push partition table on device")
+    f.add_command("fastboot oem partition /tmp/%s" % (partition_filename), "Apply partition on device")
+
+    if bld == "byt_m_crb":
+        tag = "flash.xml -EraseFactory"
+    else:
+        tag = "-EraseFactory"
+
+    xml_tag_list = [i for i in f.xml.keys() if tag in i]
+    f.add_command("fastboot erase %s"%("factory"), "erase %s partition"%("factory"), xml_filter=xml_tag_list)
+
+    for i in "system cache config logs spare data".split():
+        f.add_command("fastboot erase "+i, "erase %s partition"%(i))
+    f.add_command("fastboot oem stop_partitioning", "Stop partitioning")
+
+    fru_configs = get_build_options(key='FRU_CONFIGS')
+    if os.path.exists(fru_configs):
+        f.add_xml_file("flash-fru.xml")
+        fru = ["flash-fru.xml"]
+        f.xml_header("fastboot", bld, "1", xml_filter=fru)
+        if bld_prod not in ["saltbay_lnp","saltbay_pr1","bodegabay"]:
+            token_filename = "token.bin"
+            stub_token=os.path.join(product_out, token_filename)
+            # create a token with dummy data to make phone flash tool happy
+            os.system("echo 'dummy token' > " + stub_token)
+            f.add_codegroup("TOKEN",(("SECURE_TOKEN", stub_token, buildnumber),))
+            f.add_command("fastboot flash token $secure_token_file" , "Push secure token on device", xml_filter=fru)
+        f.add_command("fastboot oem fru set $fru_value" , "Flash FRU value on device", xml_filter=fru)
+        f.add_command("popup" , "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
+        f.add_raw_file(fru_configs, xml_filter=fru)
 
 	# Create a dedicated flash file for buildbot
 	# Use EraseFactory for redhookbay if it exists.
 	# Use flash.xml for all other
-	if bld == "redhookbay":
-		if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
-			f.copy_xml_file("flash.xml","flash-buildbot.xml")
-	else:
-		f.copy_xml_file("flash.xml","flash-buildbot.xml")
+    if bld == "redhookbay":
+        if not f.copy_xml_file("flash-EraseFactory.xml","flash-buildbot.xml"):
+            f.copy_xml_file("flash.xml","flash-buildbot.xml")
+    else:
+        f.copy_xml_file("flash.xml","flash-buildbot.xml")
 
-        f.finish()
+    f.finish()
 
+def publish_blankphone(basedir, bld, buildnumber):
+    ifwis = find_ifwis(basedir)
+    if ifwis:
+        for board, args in ifwis.items():
+            # build the full blankphone flashfile
+            blankphone_full_attach(basedir, bld, buildnumber, ifwis, board, args)
+    else:
+        # build the blankphone without ifwi and capsule
+        blankphone_main_attach(basedir, bld, buildnumber)
 
 def publish_modem(basedir, bld):
     # environment variables
