@@ -137,7 +137,8 @@ def find_ifwis(basedir, board_soc):
         else:
             ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2",
                          "cht_rvp": "cherrytrail_edk2/cht_rvp",
-                         "byt_t_ffrd8": "baytrail_edk2/byt_t"
+                         "byt_t_ffrd8": "baytrail_edk2/byt_t",
+                         "bsw_rvp": "braswell_edk2/bsw_rvp"
                         }[bld_prod]
 
         print "looking for ifwis in the tree for %s" % bld_prod
