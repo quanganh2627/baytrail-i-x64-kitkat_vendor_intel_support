@@ -313,7 +313,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
 
     system_flash_timeout = 300000
 
-    f.add_command("fastboot flash system $system_file", "Flashing system", timeout=system_flash_timeout)
+    f.add_command("fastboot flash system:type=gzip $system_file", "Flashing system", timeout=system_flash_timeout)
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
 
     if bld_flash_modem:
