@@ -126,7 +126,7 @@ def find_ifwis(basedir, board_soc):
                           "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
                           "baylake": "baytrail/baylake",
                           "baylake_next": "baytrail/baylake",
-                          "byt_t_ffrd8": "baytrail/byt_t"
+                          "byt_t_ffrd8": "baytrail/byt_t",
                      	   "byt_m_crb": "baytrail/byt_m",
                          }[bld_prod]
         else:
