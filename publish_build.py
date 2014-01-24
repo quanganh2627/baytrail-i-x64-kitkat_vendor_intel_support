@@ -216,7 +216,7 @@ def publish_kernel_keys(product_out, bld_variant):
 
 def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
-    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bld_supports_droidboot = get_build_options(key='TARGET_USE_USERFASTBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
     bld_flash_modem_nvm = not(get_build_options(key='SKIP_NVM', key_type='boolean'))
@@ -236,8 +236,8 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     system_img_path_in_out = None
 
     if bld_supports_droidboot:
-        publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
-        publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
+        publish_file(locals(), "%(product_out)s/fastboot.img", fastboot_dir, enforce=False)
+        publish_file(locals(), "%(product_out)s/fastboot.img.POS.bin", fastboot_dir, enforce=False)
         if sparse_disabled:
             system_img_path_in_out = os.path.join(product_out, "system.img.gz")
         else:
@@ -269,7 +269,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
             f.add_file("MODEM_NVM", os.path.join(fastboot_dir, "modem_nvm.zip"), buildnumber)
 
     if bld_supports_droidboot:
-        f.add_file("FASTBOOT", os.path.join(fastboot_dir, "droidboot.img"), buildnumber)
+        f.add_file("FASTBOOT", os.path.join(fastboot_dir, "fastboot.img"), buildnumber)
     # the system_img is optionally published, therefore
     # we use the one that is in out to be included in the flashfile
     f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
@@ -355,7 +355,7 @@ def publish_flash_modem_files(f):
 def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images")
-    target2file = [("ESP", "esp"), ("fastboot", "droidboot"), ("boot", "boot"),
+    target2file = [("ESP", "esp"), ("fastboot", "userfastboot"), ("boot", "boot"),
                     ("recovery", "recovery"), ("system", "system")]
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     flashfile_dir = os.path.join(bldpub, "flash_files")
@@ -483,7 +483,7 @@ def publish_partitioning_commands(f, bld, buildnumber, filename, erase_list):
 
 
 def publish_blankphone_iafw(bld, buildnumber, board_soc):
-    bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bld_supports_droidboot = get_build_options(key='TARGET_USE_USERFASTBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
     product_out = os.path.join("out/target/product", bld)
@@ -491,7 +491,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
     partition_filename = "partition.tbl"
     partition_file = os.path.join(product_out, partition_filename)
     if bld_supports_droidboot:
-        recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
+        recoveryimg = os.path.join(product_out, "fastboot.img.POS.bin")
     else:
         recoveryimg = os.path.join(product_out, "recovery.img.POS.bin")
     ifwis = find_ifwis(board_soc)
@@ -546,7 +546,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
 
         if args["capsule"]:
             fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
-            f.add_file("FASTBOOT", os.path.join(product_out, "droidboot.img"), buildnumber)
+            f.add_file("FASTBOOT", os.path.join(product_out, "fastboot.img"), buildnumber)
             f.add_file("KERNEL", os.path.join(product_out, "boot.img"), buildnumber)
             f.add_file("RECOVERY", os.path.join(product_out, "recovery.img"), buildnumber)
             f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
@@ -623,7 +623,7 @@ def publish_flash_target2file(f, target2file):
 def publish_blankphone_uefi(bld, buildnumber, board_soc):
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images")
-    target2file = [("ESP", "esp"), ("fastboot", "droidboot")]
+    target2file = [("ESP", "esp"), ("fastboot", "userfastboot")]
 
     blankphone_dir = os.path.join(bldpub, "flash_files/blankphone")
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
