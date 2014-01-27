@@ -81,10 +81,10 @@ def publish_file(args, src, dest, enforce=True):
                                            enforce=enforce)
 
 
-def find_stitched_ifwis(basedir, ifwi_base_dir):
+def find_stitched_ifwis(ifwi_base_dir):
     ifwis = {}
 
-    gl = os.path.join(basedir, ifwi_base_dir, "*/ifwi*")
+    gl = os.path.join(ifwi_base_dir, "*/ifwi*")
     print "looking for ifwis in the tree for %s" % bld_prod
     for ifwidir in glob.glob(gl):
         ifwi_name = os.path.splitext(os.path.basename(ifwidir))[0]
@@ -109,16 +109,16 @@ def find_stitched_ifwis(basedir, ifwi_base_dir):
     return ifwis
 
 
-def find_ifwis(basedir, board_soc):
+def find_ifwis(board_soc):
 
     ifwi_out_dir = os.path.join('out/target/product', bld, 'ifwi')
-    if os.path.exists(os.path.join(basedir, ifwi_out_dir, 'version')):
+    if os.path.exists(os.path.join(ifwi_out_dir, 'version')):
         """ Stitched ifwi availlable. Prebuilt ifwi remain in the legacy path"""
-        return find_stitched_ifwis(basedir, ifwi_out_dir)
+        return find_stitched_ifwis(ifwi_out_dir)
     """ walk the ifwi directory for matching ifwi
     return a dict indexed by boardname, with all the information in it"""
     ifwis = {}
-    if os.path.exists(os.path.join(basedir, ifwi_private_dir)):
+    if os.path.exists(ifwi_private_dir):
         ifwi_base_dir = ifwi_private_dir
     else:
         ifwi_base_dir = ifwi_external_dir
@@ -144,7 +144,7 @@ def find_ifwis(basedir, board_soc):
         print "looking for ifwis in the tree for %s" % bld_prod
 
         for ifwiglob in ifwiglobs.split(" "):
-            gl = os.path.join(basedir, ifwi_base_dir, ifwiglob)
+            gl = os.path.join(ifwi_base_dir, ifwiglob)
             base_ifwi = ifwiglob.split("/")[0]
             for ifwidir in glob.glob(gl):
                 # When the ifwi directory is placed within a subdir, we shall
@@ -205,14 +205,14 @@ def do_we_publish_extra_build(bld_variant, extra_build):
     else:
         return True
 
-def publish_kernel_keys(product_out, basedir, bld_variant):
+def publish_kernel_keys(product_out, bld_variant):
     # Publish the kernel module signing keys only for engineering and userdebug builds
     if bld_variant == "userdebug" or bld_variant == "eng":
-        signing_keys_dir = os.path.join(basedir, bldpub, "signing_keys", bld_variant)
+        signing_keys_dir = os.path.join(bldpub, "signing_keys", bld_variant)
         publish_file(locals(), "%(product_out)s/linux/kernel/signing_key.priv", signing_keys_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/linux/kernel/signing_key.x509", signing_keys_dir, enforce=False)
 
-def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
+def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
@@ -221,14 +221,14 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
     sparse_disabled = get_build_options(key='SPARSE_DISABLED', key_type='boolean')
 
-    product_out = os.path.join(basedir, "out/target/product", bld)
-    fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
-    iafw_dir = os.path.join(basedir, bldpub, "iafw")
-    flashfile_dir = os.path.join(basedir, bldpub, "flash_files")
+    product_out = os.path.join("out/target/product", bld)
+    fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
+    iafw_dir = os.path.join(bldpub, "iafw")
+    flashfile_dir = os.path.join(bldpub, "flash_files")
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
-    publish_kernel_keys(product_out, basedir, bld_variant)
+    publish_kernel_keys(product_out, bld_variant)
     publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
@@ -247,7 +247,7 @@ def publish_build_iafw(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
         publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
     publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw.bin", iafw_dir, enforce=False)
-    ifwis = find_ifwis(basedir, board_soc)
+    ifwis = find_ifwis(board_soc)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
     if bld_flash_modem:
@@ -348,14 +348,14 @@ def publish_flash_modem_files(f):
                           xml_filter=["flash.xml"], timeout=220000)
 
 
-def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_soc):
-    product_out = os.path.join(basedir, "out/target/product", bld)
-    fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images")
+def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
+    product_out = os.path.join("out/target/product", bld)
+    fastboot_dir = os.path.join(bldpub, "fastboot-images")
     target2file = [("ESP", "esp"), ("fastboot", "droidboot"), ("boot", "boot"),
                     ("recovery", "recovery"), ("system", "system")]
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
-    flashfile_dir = os.path.join(basedir, bldpub, "flash_files")
-    publish_kernel_keys(product_out, basedir, bld_variant)
+    flashfile_dir = os.path.join(bldpub, "flash_files")
+    publish_kernel_keys(product_out, bld_variant)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant,
                                "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
@@ -366,7 +366,7 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
 
-    ifwis = find_ifwis(basedir, board_soc)
+    ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
          if args["capsule"]:
              f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
@@ -389,7 +389,7 @@ def publish_build_uefi(basedir, bld, bld_variant, bld_prod, buildnumber, board_s
     f.finish()
 
 
-def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
+def publish_ota_files(bld, bld_variant, bld_prod, buildnumber):
     target_name = get_build_options(key='GENERIC_TARGET_NAME')
 
     # Get publish options
@@ -397,10 +397,10 @@ def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
     publish_full_ota = do_we_publish_extra_build(bld_variant, 'full_ota')
 
     # Set paths
-    pub_dir_inputs = os.path.join(basedir, bldpub, "ota_inputs", bld_variant)
-    pub_dir_full_ota = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
+    pub_dir_inputs = os.path.join(bldpub, "ota_inputs", bld_variant)
+    pub_dir_full_ota = os.path.join(bldpub, "fastboot-images", bld_variant)
 
-    product_out = os.path.join(basedir, "out/target/product", bld)
+    product_out = os.path.join("out/target/product", bld)
     full_ota_basename = "%(target_name)s-ota-%(buildnumber)s.zip" % locals()
     full_ota_file = os.path.join(product_out, full_ota_basename)
 
@@ -416,7 +416,7 @@ def publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber):
         publish_file_without_formatting(inputs_file, pub_dir_inputs, enforce=False)
 
 
-def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
+def publish_ota_flashfile(bld, bld_variant, bld_prod, buildnumber):
     # Get values from environment variables
     supported = not(get_build_options(key='FLASHFILE_NO_OTA', key_type='boolean'))
     published = do_we_publish_extra_build(bld_variant, 'full_ota_flashfile')
@@ -427,9 +427,9 @@ def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
         return
 
     # Set paths
-    pub_dir_flashfiles = os.path.join(basedir, bldpub, "flash_files")
+    pub_dir_flashfiles = os.path.join(bldpub, "flash_files")
 
-    product_out = os.path.join(basedir, "out/target/product", bld)
+    product_out = os.path.join("out/target/product", bld)
     full_ota_basename = "%(target_name)s-ota-%(buildnumber)s.zip" % locals()
     full_ota_file = os.path.join(product_out, full_ota_basename)
 
@@ -453,9 +453,9 @@ def publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber):
     f.finish()
 
 
-def publish_ota(basedir, bld, bld_variant, bld_prod, buildnumber):
-    publish_ota_files(basedir, bld, bld_variant, bld_prod, buildnumber)
-    publish_ota_flashfile(basedir, bld, bld_variant, bld_prod, buildnumber)
+def publish_ota(bld, bld_variant, bld_prod, buildnumber):
+    publish_ota_files(bld, bld_variant, bld_prod, buildnumber)
+    publish_ota_flashfile(bld, bld_variant, bld_prod, buildnumber)
 
 
 def publish_erase_partitions(f, partitions):
@@ -478,19 +478,19 @@ def publish_partitioning_commands(f, bld, buildnumber, filename, erase_list):
     f.add_command("fastboot oem stop_partitioning", "Stop partitioning.")
 
 
-def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
+def publish_blankphone_iafw(bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
-    product_out = os.path.join(basedir, "out/target/product", bld)
-    blankphone_dir = os.path.join(basedir, bldpub, "flash_files/blankphone")
+    product_out = os.path.join("out/target/product", bld)
+    blankphone_dir = os.path.join(bldpub, "flash_files/blankphone")
     partition_filename = "partition.tbl"
     partition_file = os.path.join(product_out, partition_filename)
     if bld_supports_droidboot:
         recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
     else:
         recoveryimg = os.path.join(product_out, "recovery.img.POS.bin")
-    ifwis = find_ifwis(basedir, board_soc)
+    ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip" % locals()), "flash.xml")
@@ -541,7 +541,7 @@ def publish_blankphone_iafw(basedir, bld, buildnumber, board_soc):
             f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter=[xml_file])
 
         if args["capsule"]:
-            fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
+            fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
             f.add_file("FASTBOOT", os.path.join(product_out, "droidboot.img"), buildnumber)
             f.add_file("KERNEL", os.path.join(product_out, "boot.img"), buildnumber)
             f.add_file("RECOVERY", os.path.join(product_out, "recovery.img"), buildnumber)
@@ -616,12 +616,12 @@ def publish_flash_target2file(f, target2file):
                       "Flashing '%s' image." % target_file[0], timeout=flash_timeout)
 
 
-def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
-    product_out = os.path.join(basedir, "out/target/product", bld)
-    fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images")
+def publish_blankphone_uefi(bld, buildnumber, board_soc):
+    product_out = os.path.join("out/target/product", bld)
+    fastboot_dir = os.path.join(bldpub, "fastboot-images")
     target2file = [("ESP", "esp"), ("fastboot", "droidboot")]
 
-    blankphone_dir = os.path.join(basedir, bldpub, "flash_files/blankphone")
+    blankphone_dir = os.path.join(bldpub, "flash_files/blankphone")
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     f = FlashFile(os.path.join(blankphone_dir, bldx + "-blankphone.zip"), "flash.xml")
     f.add_xml_file("flash-EraseFactory.xml")
@@ -632,7 +632,7 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
-    ifwis = find_ifwis(basedir, board_soc)
+    ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
          if args["ifwi"]:
               f.add_codegroup("FIRMWARE", (("DEDIPROG_" + board.upper(), args["ifwi"], args["ifwiversion"]),))
@@ -664,7 +664,7 @@ def publish_blankphone_uefi(basedir, bld, buildnumber, board_soc):
     f.finish()
 
 
-def publish_modem(basedir, bld):
+def publish_modem(bld):
     # environment variables
     board_have_modem = get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
     publish_modem_nvm = not(get_build_options(key='SKIP_NVM', key_type='boolean'))
@@ -672,8 +672,8 @@ def publish_modem(basedir, bld):
         print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld,)
         return 0
 
-    modem_dest_dir = os.path.join(basedir, bldpub, "MODEM/")
-    product_out = os.path.join(basedir, "out/target/product", bld)
+    modem_dest_dir = os.path.join(bldpub, "MODEM/")
+    product_out = os.path.join("out/target/product", bld)
     modem_out_dir = os.path.join(product_out, "system/etc/firmware/modem/")
 
     publish_file(locals(), modem_out_dir + "modem.zip", modem_dest_dir)
@@ -681,9 +681,9 @@ def publish_modem(basedir, bld):
         publish_file(locals(), modem_out_dir + "modem_nvm.zip", modem_dest_dir)
 
 
-def publish_kernel(basedir, bld, bld_variant):
-    product_out = os.path.join(basedir, "out/target/product", bld)
-    fastboot_dir = os.path.join(basedir, bldpub, "fastboot-images", bld_variant)
+def publish_kernel(bld, bld_variant):
+    product_out = os.path.join("out/target/product", bld)
+    fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
 
     print "publishing fastboot images"
     # everything is already ready in product out directory, just publish it
@@ -707,11 +707,11 @@ def generateAllowedPrebuiltsList(customer):
     return [allowedPrebuilts.replace("/PRIVATE/", "/prebuilts/[^/]+/") + '/' for allowedPrebuilts in allowedPrebuiltsList.splitlines()]
 
 
-def publish_stitched_ifwi(basedir, ifwis, board_soc, z):
+def publish_stitched_ifwi(ifwis, board_soc, z):
 
     def write_ifwi_bin(board, fn, arcname):
         arcname = os.path.join(ifwi_external_dir, board, arcname)
-        print fn.replace(basedir, ""), "->", arcname
+        print fn, "->", arcname
         z.write(fn, arcname)
 
     def find_sibling_file(fn, _type, possibilities):
@@ -752,11 +752,11 @@ def publish_stitched_ifwi(basedir, ifwis, board_soc, z):
     z.close()
 
 
-def publish_external(basedir, bld, bld_variant, board_soc):
-    os.system("mkdir -p " + os.path.join(basedir, bldpub))
-    product_out = os.path.join(basedir, "out/target/product", bld)
+def publish_external(bld, bld_variant, board_soc):
+    os.system("mkdir -p " + bldpub)
+    product_out = os.path.join("out/target/product", bld)
     prebuilts_out = os.path.join(product_out, "prebuilts/intel")
-    prebuilts_pub = os.path.join(basedir, bldpub, "prebuilts.zip")
+    prebuilts_pub = os.path.join(bldpub, "prebuilts.zip")
     # white_list contains the list of regular expression
     # matching the PRIVATE folders whose we want to publish binary.
     # We use 'generic' customer config to generate white list
@@ -776,14 +776,14 @@ def publish_external(basedir, bld, bld_variant, board_soc):
                     print arcname
 
         # IFWI publication
-        ifwis = find_ifwis(basedir, board_soc)
+        ifwis = find_ifwis(board_soc)
 
-        if os.path.exists(os.path.join(basedir, 'out/target/product', bld, 'ifwi/version')):
-            return publish_stitched_ifwi(basedir, ifwis, board_soc, z)
+        if os.path.exists(os.path.join('out/target/product', bld, 'ifwi/version')):
+            return publish_stitched_ifwi(ifwis, board_soc, z)
 
         def write_ifwi_bin(board, fn, arcname):
             arcname = os.path.join(ifwi_external_dir, board, arcname)
-            print fn.replace(basedir, ""), "->", arcname
+            print fn, "->", arcname
             z.write(fn, arcname)
 
         def find_sibling_file(fn, _type, possibilities):
@@ -833,14 +833,13 @@ def publish_external(basedir, bld, bld_variant, board_soc):
 if __name__ == '__main__':
     # Arguments from the command line
     goal = sys.argv[1]
-    basedir = sys.argv[2]
-    bld_prod = sys.argv[3].lower()
-    bld = sys.argv[4].lower()
-    bld_variant = sys.argv[5]
-    buildnumber = sys.argv[6]
-    board_soc = sys.argv[7]
-    if len(sys.argv) > 8:
-        xen_flag = sys.argv[8]
+    bld_prod = sys.argv[2].lower()
+    bld = sys.argv[3].lower()
+    bld_variant = sys.argv[4]
+    buildnumber = sys.argv[5]
+    board_soc = sys.argv[6]
+    if len(sys.argv) > 7:
+        xen_flag = sys.argv[7]
         if xen_flag.lower() == "true":
             bld_prod += "_xen"
 
@@ -857,7 +856,7 @@ if __name__ == '__main__':
     # When bootonly is set, only accept fastboot_flashfile goal
     if bootonly_flashfile:
         if goal == "fastboot_flashfile":
-            publish_kernel(basedir, bld, bld_variant)
+            publish_kernel(bld, bld_variant)
         else:
             print "FLASHFILE_BOOTONLY: Nothing to publish"
         sys.exit(0)
@@ -866,19 +865,19 @@ if __name__ == '__main__':
 
     # Publish goal
     if goal == "blankphone":
-        locals()["publish_blankphone_" + bios_type](basedir, bld, buildnumber, board_soc)
+        locals()["publish_blankphone_" + bios_type](bld, buildnumber, board_soc)
     elif goal == "modem":
-        publish_modem(basedir, bld)
+        publish_modem(bld)
 
     elif goal == "fastboot_flashfile":
         if external_release:
-            publish_external(basedir, bld, bld_variant, board_soc)
+            publish_external(bld, bld_variant, board_soc)
         if do_we_publish_bld_variant(bld_variant):
-            locals()["publish_build_" + bios_type](basedir, bld, bld_variant, bld_prod, buildnumber, board_soc)
+            locals()["publish_build_" + bios_type](bld, bld_variant, bld_prod, buildnumber, board_soc)
 
     elif goal == "ota_flashfile":
         if do_we_publish_bld_variant(bld_variant):
-            publish_ota(basedir, bld, bld_variant, bld_prod, buildnumber)
+            publish_ota(bld, bld_variant, bld_prod, buildnumber)
 
     else:
         print "Unsupported publish goal [%s]" % goal
