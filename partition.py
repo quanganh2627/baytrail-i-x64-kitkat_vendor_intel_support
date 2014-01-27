@@ -197,9 +197,6 @@ def generate_gpt_partition_file(storage, global_data):
     gpt_commands.append("reload %s" % (storage["base_name"]))
 
     lba_start_offset = global_data["gpt"]["lba_start_offset"]
-    lba_end_offset = global_data["gpt"]["lba_end_offset"]
-    partition_offset_start = 0
-
 
     for partition_name in sorted(partition_data.keys(), key=lambda y: (partition_data[y]['id'])):
         partition = get_dict_from(partition_data, partition_name)
@@ -223,7 +220,8 @@ def generate_gpt_partition_file(storage, global_data):
             else:
                 partition_size = ( (int(partition["size"])*1024*1024) - partition_size_hint ) / 512
 
-
+        if partition["lba_start"] != None:
+            lba_start_offset = partition["lba_start"]
 
         gpt_commands.append("add -b %d -s %s -t %s -u %s -l %s -T %d -P %d %s" % (
             lba_start_offset,
