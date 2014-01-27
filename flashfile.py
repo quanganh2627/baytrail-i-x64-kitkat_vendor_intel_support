@@ -1,4 +1,5 @@
 import os, sys
+import shutil
 
 class FlashFile:
     """a class to generate a flashfile zip
@@ -122,6 +123,14 @@ class FlashFile:
             except (KeyError,ValueError):
                 return 1
 
+        def get_config_zip():
+            try:
+                if int(os.environ['FLASHFILE_ZIP']) == 0:
+                    return False
+                return True
+            except (KeyError,ValueError):
+                return True
+
         os.system("mkdir -p "+os.path.dirname(self.filename))
         flashxmls = []
         for (flashname,xml) in self.xml.items():
@@ -142,12 +151,22 @@ class FlashFile:
         if os.path.exists(outzip):
             os.unlink(outzip)
         compression = get_compression_level()
-        print "creating flashfile:", outzip, 'at compression level', compression
-        for fn in self.filenames:
-            # -j option for zip is to ignore directories, and just put the file in the root of the zip
-            os.system("zip -j -%(compression)d %(outzip)s %(fn)s"%locals())
-        for flashxml in flashxmls:
-            os.unlink(flashxml)
+        makezip = get_config_zip()
+        pubdir = os.path.dirname(self.filename)
+
+        if makezip:
+            print "creating flashfile:", outzip, 'at compression level', compression
+            for fn in self.filenames:
+                # -j option for zip is to ignore directories, and just put the file in the root of the zip
+                os.system(b"zip -j -%(compression)d %(outzip)s %(fn)s"%locals())
+            for flashxml in flashxmls:
+                os.unlink(flashxml)
+        else:
+            for fn in self.filenames:
+                outfile = os.path.join(pubdir, os.path.basename(fn))
+                if os.path.isfile(fn) and fn != outfile:
+                    print '  CP', fn, outfile
+                    shutil.copyfile(fn, outfile)
 
     """
     Role: append content of a specified file

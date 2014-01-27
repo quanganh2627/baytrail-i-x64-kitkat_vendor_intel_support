@@ -19,11 +19,11 @@ def get_link_path(gl, quiet=False):
     if os.path.islink(gl):
         if quiet is False:
             print "\t- Link found for %s" % (os.path.basename(gl))
-        return os.path.realpath(gl)
+        return os.path.relpath(os.path.realpath(gl))
     elif os.path.exists(gl):
         if quiet is False:
             print "\t- File found for %s" % (os.path.basename(gl))
-        return os.path.realpath(gl)
+        return gl
     else:
         if quiet is False:
             print "\t- No file found for %s" % (os.path.basename(gl))
