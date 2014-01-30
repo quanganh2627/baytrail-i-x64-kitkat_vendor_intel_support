@@ -20,7 +20,7 @@
 # Learnings
 # ssh -p 29418 android.intel.com gerrit query --current-patch-set is:starred	- TO LIST is:starred items
 
-VERSION_STRING="01.20"
+VERSION_STRING="01.30"
 GERRIT_SERVER="android.intel.com"
 GERRIT_GIT_URL="git://$GERRIT_SERVER"
 GERRIT_USER=""
@@ -168,6 +168,7 @@ Clean_VARS()
 	RAWDATA=0
 	STATUS=""
 	OWNER=""
+	REVISION=""
 }
 
 IS_DIR_OK()
@@ -248,6 +249,7 @@ GET_Patch_Data()
 			CURR_PATCHSET_ID=`echo "$RAW_PATCH_INFO_FROM_GERRIT" | grep "revision:" | tail -1 | awk '{print $2}'`
 			SUBJECT=`echo "$RAW_PATCH_INFO_FROM_GERRIT" | grep "subject:" | awk 'BEGIN{FS="subject:"}{print $1 $2}'`
 			STATUS=`echo "$RAW_PATCH_INFO_FROM_GERRIT" | grep "status:" | awk 'BEGIN{FS=" "}{print $2}'`
+			REVISION=`echo "$RAW_PATCH_INFO_FROM_GERRIT" | grep "revision:" | awk 'BEGIN{FS=" "}{print $2}'`
 			#OWNER=`echo "$RAW_PATCH_INFO_FROM_GERRIT" | grep email | awk 'BEGIN{FS="email:"}{print $1 $2}'`
 			OWNER=`echo "$RAW_PATCH_INFO_FROM_GERRIT" | grep -A 3 "owner:" | grep email | awk 'BEGIN{FS=" "}{print $2}'`
 
@@ -397,7 +399,18 @@ Abandon_Patch()
 
 Revert_Patch()
 {
-	LogMe "INFO" "REVERT NOT IMPLEMENTED YET."
+	if [ $ISPRESENT -eq 0 ]; then
+		LogMe "FAIL" "Patch is not applied in this env. Can NOT revert it"
+	else
+		cd $PROJECT_DIR
+		git revert --no-edit $REVISION
+		if [ $? -eq 0 ]; then
+			LogMe "PASS" "Patch $PATCH_NUMBER in $PROJECT_DIR is reverted"
+		else
+			LogMe "FAIL" "Patch $PATCH_NUMBER NOT reverted. See above error"
+		fi
+		cd $REPO_ROOT
+	fi
 }
 
 doSync ()
@@ -447,7 +460,7 @@ Patch_Report_csv()
 	printf "%s;" "$REQ_PATCHSET"
 	printf "%s;" "$LATEST_PATCHSET"
 	printf "%s;" "$ISPRESENT"
-	printf "%s;" "http://$GERRIT_SERVER:8080/$PATCH_NUMBER"
+	printf "%s;" "http://$GERRIT_SERVER:8080/$PATCH_NUMBER "
 	printf "%s;" "$BZ_NB"
 	printf "%s;" "$PROJECT_DIR"
 	printf "%s;" "$STATUS"
