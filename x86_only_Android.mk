@@ -7,6 +7,6 @@
 
 LOCAL_PATH := $(my-dir)
 
-ifeq ($(TARGET_ARCH),x86)
+ifeq ($(TARGET_ARCH),$(filter $(TARGET_ARCH), x86 x86_64))
 include $(call first-makefiles-under,$(LOCAL_PATH))
 endif
