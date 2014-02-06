@@ -7,8 +7,8 @@ import struct
 import re
 import shutil
 
-#call an external command
-#optional parameter edir is the directory where it should be executed.
+# call an external command
+# optional parameter edir is the directory where it should be executed.
 def call(cmd, edir=''):
     if options.verbose:
         print '[', edir, '] Calling', cmd
@@ -23,10 +23,7 @@ def call(cmd, edir=''):
     if edir:
         os.chdir(origdir)
 
-    out = P.communicate()
-    #print out
-    stdout = out[0]
-    stderr = out[1]
+    stdout, stderr = P.communicate()
     if P.returncode:
         print cmd
         print "Failed " + stderr
@@ -64,18 +61,41 @@ def unpack_ramdisk(fname, outdir):
     os.mkdir(outdir)
     call('cpio -i < ../' + fname, edir=outdir)
 
-#Intel legacy format
+# Return next few bytes from file f
+def check_byte(f, size):
+    off = f.tell()
+    byte = f.read(size)
+    f.seek(-size, os.SEEK_CUR)
+    return byte
+
+# Intel legacy format
 def unpack_bootimg_intel(fname):
     f = open(fname, 'r')
 
     sig = f.read(512)
+
+# it may have 480 bytes more of signature on some products
+    if not check_byte(f, 1).isalnum():
+        sig += f.read(480)
+
     cmdline_block = f.read(4096)
     bootstub = f.read(4096)
+# bootstub is 4k, but can be 8k on some products
+    if check_byte(f, 1).isalnum():
+        bootstub += f.read(4096)
 
     kernelsize, ramdisksize = struct.unpack('II', cmdline_block[1024:1032])
 
     print 'kernel size  ', kernelsize
     print 'ramdisk size ', ramdisksize
+
+    if kernelsize < 500000 or kernelsize > 15000000:
+        print 'Error kernel size likely wrong'
+        return
+
+    if ramdisksize < 10000 or ramdisksize > 300000000:
+        print 'Error ramdisk size likely wrong'
+        return
 
     kernel = f.read(kernelsize)
     ramdisk = f.read(ramdisksize)
@@ -98,7 +118,7 @@ def skip_pad(f, pgsz):
     npg = ((f.tell() / pgsz) + 1)
     f.seek(npg * pgsz)
 
-#Google mkbootimg standard format
+# Google mkbootimg standard format
 def unpack_bootimg_google(fname):
     f = open(fname, 'r')
 
@@ -221,7 +241,7 @@ def main():
         print 'error ', options.dir, 'is not a valid directory'
         return
 
-    pack_bootimg(bootimg)
+    pack_bootimg_intel(bootimg)
 
 if __name__ == "__main__":
     main()

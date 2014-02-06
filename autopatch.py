@@ -4,6 +4,7 @@ import subprocess
 import os
 import json
 import tarfile
+import urllib2
 from optparse import OptionParser
 
 # Dummy error, to handle failed git command nicely
@@ -15,7 +16,7 @@ def print_verbose(a):
         print a
 
 # call an external program in a specific directory
-def call(wd, cmd):
+def call(wd, cmd, quiet=False):
     origdir = os.getcwd()
     os.chdir(os.path.abspath(wd))
 
@@ -28,8 +29,9 @@ def call(wd, cmd):
 
     print_verbose('Done')
     if P.returncode:
-        print 'Command', cmd
-        print 'Failed ' + stderr
+        if not quiet:
+            print 'Command', cmd
+            print 'Failed ' + stderr
         raise CommandError(stderr)
     return stdout
 
@@ -99,30 +101,68 @@ def query_gerrit_batch(grev):
         print 'skipping', ' '.join(grev), 'not found on gerrit'
     return projs
 
+# Download a daily/weekly manifest from artifactory
+def download_manifest(period, num, fname):
+    mname = 'manifest_' + num + '_generated.xml'
+    mpath = os.path.join('.repo', 'manifests', mname)
+    if os.path.exists(mpath):
+        return mname
+
+    print 'get manifest from artifactory'
+    url = 'http://mcg-depot.intel.com:8081/artifactory/cactus-absp/build/eng-builds/main/PSI/' + period + '/' + num + '/' + fname
+    mg = urllib2.urlopen(url).read()
+
+    print 'copy it to', mpath
+    f = open(mpath, 'w')
+    f.write(mg)
+    f.close()
+    return mname
+
+# Synchronize repo with a specific manifest
+# mname is the manifest name in .repo/manifests/ directory
+def set_repo_manifest(mname):
+    print 'initialize repository'
+    call('.', ['repo', 'init', '-m', mname])
+    print 'synchronize repository (may take a while)'
+    call('.', ['repo', 'sync', '-l'])
+
+# set repo to a weekly manifest
+# ww is in '2013_WW05' format
+def set_repo_weekly(ww):
+    mname = download_manifest('weekly', ww, 'manifest-generated.xml')
+    set_repo_manifest(mname)
+
+# set repo to a daily manifest
+# num is in the '20140205_2940' format
+def set_repo_daily(num):
+    mname = download_manifest('daily', num, 'manifest-' + num + '-generated.xml')
+    set_repo_manifest(mname)
+
 # cherry pick one commit
 # p is project, r is gerrit json for this patch
 # logchid is used to check if patches is already applied
 def chpick_one(p, r, logchid):
     stline = '\t' + r['number'] + '/' + r['pset'] + '\t'
-    if logchid.find(r['id']) > -1:
+    if r['id'] in logchid:
         print stline, 'Already Present'
         return
     br = r['lbranch']
     try:
-        call(p, ['git','cherry-pick','--ff', br])
+        call(p, ['git','cherry-pick','--ff', br], quiet=True)
         print stline, 'Applied'
     except CommandError:
         print stline, 'Cherry pick FAILED'
+        print '\t\tyou can resolve the conflict with'
+        print '\t\tcd', p, '\n\t\tgit cherry-pick', br
+        print '\t\tgit mergetool'
         call(p, ['git','cherry-pick','--abort'])
 
 # use git log --grep 'ChangeID' to check if a patch is present
 # this command is long, so we do it once on each project with multiple --grep
 def get_log_chid(p, g):
-    grepcmd = ['git', 'log']
-    for r in g:
-        grepcmd.append('--grep')
-        grepcmd.append(r['id'])
-    return call(p, grepcmd)
+    grepcmd = ['git', 'log', '-n', '2000', '--format="%b"']
+    msg = call(p, grepcmd).decode('utf8')
+    return [r['id'] for r in g if msg.find(r['id']) > 0]
 
 # fetch only required gerrit patches
 # save them to a local branch (refs-changes-40-147340-5)
@@ -198,19 +238,19 @@ def parse_json_info(p, r, logchid, pset):
         r['curpset'] = pset[r['number']]
     else:
         r['curpset'] = r['lastpset']
-    if logchid.find(r['id']) > -1:
+    if r['id'] in logchid:
         r['isApplied'] = 'Applied'
     else:
         r['isApplied'] = 'Missing'
     r['bz'] = get_bz_from_commit(r['commitMessage'])
     if r['bz'].isdigit():
-        r['bzurl'] = '=hyperlink("http://shilc211.sh.intel.com:41006/show_bug.cgi?id=' + r['bz'] + '","' + r['bz'] + '")'
+        r['bzurl'] = '=hyperlink("http://shilc211.sh.intel.com:41006/show_bug.cgi?id=' + r['bz'] + '";"' + r['bz'] + '")'
     else:
         r['bzurl'] = ''
     r['path'] = p
     r['ownername'] = r['owner']['name']
     r['psetinfo'] = r['curpset'] + '/' + r['lastpset']
-    r['link'] = '=hyperlink("' + r['url'] + '","' + r['number'] + '")'
+    r['link'] = '=hyperlink("' + r['url'] + '";"' + r['number'] + '")'
     r['review'] = ''
     r['verified'] = ''
 
@@ -235,14 +275,14 @@ def get_info(grev, pset):
 # print a csv file, so you can import it in Libreoffice/Excel
 def pr_csv(grev, pset, outfile):
     f = open(outfile, 'wb')
-    f.write('Patch;URL;Review;Verified;Patchset;LatestPatchset;IsApplied;BZ;ProjectDir;Status;Owner;Subject\n')
+    f.write('\t'.join(['Patch','URL','Review','Verified','Patchset','Latest Patchset','IsApplied','BZ','Project Dir','Status','Owner','Subject\n']))
     column = ['number', 'link', 'review', 'verified', 'curpset', 'lastpset', 'isApplied', 'bzurl', 'path', 'status', 'ownername', 'subject']
 
     projs = get_info(grev, pset)
 
     for p in projs:
         for r in projs[p]:
-            line = ';'.join([r[c] for c in column]) + '\n'
+            line = '\t'.join([r[c] for c in column]) + '\n'
             f.write(line)
     f.close()
 
@@ -259,15 +299,20 @@ def pr_long(grev, pset):
 # print short summary on each gerrit number
 def pr_short(grev, pset):
     projs = get_info(grev, pset)
-    column = ['number', 'isApplied', 'status', 'bz']
     for p in projs:
-        print 'Project ', p
+        print '# Project ', p
         for r in projs[p]:
-            print '\t'.join([r[c] for c in column])
+            print r['url'] + ' # ' + r['subject']
 
 # generate .patch files, and put them in a tar archive.
+# add current manifest to tar archive if asked to do so ( -m )
 def genpatch(grev, pset, tfile):
     f = tarfile.open(tfile,'w')
+
+    if options.manifest:
+        mname = os.path.relpath(os.path.realpath('.repo/manifest.xml'))
+        print 'ADD ', mname
+        f.add(mname)
 
     projs = query_gerrit_batch(grev)
 
@@ -292,13 +337,20 @@ def genpatch(grev, pset, tfile):
     print tfile, 'generated'
 
 # extract files from tar archive and apply them
+# if a manifest is present, set repo to this manifest.
 # if patches apply, remove the .patch file
 # if it fails, let it so user can apply it by hands
 def applypatch(tfile):
     f = tarfile.open(tfile,'r')
     f.extractall()
 
-    for patch in f.getnames():
+    allfiles = f.getnames()
+    mname = [ m for m in allfiles if '.xml' in m ]
+    if mname:
+        set_repo_manifest(os.path.basename(mname[0]))
+        allfiles.remove(mname[0])
+
+    for patch in allfiles:
         p, fname = os.path.split(patch)
         try:
             call(p, ['git', 'am', '-3', '--keep-cr', '--whitespace=nowarn', fname])
@@ -348,35 +400,49 @@ def parse_infile(fname):
 
 def main():
     global options
-    usage = "usage: %prog [options] arg"
-    parser = OptionParser(usage)
+    usage = "usage: %prog [options] patch1 patch2 ... "
+    description = "Genereric tool to manage a list of patches from gerrit. The default behavior is to apply the patches to current repository"
+    parser = OptionParser(usage, description=description)
     parser.add_option("-b", "--branch", dest="brname", default='',
                       help="create branch BRNAME or checkout BRNAME before cherry-pick")
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="verbose")
-    parser.add_option("-f", "--file", dest="infile", default='', help="read gerrit id from file")
-    parser.add_option("-c", "--csv", dest="csvfile", default='', help="write gerrit info to file")
+    parser.add_option("-f", "--file", dest="infile", help="read gerrit id from file instead of argument list")
+    parser.add_option("-c", "--csv", dest="csvfile", help="write gerrit information on the list of file to a csv file")
     parser.add_option("-s", "--short", dest="printshort", action='store_true', help="print patches short status")
     parser.add_option("-l", "--long", dest="printlong", action='store_true', help="print patches long status")
-    parser.add_option("-g", "--genpatch", dest="genpatch", default='', help="save patches to a tar file")
-    parser.add_option("-a", "--applypatch", dest="applypatch", default='', help="apply all patches saved to a tar file")
+    parser.add_option("-g", "--genpatch", dest="genpatch", help="save patches to a tar file")
+    parser.add_option("-a", "--applypatch", dest="applypatch", help="apply all patches saved to a tar file")
+    parser.add_option("-w", "--weekly", dest="weekly", help="synchronize repo to weekly manifest ex: 2014_WW05")
+    parser.add_option("-d", "--daily", dest="daily", help="synchronize repo to daily manifest ex: 20140205_2940")
+    parser.add_option("-m", "--manifest", dest="manifest", action='store_true', help="when used with -g, add the manifest.xml to the tar file")
 
     (options, args) = parser.parse_args()
+
+    if not find_repo_top():
+        return
 
     if options.applypatch:
         applypatch(options.applypatch)
         return
 
-    if len(args) < 1 and not options.infile:
-        parser.error("needs at least 1 gerrit revision")
+    if options.weekly:
+        set_repo_weekly(options.weekly)
+    elif options.daily:
+        set_repo_daily(options.daily)
+    elif not options.infile and len(args) < 1:
+        parser.print_help()
+
+    init_gerrit2path()
 
     if options.infile:
         args += parse_infile(options.infile)
 
-    if not find_repo_top():
-        return
-    init_gerrit2path()
     grev, pset = clean_args(args)
+
+    if not grev:
+        print 'No patches to process, exiting (use -h for help)'
+        return
 
     if options.csvfile:
         pr_csv(grev, pset, options.csvfile)
