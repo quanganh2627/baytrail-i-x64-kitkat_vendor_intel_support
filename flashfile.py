@@ -6,7 +6,7 @@ class FlashFile:
     def __init__(self, filename, default_flash_file):
         self.filename = filename
         self.xml = {default_flash_file:""}
-        self.filenames = []
+        self.filenames = set()
         self.filenames_dict = {}
 
     def copy_xml_file(self, source, target):
@@ -65,7 +65,7 @@ class FlashFile:
                     <name>%(filenamebase)s</name>
                     <version>%(version)s</version>
                 </file>"""%locals()
-                self.filenames.append(filename)
+                self.filenames.add(filename)
         xml += "\n        </code_group>"
         return xml
 
@@ -130,7 +130,7 @@ class FlashFile:
 </flashfile>"""
                 flashxml = os.path.join(os.path.dirname(self.filename),flashname)
                 flashxmls.append(flashxml)
-                self.filenames.append(flashxml)
+                self.filenames.add(flashxml)
                 f = open(flashxml,"w")
                 f.write(xml)
                 f.close()
