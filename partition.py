@@ -356,11 +356,11 @@ def json_load_override(base_file, override_file):
 """
     Main script
 """
-if len(sys.argv) < 5:
+if len(sys.argv) < 6:
     print "Usage: %s partition_base filesystem_base override_file out_directory product_model" % (sys.argv[0])
 else:
     try:
-        if len(sys.argv) >= 5:
+        if len(sys.argv) >= 6:
             storage_base_file = sys.argv[1]
             filesystem_base_file = sys.argv[2]
             override_file = sys.argv[3]
