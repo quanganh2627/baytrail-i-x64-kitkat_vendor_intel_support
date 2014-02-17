@@ -1,10 +1,25 @@
 #!/usr/bin/env python
 
+# autopatch.py : script to manage patches on top of repo
+# Copyright (c) 2014, Intel Corporation.
+# Author: Falempe Jocelyn <jocelyn.falempe@intel.com>
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
 import subprocess
 import os
 import json
 import tarfile
 import urllib2
+import threading
+import sys
 from optparse import OptionParser
 
 # Dummy error, to handle failed git command nicely
@@ -17,14 +32,10 @@ def print_verbose(a):
 
 # call an external program in a specific directory
 def call(wd, cmd, quiet=False):
-    origdir = os.getcwd()
-    os.chdir(os.path.abspath(wd))
-
     print_verbose(wd + ' : ' + ' '.join(cmd))
 
     P = subprocess.Popen(args=cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    os.chdir(os.path.abspath(origdir))
+                         stderr=subprocess.PIPE, cwd=wd)
     stdout, stderr = P.communicate()
 
     print_verbose('Done')
@@ -86,17 +97,22 @@ def init_gerrit2path():
 # grev : list of gerrit revision number to query
 # return a dictionary with {project_path : [ gerjson1, gerjson2, ..]}
 def query_gerrit_batch(grev):
-    gdata = querygerrit(' OR '.join(grev).split())
+    gjson = querygerrit(' OR '.join(grev).split())
+
+    # sort the list in the same order as grev
+    gjson.sort(key=lambda r: grev.index(r['number']))
 
     projs = {}
-    for r in gdata:
+    for r in gjson:
+        if not str(r['project']) in g2p:
+            continue
+
         p = g2p[str(r['project'])]
         if p in projs:
             projs[p].append(r)
         else:
             projs[p] = [r]
         grev.remove(r['number'])
-
     if grev:
         print 'skipping', ' '.join(grev), 'not found on gerrit'
     return projs
@@ -124,7 +140,7 @@ def set_repo_manifest(mname):
     print 'initialize repository'
     call('.', ['repo', 'init', '-m', mname])
     print 'synchronize repository (may take a while)'
-    call('.', ['repo', 'sync', '-l'])
+    call('.', ['repo', 'sync', '-l', '-d'])
 
 # set repo to a weekly manifest
 # ww is in '2013_WW05' format
@@ -144,18 +160,16 @@ def set_repo_daily(num):
 def chpick_one(p, r, logchid):
     stline = '\t' + r['number'] + '/' + r['pset'] + '\t'
     if r['id'] in logchid:
-        print stline, 'Already Present'
-        return
+        return stline + 'Already Present\n'
     br = r['lbranch']
     try:
         call(p, ['git','cherry-pick','--ff', br], quiet=True)
-        print stline, 'Applied'
+        return stline + 'Applied\n'
     except CommandError:
-        print stline, 'Cherry pick FAILED'
-        print '\t\tyou can resolve the conflict with'
-        print '\t\tcd', p, '\n\t\tgit cherry-pick', br
-        print '\t\tgit mergetool'
         call(p, ['git','cherry-pick','--abort'])
+        log =  stline + 'Cherry pick FAILED\n'
+        log += '\n\t\t'.join(['\t\tyou can resolve the conflict with','cd ' + p, 'git cherry-pick ' + br, 'git mergetool'])
+        return log + '\n'
 
 # use git log --grep 'ChangeID' to check if a patch is present
 # this command is long, so we do it once on each project with multiple --grep
@@ -185,30 +199,40 @@ def fetch_branches(p, g, pset, all_branch):
     if ref_to_fetch:
         call(p, ['git','fetch','umg'] + ref_to_fetch)
 
+def chpick_threaded(p, g, pset, brname, lock):
+    #Check local branches
+    all_branch = call(p, ['git','branch']).split()
+    if brname:
+        if brname in all_branch:
+            call(p, ['git', 'checkout', brname])
+        else:
+            call(p, ['git', 'checkout', '-b', brname])
+    logchid = get_log_chid(p, g)
+    fetch_branches(p, g, pset, all_branch)
+
+    log = 'Project ' + p + '\n'
+    for r in g:
+        log += chpick_one(p, r, logchid)
+    with lock:
+        sys.stdout.write(log + '\n')
+
 # fetch and cherry-pick all gerrit inspection.
 # grev : gerrit revision number, pset : dict with patchset for each revision
 # brname : branchname to create
 def chpick(grev, pset, brname):
     projs = query_gerrit_batch(grev)
+    allth = []
+    lock = threading.Lock()
 
     for p in projs:
         g = projs[p]
 
-        print 'Project:', p
+        th = threading.Thread(None, chpick_threaded, None, (p, g, pset, brname, lock), None)
+        th.start()
+        allth.append(th)
 
-        #Check local branches
-        all_branch = call(p, ['git','branch']).split()
-        if brname:
-            if brname in all_branch:
-                call(p, ['git', 'checkout', brname])
-            else:
-                call(p, ['git', 'checkout', '-b', brname])
-
-        logchid = get_log_chid(p, g)
-        fetch_branches(p, g, pset, all_branch)
-
-        for r in g:
-            chpick_one(p, r, logchid)
+    for th in allth:
+        th.join()
 
 # get BZ number from commit message
 # find first line with BZ: and get bz number if it exists

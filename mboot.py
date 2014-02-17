@@ -1,5 +1,18 @@
 #!/usr/bin/env python
 
+# mboot.py : script to unpack and re-pack boot.img for Android
+# Copyright (c) 2014, Intel Corporation.
+# Author: Falempe Jocelyn <jocelyn.falempe@intel.com>
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+
 import os
 import subprocess
 from optparse import OptionParser
