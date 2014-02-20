@@ -628,7 +628,7 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     f.xml_header("fastboot_dnx", bld, flashfile_version)
 
     publish_attach_target2file(f, product_out, buildnumber, target2file)
-    f.add_file("osloader", os.path.join(product_out, "efilinux.efi"), buildnumber);
+    f.add_file("osloader", os.path.join(product_out, "efilinux-%s.efi" % bld_variant), buildnumber);
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
 
