@@ -13,7 +13,7 @@ from subprocess import Popen, PIPE
 bldpub = None
 ifwi_external_dir = "prebuilts/intel/vendor/intel/fw/prebuilts/ifwi"
 ifwi_private_dir = "vendor/intel/fw/PRIVATE/ifwi"
-
+flashfile_version = "1.0"
 
 def get_link_path(gl, quiet=False):
     if os.path.islink(gl):
@@ -253,7 +253,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     if bld_flash_modem:
         f.add_xml_file("no-modem-reflash.xml")
 
-    f.xml_header("fastboot", bld, "1")
+    f.xml_header("fastboot", bld, flashfile_version)
     f.add_file("KERNEL", os.path.join(fastboot_dir, "boot.img"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir, "recovery.img"), buildnumber)
 
@@ -316,7 +316,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
         if args["capsule"]:
             f.add_xml_file("flash-capsule.xml")
             f_capsule = ["flash-capsule.xml"]
-            f.xml_header("fastboot", bld, "1", xml_filter=f_capsule)
+            f.xml_header("fastboot", bld, flashfile_version, xml_filter=f_capsule)
             f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),), xml_filter=f_capsule)
             f.add_buildproperties("%(product_out)s/system/build.prop" % locals(), xml_filter=f_capsule)
             f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board, xml_filter=f_capsule)
@@ -361,7 +361,7 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
                                "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
     if get_build_options(key='FLASH_MODEM', key_type='boolean'):
         f.add_xml_file("no-modem-reflash.xml")
-    f.xml_header("fastboot", bld, "1")
+    f.xml_header("fastboot", bld, flashfile_version)
 
     publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
@@ -438,7 +438,7 @@ def publish_ota_flashfile(bld, bld_variant, bld_prod, buildnumber):
                                "build-" + bld_variant,
                                "%(target_name)s-%(bld_variant)s-ota-%(buildnumber)s.zip" % locals()),
                                "flash.xml")
-    f.xml_header("ota", bld, "1")
+    f.xml_header("ota", bld, flashfile_version)
     f.add_file("OTA", full_ota_file, buildnumber)
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
     f.add_command("adb root", "As root user")
@@ -503,16 +503,16 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             for softfuse_f in softfuse_files:
                 f.add_xml_file(softfuse_f)
 
-            f.xml_header("system", bld, "1")
+            f.xml_header("system", bld, flashfile_version)
             f.add_gpflag(gpflag | 0x00000200, xml_filter=softfuse_files)
             f.add_gpflag(gpflag | 0x00000100, xml_filter=default_files)
         else:
             if bld == "baylake" or bld == "byt_t_ffrd8":
-                f.xml_header("fastboot_dnx", bld, "1")
+                f.xml_header("fastboot_dnx", bld, flashfile_version)
             elif args["capsule"]:
-                f.xml_header("fastboot", bld, "1")
+                f.xml_header("fastboot", bld, flashfile_version)
             else:
-                f.xml_header("system", bld, "1")
+                f.xml_header("system", bld, flashfile_version)
                 f.add_gpflag(gpflag, xml_filter=default_files)
 
         if args["capsule"]:
@@ -570,7 +570,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
         if os.path.exists(fru_configs):
             f.add_xml_file("flash-fru.xml")
             fru = ["flash-fru.xml"]
-            f.xml_header("fastboot", bld, "1", xml_filter=fru)
+            f.xml_header("fastboot", bld, flashfile_version, xml_filter=fru)
 
             if bld_prod not in ["saltbay_lnp", "saltbay", "mofd_v0" ,"mofd_v0_64", "mofd_lnp", "mofd_lnp_64"]:
                 token_filename = "token.bin"
@@ -587,7 +587,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             # Creation of a "flash IFWI only" xml
             flash_IFWI = "flash-IFWI-only.xml"
             f.add_xml_file(flash_IFWI)
-            f.xml_header("system", bld, "1", xml_filter=[flash_IFWI])
+            f.xml_header("system", bld, flashfile_version, xml_filter=[flash_IFWI])
             f.add_gpflag((gpflag & 0xFFFFFFF8) | 0x00000102, xml_filter=[flash_IFWI])
             f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
@@ -625,7 +625,7 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     f = FlashFile(os.path.join(blankphone_dir, bldx + "-blankphone.zip"), "flash.xml")
     f.add_xml_file("flash-EraseFactory.xml")
-    f.xml_header("fastboot_dnx", bld, "1")
+    f.xml_header("fastboot_dnx", bld, flashfile_version)
 
     publish_attach_target2file(f, product_out, buildnumber, target2file)
     f.add_file("osloader", os.path.join(product_out, "efilinux.efi"), buildnumber);
