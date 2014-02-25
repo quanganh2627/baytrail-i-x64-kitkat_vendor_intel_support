@@ -659,6 +659,8 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     f.add_command("fastboot boot $droidboot_file", "Uploading fastboot image.")
     f.add_command("sleep", "Sleep for 25 seconds.", timeout=25000)
 
+    f.add_command("fastboot oem wipe ESP", "Wiping ESP partition.", mandatory=0);
+    f.add_command("fastboot oem wipe reserved", "Wiping reserved partition.", mandatory=0);
     publish_partitioning_commands(f, bld, buildnumber, os.path.split(part_file)[1],
                                   ["system", "cache", "config", "logs", "data"])
 
