@@ -549,19 +549,18 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
         publish_partitioning_commands(f, bld, buildnumber, partition_filename,
                                       ["system", "cache", "config", "logs", "data"])
 
+        fru_token_dir = fru_configs = get_build_options(key='FRU_TOKEN_DIR')
+        if os.path.isdir(fru_token_dir):
+            # Use tokens to set the fru
+            for filename in os.listdir(fru_token_dir):
+                f.filenames.add(os.path.join(fru_token_dir, filename))
+
         fru_configs = get_build_options(key='FRU_CONFIGS')
         if os.path.exists(fru_configs):
+            # Use fastboot command to set the fru
             f.add_xml_file("flash-fru.xml")
             fru = ["flash-fru.xml"]
             f.xml_header("fastboot", bld, flashfile_version, xml_filter=fru)
-
-            if bld_prod not in ["saltbay_lnp", "saltbay", "mofd_v0" ,"mofd_v0_64", "mofd_lnp", "mofd_lnp_64"]:
-                token_filename = "token.bin"
-                stub_token = os.path.join(product_out, token_filename)
-                # create a token with dummy data to make phone flash tool happy
-                os.system("echo 'dummy token' > " + stub_token)
-                f.add_codegroup("TOKEN", (("SECURE_TOKEN", stub_token, buildnumber),))
-                f.add_command("fastboot flash token $secure_token_file", "Push secure token on device", xml_filter=fru)
             f.add_command("fastboot oem fru set $fru_value", "Flash FRU value on device", xml_filter=fru)
             f.add_command("popup", "Please turn off the board and update AOBs according to the new FRU value", xml_filter=fru)
             f.add_raw_file(fru_configs, xml_filter=fru)
