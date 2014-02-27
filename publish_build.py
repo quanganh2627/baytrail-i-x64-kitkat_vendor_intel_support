@@ -465,6 +465,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
+    config_list = get_build_options(key='CONFIG_LIST')
     product_out = os.path.join("out/target/product", bld)
     blankphone_dir = os.path.join(bldpub, "flash_files/blankphone")
     partition_filename = "partition.tbl"
@@ -478,6 +479,10 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
         # build the blankphone flashfile
         f = FlashFile(os.path.join(blankphone_dir, "%(board)s-blankphone.zip" % locals()), "flash.xml")
         f.add_xml_file("flash-EraseFactory.xml")
+        # create all config XML files including default config
+        if config_list:
+            for conf in config_list.split():
+                f.add_xml_file("flash-%s.xml" % conf)
 
         default_files = f.xml.keys()
 
@@ -573,15 +578,20 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             f.add_gpflag((gpflag & 0xFFFFFFF8) | 0x00000102, xml_filter=[flash_IFWI])
             f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
+        if config_list:
+            # populate default config in standard flash.xml
+            f.add_command("fastboot oem mount config ext4", "Mount config partition", xml_filter="flash.xml")
+            f.add_command("fastboot oem config %s" % config_list.split()[0],
+                          "Activating config %s" % config_list.split()[0], xml_filter="flash.xml")
+
+            # populate alternate config XML files with corresponding configuration
+            for conf in config_list.split():
+                f.add_command("fastboot oem mount config ext4", "Mount config partition", xml_filter="flash-%s.xml" % conf)
+                f.add_command("fastboot oem config %s" % conf, "Activating config %s" % conf, xml_filter="flash-%s.xml" % conf)
+
         # Create a dedicated flash file for buildbot
-        # Use EraseFactory for redhookbay if it exists.
-        # Use flash.xml for all other
-        # Make sure indentation lines up
-        if bld_prod == "redhookbay":
-                if not f.copy_xml_file("flash-EraseFactory.xml", "flash-buildbot.xml"):
-                    f.copy_xml_file("flash.xml", "flash-buildbot.xml")
-        else:
-                f.copy_xml_file("flash.xml", "flash-buildbot.xml")
+        f.copy_xml_file("flash.xml", "flash-buildbot.xml")
+
         f.finish()
 
 
