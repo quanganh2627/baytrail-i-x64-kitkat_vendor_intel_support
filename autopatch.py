@@ -140,7 +140,7 @@ def set_repo_manifest(mname):
     print 'initialize repository'
     call('.', ['repo', 'init', '-m', mname])
     print 'synchronize repository (may take a while)'
-    call('.', ['repo', 'sync', '-l', '-d'])
+    call('.', ['repo', 'sync', '-l', '-d', '-c'])
 
 # set repo to a weekly manifest
 # ww is in '2013_WW05' format
