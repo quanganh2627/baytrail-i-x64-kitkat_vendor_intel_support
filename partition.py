@@ -98,9 +98,13 @@ def generate_gpt_fstab_file(storage, global_data, os_mount):
 
         if partition["label"] is None:
             display_partition_name = partition_name
+        else:
+            display_partition_name = partition["label"]
 
         if partition["mount_point"] is None:
             display_mount_point = "/%s" % partition_name
+        else:
+            display_mount_point = "/%s" % partition["mount_point"]
 
         current_line = list()
         current_line.append(global_data["gpt"]["base_name_label"] + display_partition_name)
@@ -150,9 +154,13 @@ def generate_mbr_fstab_file(storage, global_data, os_mount):
 
         if partition["label"] is None:
             display_partition_name = partition_name
+        else:
+            display_partition_name = partition["label"]
 
         if partition["mount_point"] is None:
             display_mount_point = "/%s" % partition_name
+        else:
+            display_mount_point = "/%s" % partition["mount_point"]
 
         current_line = list()
 
@@ -265,6 +273,8 @@ def generate_mbr_recovery_fstab_file(storage, global_data):
 
         if partition["label"] is None:
             display_partition_name = partition_name
+        else:
+            display_partition_name = partition["label"]
 
         current_line.append("#size_hint=%d" % (partition["size"]))
         current_line.append("\n")
