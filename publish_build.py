@@ -253,6 +253,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
         publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
     publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw.bin", iafw_dir, enforce=False)
+    publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw_dfx.bin", iafw_dir, enforce=False)
     ifwis = find_ifwis(board_soc)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
