@@ -135,11 +135,16 @@ def find_ifwis(board_soc):
                           "byt_t_ffrd8": "baytrail/byt_t"
                          }[bld_prod]
         else:
-            ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/ia32",
-                         "cht_rvp": "cherrytrail_edk2/cht_rvp",
-                         "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32",
-                         "bsw_rvp": "braswell_edk2/bsw_rvp"
-                        }[bld_prod]
+            kernel_x64_format = get_build_options(key='BOARD_USE_64BIT_KERNEL', default_value='false')
+            if kernel_x64_format != "true":
+
+                ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/ia32",
+                             "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32"
+                            }[bld_prod]
+            else:
+                ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/x64"
+                            }[bld_prod]
+
 
         print "looking for ifwis in the tree for %s" % bld_prod
 
