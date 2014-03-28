@@ -358,6 +358,8 @@ def json_load_override(base_file, override_file):
             base=merge_dict(base,override)
         except ValueError, e:
             print "%s file malformed. No overriding (%s)" % (override_file, str(e))
+            # malformed file : fatal error
+            sys.exit(-1)
     else:
         print "%s file does not exist. No overriding" % (override_file)
 
