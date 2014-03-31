@@ -137,9 +137,9 @@ def find_ifwis(board_soc):
                      	   "byt_m_crb": "baytrail/byt_m",
                          }[bld_prod]
         else:
-            ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2",
+            ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/ia32",
                          "cht_rvp": "cherrytrail_edk2/cht_rvp",
-                         "byt_t_ffrd8": "baytrail_edk2/byt_t",
+                         "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32",
                          "bsw_rvp": "braswell_edk2/bsw_rvp"
                         }[bld_prod]
 
