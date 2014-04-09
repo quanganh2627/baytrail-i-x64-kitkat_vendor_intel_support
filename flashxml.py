@@ -59,7 +59,7 @@ class FlashFileXml:
                 fname = os.path.basename(t2f[cmd['target']])
                 shortname = fname.split('.')[0]
                 self.add_file(shortname, fname, options.btag)
-                cmd['pftname'] = '$' + shortname + '_file'
+                cmd['pftname'] = '$' + shortname.lower() + '_file'
 
         for cmd in commands:
             params = (cmd.get('timeout', '60000'), cmd.get('retry', '2'), cmd.get('mandatory', '1'))
