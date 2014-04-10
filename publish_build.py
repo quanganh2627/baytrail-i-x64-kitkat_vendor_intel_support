@@ -361,7 +361,7 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
          if args["capsule"]:
              f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
 
-    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+    f.add_file("INSTALLER", "device/intel/cherrytrail/installer.cmd", buildnumber)
 
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
