@@ -638,7 +638,7 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     if osloader:
         f.add_file("osloader", os.path.join(product_out, "efilinux-%s.efi" % bld_variant), buildnumber);
 
-    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+    f.add_file("INSTALLER", "device/intel/cherrytrail/installer.cmd", buildnumber)
 
     ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
