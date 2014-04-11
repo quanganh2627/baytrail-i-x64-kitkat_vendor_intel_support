@@ -35,6 +35,7 @@ case "$TYPE" in
     combined) IMGNAME="recovery";;
     fastboot) IMGNAME="fastboot";;
     droidboot) IMGNAME="droidboot";;
+    ramdump) IMGNAME="ramdump";;
 esac
 if [ -z "$IMGNAME" ]; then
     # should be a fatal error
@@ -42,7 +43,7 @@ if [ -z "$IMGNAME" ]; then
     # some parameters will miss : we workaround
     IMGNAME="recovery"
     TYPE="recovery"
-    echo "Error: image type shall be one of: mos,recovery,combined,fastboot,droidboot"
+    echo "Error: image type shall be one of: mos,recovery,combined,fastboot,droidboot,ramdump"
     #exit 1
 fi
 if [ -z "$SIGN_WITH" ]; then

@@ -222,6 +222,7 @@ def publish_kernel_keys(product_out, bld_variant):
 def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
+    bld_supports_ramdump = get_build_options(key='TARGET_USE_RAMDUMP', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
@@ -249,6 +250,10 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     else:
         publish_file(locals(), "%(product_out)s/recovery.img.POS.bin", fastboot_dir, enforce=False)
         system_img_path_in_out = os.path.join(product_out, "system.tar.gz")
+
+    if bld_supports_ramdump:
+        publish_file(locals(), "%(product_out)s/ramdump.img", fastboot_dir, enforce=False)
+
     if publish_system_img:
         publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
@@ -321,6 +326,16 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
             f.add_buildproperties("%(product_out)s/system/build.prop" % locals(), xml_filter=f_capsule)
             f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower(),), "Attempt flashing ifwi " + board, xml_filter=f_capsule)
             f.add_command("fastboot continue", "Reboot", xml_filter=f_capsule)
+
+    # build the flash-ramdump.xml to flash and enable the ramdump
+    if bld_supports_ramdump:
+        f.add_xml_file("flash-ramdump.xml")
+        f_ramdump = ["flash-ramdump.xml"]
+        f.xml_header("fastboot", bld, flashfile_version, xml_filter=f_ramdump)
+        f.add_file("RAMDUMP", os.path.join(fastboot_dir, "ramdump.img"), buildnumber, xml_filter=f_ramdump)
+        f.add_command("fastboot flash ramdump $ramdump_file", "Flashing ramdump", xml_filter=f_ramdump)
+        f.add_command("fastboot oem custom_boot 0x80", "Enabling ramdump", xml_filter=f_ramdump)
+        f.add_command("fastboot continue", "Reboot", xml_filter=f_ramdump)
 
     f.finish()
 
