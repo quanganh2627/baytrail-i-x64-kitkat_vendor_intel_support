@@ -226,7 +226,7 @@ def generate_gpt_partition_file(storage, global_data):
             if (partition["size"] <= 0):
                 partition_size = "$calc($lba_end%s)" % (partition_size_hint)
             else:
-                partition_size = ( (int(partition["size"])*1024*1024) - partition_size_hint ) / 512
+                partition_size = ( (int(partition["size"])*1024*1024) - partition_size_hint ) / storage["sector_size"]
 
         if partition["lba_start"] != None:
             lba_start_offset = partition["lba_start"]
