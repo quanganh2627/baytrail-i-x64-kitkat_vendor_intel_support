@@ -144,7 +144,8 @@ def find_ifwis(board_soc):
                              "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32"
                             }[bld_prod]
             else:
-                ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/x64"
+                ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/x64",
+                             "byt_t_ffrd8": "baytrail_edk2/byt_t/x64"
                             }[bld_prod]
 
 
