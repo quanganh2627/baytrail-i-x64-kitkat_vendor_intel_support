@@ -361,7 +361,7 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
          if args["capsule"]:
              f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
 
-    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+    f.add_file("INSTALLER", "device/intel/cherrytrail/installer.cmd", buildnumber)
 
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
@@ -540,7 +540,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             f.add_file("FASTBOOT", os.path.join(product_out, "droidboot.img"), buildnumber)
             f.add_file("KERNEL", os.path.join(product_out, "boot.img"), buildnumber)
             f.add_file("RECOVERY", os.path.join(product_out, "recovery.img"), buildnumber)
-            f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+            f.add_file("INSTALLER", "device/intel/cherrytrail/installer.cmd", buildnumber)
         else:
             f.add_codegroup("BOOTLOADER", (("KBOOT", recoveryimg, buildnumber),))
 
@@ -638,7 +638,7 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     if osloader:
         f.add_file("osloader", os.path.join(product_out, "efilinux-%s.efi" % bld_variant), buildnumber);
 
-    f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
+    f.add_file("INSTALLER", "device/intel/cherrytrail/installer.cmd", buildnumber)
 
     ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
