@@ -358,7 +358,7 @@ def publish_flash_modem_files(f):
 def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images")
-    target2file = [("ESP", "esp"), ("fastboot", "droidboot"), ("boot", "boot"),
+    target2file = [("fastboot", "droidboot"), ("boot", "boot"),
                     ("recovery", "recovery"), ("system", "system")]
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     flashfile_dir = os.path.join(bldpub, "flash_files")
