@@ -341,7 +341,7 @@ def publish_flash_modem_files(f):
 def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images")
-    target2file = [("ESP", "esp"), ("fastboot", "droidboot"), ("boot", "boot"),
+    target2file = [("fastboot", "droidboot"), ("boot", "boot"),
                     ("recovery", "recovery"), ("system", "system")]
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     flashfile_dir = os.path.join(bldpub, "flash_files")
@@ -355,6 +355,7 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
+    f.add_file("esp_update", os.path.join(product_out, "esp.zip"), buildnumber);
 
     ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
@@ -366,6 +367,8 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
     publish_erase_partitions(f, ["cache", "system"])
+
+    f.add_command("fastboot flash esp_update $esp_update_file", "Updating ESP.")
 
     publish_flash_target2file(f, target2file)
 
