@@ -134,6 +134,7 @@ def parse_config(conf):
             f = FlashFileCmd(c)
 
         commands = conf['commands']
+        commands = [cmd for cmd in commands if not 'target' in cmd or cmd['target'] in t2f]
         commands = [cmd for cmd in commands if not 'restrict' in cmd or c['name'] in cmd['restrict']]
 
         f.parse_command(commands)
@@ -144,6 +145,9 @@ def init_t2f_dict():
     d = {}
     for l in options.t2f.split():
         target, fname = l.split(':')
+        if fname == '':
+            print "warning: skip missing target %s" % target
+            continue
         d[target] = fname
     return d
 
