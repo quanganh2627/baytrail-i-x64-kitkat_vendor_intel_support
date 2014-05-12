@@ -3,6 +3,7 @@
 import os
 import json
 from optparse import OptionParser
+from lxml import etree
 
 # main Class to generate xml file from json configuration file
 class FlashFileXml:
@@ -11,47 +12,48 @@ class FlashFileXml:
         self.xmlfile = os.path.join(options.directory, config['filename'])
         self.flist = []
         flashtype = config['flashtype']
-        self.xml = """\
-<?xml version="1.0" encoding="utf-8"?>
-<flashfile version="1.0">
-    <id>%(flashtype)s</id>
-    <platform>%(platform)s</platform>""" % locals()
+        self.xml = etree.Element('flashfile')
+        self.xml.set('version','1.0')
+        self.add_sub(self.xml, 'id', flashtype)
+        self.add_sub(self.xml, 'platform', platform)
+
+    def add_sub(self, parent, name, text):
+        sub = etree.SubElement(parent, name)
+        sub.text = text
 
     def add_file(self, filetype, filename, version):
         if filename in self.flist:
             return
+        cg = etree.SubElement(self.xml, 'code_group')
+        cg.set('name', filetype)
+        fl = etree.SubElement(cg, 'file')
+        fl.set('TYPE', filetype)
+        self.add_sub(fl, 'name', filename)
+        self.add_sub(fl, 'version', version)
 
-        self.xml += '\n        <code_group name="%(filetype)s">' % locals()
-        self.xml += """
-            <file TYPE="%(filetype)s">
-                <name>%(filename)s</name>
-                <version>%(version)s</version>
-            </file>""" % locals()
-        self.xml += "\n        </code_group>"
         self.flist.append(filename)
 
     def add_buildproperties(self, buildprop):
         if not os.path.isfile(buildprop):
             return
-        self.xml += '\n        <buildproperties>'
+        bp = etree.SubElement(self.xml, 'buildproperties')
         with open(buildprop, 'r') as f:
             for line in f.readlines():
                 if not line.startswith("#") and line.count("=") == 1:
-                    prop = line.strip().split("=")[0]
-                    value = line.strip().split("=")[1]
-                    self.xml += '\n            <property name="%(prop)s" value="%(value)s"/>' % locals()
-        self.xml += '\n        </buildproperties>'
+                    name, value = line.strip().split("=")
+                    pr = etree.SubElement(bp, 'property')
+                    pr.set('name', name)
+                    pr.set('value', value)
 
     def add_command(self, command, description, (timeout, retry, mandatory)):
         command = ' '.join(command)
-        self.xml += """
-        <command>
-            <string>%(command)s</string>
-            <timeout>%(timeout)s</timeout>
-            <retry>%(retry)s</retry>
-            <description>%(description)s</description>
-            <mandatory>%(mandatory)s</mandatory>
-        </command>""" % locals()
+        mandatory = {True: "1", False: "0"}[mandatory]
+        cmd = etree.SubElement(self.xml, 'command')
+        self.add_sub(cmd, 'string', command)
+        self.add_sub(cmd, 'timeout', str(timeout))
+        self.add_sub(cmd, 'retry', str(retry))
+        self.add_sub(cmd, 'description', description)
+        self.add_sub(cmd, 'mandatory', mandatory)
 
     def parse_command(self, commands):
         for cmd in commands:
@@ -62,7 +64,7 @@ class FlashFileXml:
                 cmd['pftname'] = '$' + shortname.lower() + '_file'
 
         for cmd in commands:
-            params = (cmd.get('timeout', '60000'), cmd.get('retry', '2'), cmd.get('mandatory', '1'))
+            params = (cmd.get('timeout', 60000), cmd.get('retry', 2), cmd.get('mandatory', True))
 
             if cmd['type'] == 'prop':
                 self.add_buildproperties(t2f[cmd['target']])
@@ -83,7 +85,7 @@ class FlashFileXml:
                 desc = cmd.get('desc', 'Rebooting now.')
                 command = ['fastboot', 'continue']
             elif cmd['type'] == 'sleep':
-                desc = cmd.get('desc', 'Sleep for ' + str(int(params[0]) / 1000) + ' seconds.')
+                desc = cmd.get('desc', 'Sleep for ' + str(params[0] / 1000) + ' seconds.')
                 command = ['sleep']
             elif cmd['type'] == 'adb':
                 desc = cmd.get('desc', 'adb ' + cmd['arg'])
@@ -96,11 +98,10 @@ class FlashFileXml:
             self.add_command(command, desc, params)
 
     def finish(self):
-        self.xml += """
-</flashfile>"""
         print 'writing ', self.xmlfile
-        with open(self.xmlfile, "w") as f:
-            f.write(self.xml)
+
+        tree = etree.ElementTree(self.xml)
+        tree.write(self.xmlfile, xml_declaration=True, encoding="utf-8", pretty_print=True)
 
 # class to generate installer .cmd file from json configuration file.
 # .cmd files are used by droidboot to flash target without USB device.
