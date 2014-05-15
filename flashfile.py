@@ -17,6 +17,12 @@ class FlashFile:
         else:
            return False
 
+    def clear_xml_file(self, filename):
+        if filename in self.xml:
+            self.xml[filename] = ""
+            return True
+        return False
+
     def add_xml_file(self, xmlfilename):
         if not self.xml.has_key(xmlfilename):
             self.xml[xmlfilename] = ""

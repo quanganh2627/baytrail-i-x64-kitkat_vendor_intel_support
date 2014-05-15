@@ -589,15 +589,16 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             f.add_codegroup("FIRMWARE", default_ifwi, xml_filter=[flash_IFWI])
 
         if config_list:
-            # populate default config in standard flash.xml
-            f.add_command("fastboot oem mount config ext4", "Mount config partition", xml_filter="flash.xml")
-            f.add_command("fastboot oem config %s" % config_list.split()[0],
-                          "Activating config %s" % config_list.split()[0], xml_filter="flash.xml")
-
             # populate alternate config XML files with corresponding configuration
             for conf in config_list.split():
                 f.add_command("fastboot oem mount config ext4", "Mount config partition", xml_filter="flash-%s.xml" % conf)
                 f.add_command("fastboot oem config %s" % conf, "Activating config %s" % conf, xml_filter="flash-%s.xml" % conf)
+
+            if f.clear_xml_file("flash.xml"):
+                f.xml_header("fastboot", bld, flashfile_version, xml_filter="flash.xml")
+                f.add_command("popup","This build does not support generic flash file, please select the one that corresponds to your hardware", xml_filter="flash.xml")
+                f.add_command("fastboot flash fail", "Fake command to always return a flash failure", xml_filter="flash.xml")
+                f.add_gpflag((gpflag & 0xFFFFFFF8) | 0x00000045, xml_filter="flash.xml")
 
         # Create a dedicated flash file for buildbot
         f.copy_xml_file("flash.xml", "flash-buildbot.xml")
