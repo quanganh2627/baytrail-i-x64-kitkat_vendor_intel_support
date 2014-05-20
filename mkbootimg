@@ -37,8 +37,13 @@ case "$TYPE" in
     droidboot) IMGNAME="droidboot";;
 esac
 if [ -z "$IMGNAME" ]; then
+    # should be a fatal error
+    # we need to allow to call this script from standard AOSP build
+    # some parameters will miss : we workaround
+    IMGNAME="recovery"
+    TYPE="recovery"
     echo "Error: image type shall be one of: mos,recovery,combined,fastboot,droidboot"
-    exit 1
+    #exit 1
 fi
 if [ -z "$SIGN_WITH" ]; then
     SIGN_WITH="xfstk"
@@ -84,8 +89,12 @@ if [ -n "$XEN" ]; then
 fi
 
 if [ ! -e "${BOOTSTUB}" ]; then
+    # should be a fatal error
+    # we need to allow to call this script from standard AOSP build
+    # some parameters will miss : we workaround
     echo "error: bootstub file ${BOOTSTUB} does not exist"
-    exit 1
+    BOOTSTUB="${TARG}/bootstub"
+    #exit 1
 fi
 
 if [ -e "${OUT}" ]; then
