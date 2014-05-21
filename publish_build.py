@@ -388,6 +388,10 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     publish_erase_partitions(f, ["cache", "system"])
 
+    # Add erase data to xxx_fastboot_xxx.zip due to
+    # it is no necessary to re-flash blankphone_xxx.zip every time
+    publish_erase_partitions(f, ["data"])
+
     publish_flash_target2file(f, target2file)
 
     for board, args in ifwis.items():
