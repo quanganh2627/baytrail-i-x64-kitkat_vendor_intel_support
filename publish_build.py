@@ -139,12 +139,14 @@ def find_ifwis(board_soc):
             if kernel_x64_format != "true":
 
                 ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/ia32",
-                             "anzhen4_mrd8": "anzhen4_mrd8",
-                             "anzhen4_mrd7": "anzhen4_mrd7",
+                             "anzhen4_mrd7_w": "anzhen4_mrd7_w/ia32",
+                             "anzhen4_mrd8": "anzhen4_mrd8/ia32",
+                             "anzhen4_mrd7": "anzhen4_mrd7/ia32",
                              "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32"
                             }[bld_prod]
             else:
                 ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/x64",
+                             "anzhen4_mrd7_w": "anzhen4_mrd7_w/x64",
                              "anzhen4_mrd8_64": "anzhen4_mrd8/x64",
                              "anzhen4_mrd7_64": "anzhen4_mrd7/x64",
                              "byt_t_ffrd8": "baytrail_edk2/byt_t/x64"
