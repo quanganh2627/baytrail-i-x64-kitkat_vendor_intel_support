@@ -223,6 +223,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ramdump = get_build_options(key='TARGET_USE_RAMDUMP', key_type='boolean')
+    bld_supports_silentlake = get_build_options(key='INTEL_FEATURE_SILENTLAKE', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
@@ -237,6 +238,8 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     # everything is already ready in product out directory, just publish it
     publish_kernel_keys(product_out, bld_variant)
     publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
+    if bld_supports_silentlake:
+        publish_file(locals(), "%(product_out)s/sl_vmm.bin", fastboot_dir)
     publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
 
@@ -266,6 +269,8 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f.xml_header("fastboot", bld, flashfile_version)
     f.add_file("KERNEL", os.path.join(fastboot_dir, "boot.img"), buildnumber)
+    if bld_supports_silentlake:
+        f.add_file("SILENTLAKE", os.path.join(fastboot_dir, "sl_vmm.bin"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir, "recovery.img"), buildnumber)
 
     if bld_flash_modem:
@@ -311,6 +316,8 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f.add_command("fastboot flash system $system_file", "Flashing system", timeout=system_flash_timeout)
     f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
+    if bld_supports_silentlake:
+        f.add_command("fastboot flash silentlake $silentlake_file", "Flashing silentlake")
 
     if bld_flash_modem:
         f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"], timeout=220000)
