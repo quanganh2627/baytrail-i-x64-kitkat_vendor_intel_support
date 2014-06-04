@@ -147,8 +147,8 @@ def find_ifwis(board_soc):
                             }[bld_prod]
             else:
                 ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/x64",
-                             "anzhen4_mrd8_w": "anzhen4_mrd8_w/x64",
-                             "anzhen4_mrd7_w": "anzhen4_mrd7_w/x64",
+                             "anzhen4_mrd8_w_64": "anzhen4_mrd8_w/x64",
+                             "anzhen4_mrd7_w_64": "anzhen4_mrd7_w/x64",
                              "anzhen4_mrd8_64": "anzhen4_mrd8/x64",
                              "anzhen4_mrd7_64": "anzhen4_mrd7/x64",
                              "byt_t_ffrd8": "baytrail_edk2/byt_t/x64"
