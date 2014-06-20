@@ -17,7 +17,6 @@ import subprocess
 import os
 import json
 import tarfile
-import urllib2
 import threading
 import sys
 from optparse import OptionParser
@@ -66,7 +65,7 @@ def find_repo_top():
 # return a list of a json parsed data
 def querygerrit(rev):
     cmd = ["ssh", "android.intel.com",
-           "gerrit", "query", '--current-patch-set', "--format=json", '--commit-message'] + rev
+           "gerrit", "query", "--format=json", '--current-patch-set', '--patch-sets', '--commit-message'] + rev
 
     print_verbose('Start Gerrit Query ' + ' '.join(cmd))
     p = subprocess.Popen(args=cmd,
@@ -92,47 +91,58 @@ def init_gerrit2path():
         p,g = l.split(':')
         g2p[g.strip()] = p.strip()
 
+def count_parent(r, g):
+    if not 'parents' in r['currentPatchSet']:
+        return 0
+
+    for r2 in g:
+        for ps in r2['patchSets']:
+            if ps['revision'] in r['currentPatchSet']['parents']:
+                return count_parent(r2, g) + 1
+    return 0
+
+# split gerrit json output by git project
+def split_by_project(gjson):
+    projs = {}
+    for r in gjson:
+        p = g2p.get(str(r['project']), 'not_in_manifest')
+        if p in projs:
+            projs[p].append(r)
+        else:
+            projs[p] = [r]
+
+# sort dependent patches
+    for p in projs:
+        g = projs[p]
+        for r in g:
+            r['parent_count'] = count_parent(r, g)
+        projs[p].sort(key=lambda r: r['parent_count'])
+    return projs
+
 # Generate 1 query for all requested gerrit revision
 # eg: 111453 OR 123433 OR 115533
 # grev : list of gerrit revision number to query
 # return a dictionary with {project_path : [ gerjson1, gerjson2, ..]}
-def query_gerrit_batch(grev):
+def query_gerrit_revision(grev, pset):
     gjson = querygerrit(' OR '.join(grev).split())
 
     # sort the list in the same order as grev
     gjson.sort(key=lambda r: grev.index(r['number']))
 
-    projs = {}
-    for r in gjson:
-        if not str(r['project']) in g2p:
-            continue
+    projs = split_by_project(gjson)
+    for p in projs:
+        for r in projs[p]:
+            grev.remove(r['number'])
+            if r['number'] in pset:
+                r['force_patchset'] = pset[r['number']]
 
-        p = g2p[str(r['project'])]
-        if p in projs:
-            projs[p].append(r)
-        else:
-            projs[p] = [r]
-        grev.remove(r['number'])
     if grev:
-        print 'skipping', ' '.join(grev), 'not found on gerrit'
+        print 'skipping', ' '.join(grev), 'not found on gerrit, or project not present in manifest'
     return projs
 
-# Download a daily/weekly manifest from artifactory
-def download_manifest(period, num, fname):
-    mname = 'manifest_' + num + '_generated.xml'
-    mpath = os.path.join('.repo', 'manifests', mname)
-    if os.path.exists(mpath):
-        return mname
-
-    print 'get manifest from artifactory'
-    url = 'http://mcg-depot.intel.com:8081/artifactory/cactus-absp/build/eng-builds/main/PSI/' + period + '/' + num + '/' + fname
-    mg = urllib2.urlopen(url).read()
-
-    print 'copy it to', mpath
-    f = open(mpath, 'w')
-    f.write(mg)
-    f.close()
-    return mname
+def query_gerrit_custom(query):
+    gjson = querygerrit(query.split())
+    return split_by_project(gjson)
 
 # Synchronize repo with a specific manifest
 # mname is the manifest name in .repo/manifests/ directory
@@ -142,30 +152,20 @@ def set_repo_manifest(mname):
     print 'synchronize repository (may take a while)'
     call('.', ['repo', 'sync', '-l', '-d', '-c'])
 
-# set repo to a weekly manifest
-# ww is in '2013_WW05' format
-def set_repo_weekly(ww):
-    mname = download_manifest('weekly', ww, 'manifest-generated.xml')
-    set_repo_manifest(mname)
-
-# set repo to a daily manifest
-# num is in the '20140205_2940' format
-def set_repo_daily(num):
-    mname = download_manifest('daily', num, 'manifest-' + num + '-generated.xml')
-    set_repo_manifest(mname)
-
 # cherry pick one commit
 # p is project, r is gerrit json for this patch
 # logchid is used to check if patches is already applied
-def chpick_one(p, r, logchid):
+def chpick_one(p, r):
+    global status
     stline = '\t' + r['number'] + '/' + r['pset'] + '\t'
-    if r['id'] in logchid:
+    if r['isApplied'] == 'Applied':
         return stline + 'Already Present\n'
     br = r['lbranch']
     try:
         call(p, ['git','cherry-pick','--ff', br], quiet=True)
         return stline + 'Applied\n'
     except CommandError:
+        status = 1
         call(p, ['git','cherry-pick','--abort'])
         log =  stline + 'Cherry pick FAILED\n'
         log += '\n\t\t'.join(['\t\tyou can resolve the conflict with','cd ' + p, 'git cherry-pick ' + br, 'git mergetool'])
@@ -174,21 +174,22 @@ def chpick_one(p, r, logchid):
 # use git log --grep 'ChangeID' to check if a patch is present
 # this command is long, so we do it once on each project with multiple --grep
 def get_log_chid(p, g):
+    if p == 'not_in_manifest':
+        return []
     grepcmd = ['git', 'log', '-n', '2000', '--format="%b"']
-    msg = call(p, grepcmd).decode('utf8')
+    msg = call(p, grepcmd).decode('utf8', 'ignore')
     return [r['id'] for r in g if msg.find(r['id']) > 0]
 
 # fetch only required gerrit patches
 # save them to a local branch (refs-changes-40-147340-5)
 # so we can avoid later git fetch, if the local branch is already present.
 # (user shouldn't mess with this branches, or it will break ....)
-def fetch_branches(p, g, pset, all_branch):
+def fetch_branches(p, g, all_branch):
     ref_to_fetch = []
     for r in g:
-        if r['number'] in pset:
-            rev = r['number']
-            ref = 'refs/changes/' + rev[-2:] + '/' + rev + '/' + pset[rev]
-            r['pset'] = pset[rev]
+        if 'force_patchset' in r:
+            r['pset'] = r['force_patchset']
+            ref = 'refs/changes/' + r['number'][-2:] + '/' + r['number'] + '/' + r['pset']
         else:
             ref = r['currentPatchSet']['ref']
             r['pset'] = ref.split('/')[-1]
@@ -197,9 +198,10 @@ def fetch_branches(p, g, pset, all_branch):
         if not lbranch in all_branch:
             ref_to_fetch.append('+' + ref + ':' + lbranch)
     if ref_to_fetch:
-        call(p, ['git','fetch','umg'] + ref_to_fetch)
+        remote = call(p, ['git', 'remote']).strip().split()[0]
+        call(p, ['git','fetch',remote] + ref_to_fetch)
 
-def chpick_threaded(p, g, pset, brname, lock):
+def chpick_threaded(p, g, brname, lock):
     #Check local branches
     all_branch = call(p, ['git','branch']).split()
     if brname:
@@ -207,27 +209,29 @@ def chpick_threaded(p, g, pset, brname, lock):
             call(p, ['git', 'checkout', brname])
         else:
             call(p, ['git', 'checkout', '-b', brname])
-    logchid = get_log_chid(p, g)
-    fetch_branches(p, g, pset, all_branch)
+
+    fetch_branches(p, g, all_branch)
 
     log = 'Project ' + p + '\n'
     for r in g:
-        log += chpick_one(p, r, logchid)
+        log += chpick_one(p, r)
     with lock:
         sys.stdout.write(log + '\n')
 
 # fetch and cherry-pick all gerrit inspection.
-# grev : gerrit revision number, pset : dict with patchset for each revision
+# projs : list of gerrit projects with patch revision number
 # brname : branchname to create
-def chpick(grev, pset, brname):
-    projs = query_gerrit_batch(grev)
+def chpick(projs, brname):
     allth = []
     lock = threading.Lock()
 
     for p in projs:
         g = projs[p]
+        if p == 'not_in_manifest':
+            print 'ignoring revision', [int(r['number']) for r in g]
+            continue
 
-        th = threading.Thread(None, chpick_threaded, None, (p, g, pset, brname, lock), None)
+        th = threading.Thread(None, chpick_threaded, None, (p, g, brname, lock), None)
         th.start()
         allth.append(th)
 
@@ -253,13 +257,13 @@ def review_add(x, y):
     return y
 
 # add more user friendly info in json results
-def parse_json_info(p, r, logchid, pset):
+def parse_json_info(p, r, logchid):
     pretty_verify = { '1' : 'Verified', '0' : 'No Score', '' : 'No Score', '-1' : 'Fails'}
     pretty_review = { '-2' : '-2', '-1' : '-1', '0' : '0', '1' : '+1', '2' : '+2', '' : '0'}
 
     r['lastpset'] = r['currentPatchSet']['ref'].split('/')[-1]
-    if r['number'] in pset:
-        r['curpset'] = pset[r['number']]
+    if 'force_patchset' in r:
+        r['curpset'] = r['force_patchset']
     else:
         r['curpset'] = r['lastpset']
     if r['id'] in logchid:
@@ -287,22 +291,19 @@ def parse_json_info(p, r, logchid, pset):
     r['review'] = pretty_review[r['review']]
     r['verified'] = pretty_verify[r['verified']]
 
-# get information about a list of patches.
-def get_info(grev, pset):
-    projs = query_gerrit_batch(grev)
+# parse some information on the json
+# and check if patches already applied
+def get_info(projs):
     for p in projs:
         logchid = get_log_chid(p, projs[p])
         for r in projs[p]:
-            parse_json_info(p, r, logchid, pset)
-    return projs
+            parse_json_info(p, r, logchid)
 
 # print a csv file, so you can import it in Libreoffice/Excel
-def pr_csv(grev, pset, outfile):
+def pr_csv(projs, outfile):
     f = open(outfile, 'wb')
     f.write('\t'.join(['Patch','URL','Review','Verified','Patchset','Latest Patchset','IsApplied','BZ','Project Dir','Status','Owner','Subject\n']))
     column = ['number', 'link', 'review', 'verified', 'curpset', 'lastpset', 'isApplied', 'bzurl', 'path', 'status', 'ownername', 'subject']
-
-    projs = get_info(grev, pset)
 
     for p in projs:
         for r in projs[p]:
@@ -311,8 +312,7 @@ def pr_csv(grev, pset, outfile):
     f.close()
 
 # print long information on each gerrit number
-def pr_long(grev, pset):
-    projs = get_info(grev, pset)
+def pr_long(projs):
     column = ['url', 'isApplied', 'psetinfo', 'bz', 'status', 'review', 'verified', 'subject']
     print '   ' + '\t'.join(column)
     for p in projs:
@@ -321,8 +321,7 @@ def pr_long(grev, pset):
             print '   ' + '\t'.join([r[c] for c in column])
 
 # print short summary on each gerrit number
-def pr_short(grev, pset):
-    projs = get_info(grev, pset)
+def pr_short(projs):
     for p in projs:
         print '# Project ', p
         for r in projs[p]:
@@ -330,15 +329,13 @@ def pr_short(grev, pset):
 
 # generate .patch files, and put them in a tar archive.
 # add current manifest to tar archive if asked to do so ( -m )
-def genpatch(grev, pset, tfile):
+def genpatch(projs, tfile):
     f = tarfile.open(tfile,'w')
 
     if options.manifest:
         mname = os.path.relpath(os.path.realpath('.repo/manifest.xml'))
         print 'ADD ', mname
         f.add(mname)
-
-    projs = query_gerrit_batch(grev)
 
     for p in projs:
         g = projs[p]
@@ -347,7 +344,7 @@ def genpatch(grev, pset, tfile):
         # Check local branch (this can avoid long git fetch cmd).
         all_branch = call(p, ['git','branch']).split()
 
-        fetch_branches(p, g, pset, all_branch)
+        fetch_branches(p, g, all_branch)
 
         for r in g:
             pname = call(p, ['git', 'format-patch', '-1', r['lbranch'], '--start-number', r['number']]).strip()
@@ -404,6 +401,7 @@ def clean_args(args):
                 grev.append(l[-1])
         else:
             print 'cannot parse', a, 'to a gerrit revision'
+
     return grev, pset
 
 # parse input file
@@ -424,6 +422,9 @@ def parse_infile(fname):
 
 def main():
     global options
+    global status
+
+    status = 0
     usage = "usage: %prog [options] patch1 patch2 ... "
     description = "Genereric tool to manage a list of patches from gerrit. The default behavior is to apply the patches to current repository"
     parser = OptionParser(usage, description=description)
@@ -437,9 +438,8 @@ def main():
     parser.add_option("-l", "--long", dest="printlong", action='store_true', help="print patches long status")
     parser.add_option("-g", "--genpatch", dest="genpatch", help="save patches to a tar file")
     parser.add_option("-a", "--applypatch", dest="applypatch", help="apply all patches saved to a tar file")
-    parser.add_option("-w", "--weekly", dest="weekly", help="synchronize repo to weekly manifest ex: 2014_WW05")
-    parser.add_option("-d", "--daily", dest="daily", help="synchronize repo to daily manifest ex: 20140205_2940")
     parser.add_option("-m", "--manifest", dest="manifest", action='store_true', help="when used with -g, add the manifest.xml to the tar file")
+    parser.add_option("-q", "--query", dest="query", help="free form gerrit query, like topic:l_64bits or is:starred")
 
     (options, args) = parser.parse_args()
 
@@ -450,38 +450,43 @@ def main():
         applypatch(options.applypatch)
         return
 
-    if options.weekly:
-        set_repo_weekly(options.weekly)
-    elif options.daily:
-        set_repo_daily(options.daily)
-    elif not options.infile and len(args) < 1:
+    if not (options.infile or options.query) and len(args) < 1:
         parser.print_help()
+        return
 
     init_gerrit2path()
 
     if options.infile:
         args += parse_infile(options.infile)
 
-    grev, pset = clean_args(args)
+    if options.query:
+        projs = query_gerrit_custom(options.query)
+    else:
+        grev, pset = clean_args(args)
+        projs = query_gerrit_revision(grev, pset)
 
-    if not grev:
+    if not projs:
         print 'No patches to process, exiting (use -h for help)'
         return
 
+    get_info(projs)
+
     if options.csvfile:
-        pr_csv(grev, pset, options.csvfile)
+        pr_csv(projs, options.csvfile)
         return
     if options.printshort:
-        pr_short(grev, pset)
+        pr_short(projs)
         return
     if options.printlong:
-        pr_long(grev, pset)
+        pr_long(projs)
         return
     if options.genpatch:
-        genpatch(grev, pset, options.genpatch)
+        genpatch(projs, options.genpatch)
         return
 
-    chpick(grev, pset, options.brname)
+    chpick(projs, options.brname)
+
+    sys.exit(status)
 
 if __name__ == "__main__":
     main()
