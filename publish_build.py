@@ -375,6 +375,13 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant,
                                "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
+
+    # xml file must be generated at the very beginning.
+    ifwis = find_ifwis(board_soc)
+    for board, args in ifwis.items():
+         if args["capsule"]:
+             f.add_xml_file("flash_update_capsule_p1.xml")
+
     if get_build_options(key='FLASH_MODEM', key_type='boolean'):
         f.add_xml_file("no-modem-reflash.xml")
     f.xml_header("fastboot", bld, "1")
@@ -382,7 +389,6 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
 
-    ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
          if args["capsule"]:
              f.add_codegroup("CAPSULE", (("CAPSULE_" + board.upper(), args["capsule"], args["ifwiversion"]),))
@@ -401,7 +407,7 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     for board, args in ifwis.items():
          if args["capsule"]:
-              f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower(),), "Attempt flashing capsule " + board)
+              f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower(),), "Attempt flashing capsule " + board, xml_filter=["flash_update_capsule_p1.xml"])
 
     publish_flash_modem_files(f)
 
