@@ -103,6 +103,29 @@ class FlashFileXml:
         tree = etree.ElementTree(self.xml)
         tree.write(self.xmlfile, xml_declaration=True, encoding="utf-8", pretty_print=True)
 
+# class to generate installer .sh file from json configuration file.
+# .sh files are used for flashing a board in one single command.
+class FlashFileSh:
+
+    def __init__(self, config):
+        self.sh = "#/bin/sh\n\n"
+        self.shfile = os.path.join(options.directory, config['filename'])
+
+    def parse_command(self, commands):
+        for cmd in commands:
+            if cmd['type'] == 'fflash':
+                self.sh += 'fastboot flash ' + cmd['partition'] + ' ' + os.path.basename(t2f[cmd['target']]) + '\n'
+            elif cmd['type'] == 'ferase':
+                self.sh += 'fastboot erase ' + cmd['partition'] + '\n'
+            elif cmd['type'] == 'foem':
+                self.sh += 'fastboot oem ' + cmd['arg'] + '\n'
+            elif cmd['type'] == 'fcontinue':
+                self.sh += 'fastboot continue\n'
+
+    def finish(self):
+        print 'writing ', self.shfile
+        with open(self.shfile, "w") as f:
+            f.write(self.sh)
 # class to generate installer .cmd file from json configuration file.
 # .cmd files are used by droidboot to flash target without USB device.
 class FlashFileCmd:
@@ -116,7 +139,7 @@ class FlashFileCmd:
             if cmd['type'] == 'fflash':
                 self.cmd += 'flash:' + cmd['partition'] + '#/installer/' + os.path.basename(t2f[cmd['target']]) + '\n'
             elif cmd['type'] == 'ferase':
-                self.cmd += 'erase:' + cmd['partition']
+                self.cmd += 'erase:' + cmd['partition'] + '\n'
             elif cmd['type'] == 'foem':
                 self.cmd += 'oem:' + cmd['arg'] + '\n'
             elif cmd['type'] == 'fcontinue':
@@ -133,6 +156,8 @@ def parse_config(conf):
             f = FlashFileXml(c, options.platform)
         elif c['filename'][-4:] == '.cmd':
             f = FlashFileCmd(c)
+        elif c['filename'][-3:] == '.sh':
+            f = FlashFileSh(c)
 
         commands = conf['commands']
         commands = [cmd for cmd in commands if not 'target' in cmd or cmd['target'] in t2f]
