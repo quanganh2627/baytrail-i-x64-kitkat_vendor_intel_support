@@ -264,6 +264,11 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     ifwis = find_ifwis(board_soc)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
+
+    # Warn userdbug doesn't boot to UI and prevent ACS from using userdebug for test
+    if bld_variant == "userdebug":
+        f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "does-not-boot-to-ui-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
+
     if bld_flash_modem:
         f.add_xml_file("no-modem-reflash.xml")
 
