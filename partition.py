@@ -107,7 +107,7 @@ def generate_gpt_fstab_file(storage, global_data, os_mount):
             display_mount_point = "/%s" % partition["mount_point"]
 
         current_line = list()
-        current_line.append(global_data["gpt"]["base_name_label"] + display_partition_name)
+        current_line.append(global_data["gpt"]["base_name_name"] + display_partition_name)
         current_line.append("\t")
         current_line.append("%s" % (display_mount_point))
         current_line.append("\t")
@@ -276,7 +276,7 @@ def generate_mbr_recovery_fstab_file(storage, global_data):
 
         current_line.append("#size_hint=%d" % (partition["size"]))
         current_line.append("\n")
-        current_line.append(global_data["gpt"]["base_name_label"] + display_partition_name)
+        current_line.append(global_data["gpt"]["base_name_name"] + display_partition_name)
         current_line.append("\t")
         current_line.append("/%s" % (partition_name))
         current_line.append("\t")
