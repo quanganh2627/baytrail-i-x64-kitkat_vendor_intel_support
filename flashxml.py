@@ -64,7 +64,7 @@ class FlashFileXml:
                 cmd['pftname'] = '$' + shortname.lower() + '_file'
 
         for cmd in commands:
-            params = (cmd.get('timeout', 60000), cmd.get('retry', 2), cmd.get('mandatory', True))
+            params = (cmd.get('timeout', 120000), cmd.get('retry', 2), cmd.get('mandatory', True))
 
             if cmd['type'] == 'prop':
                 self.add_buildproperties(t2f[cmd['target']])

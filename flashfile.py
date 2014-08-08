@@ -114,7 +114,7 @@ class FlashFile:
         </command>"""%locals()
         return xml
 
-    def add_command(self, command, description, xml_filter=[], timeout=60000, retry=2, mandatory=1):
+    def add_command(self, command, description, xml_filter=[], timeout=120000, retry=2, mandatory=1):
         def f(xml):
             return self.add_command_in_xml( command, description, xml, timeout, retry, mandatory)
         self.apply_f_to_all_valid_xml(f,xml_filter)
