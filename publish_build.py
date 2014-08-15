@@ -131,6 +131,7 @@ def find_ifwis(board_soc):
              ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                           "redhookbay_xen": "ctp_pr[23]/XEN ctp_pr3.1/XEN",
                           "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
+                          "pf450cl": "me372cl/pf450cl",
                           "baylake": "baytrail/baylake",
                           "byt_t_ffrd8": "baytrail/byt_t"
                          }[bld_prod]
