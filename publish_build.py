@@ -497,6 +497,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     gpflag = get_build_options(key='BOARD_GPFLAG', key_type='hex')
+    single_dnx = get_build_options(key='SINGLE_DNX')
     config_list = get_build_options(key='CONFIG_LIST')
     product_out = os.path.join("out/target/product", bld)
     blankphone_dir = os.path.join(bldpub, "flash_files/blankphone")
@@ -539,9 +540,13 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             default_ifwi = (("CAPSULE", args["capsule"], args["ifwiversion"]),
                             ("DEDIPROG",  args["ifwi"], args["ifwiversion"]),)
         else:
-            default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
-                            ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
-                            ("OS_DNX", args["osdnx"], args["ifwiversion"]))
+            if single_dnx == "true":
+                default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
+                                ("FW_DNX",  args["fwdnx"], args["ifwiversion"]))
+            else:
+                default_ifwi = (("IFWI", args["ifwi"], args["ifwiversion"]),
+                                ("FW_DNX",  args["fwdnx"], args["ifwiversion"]),
+                                ("OS_DNX", args["osdnx"], args["ifwiversion"]))
 
         ifwis_dict = {}
         for xml_file in f.xml.keys():
