@@ -228,7 +228,6 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
-    sparse_disabled = get_build_options(key='SPARSE_DISABLED', key_type='boolean')
 
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
@@ -247,10 +246,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     if bld_supports_droidboot:
         publish_file(locals(), "%(product_out)s/droidboot.img", fastboot_dir, enforce=False)
         publish_file(locals(), "%(product_out)s/droidboot.img.POS.bin", fastboot_dir, enforce=False)
-        if sparse_disabled:
-            system_img_path_in_out = os.path.join(product_out, "system.img.gz")
-        else:
-            system_img_path_in_out = os.path.join(product_out, "system.img")
+        system_img_path_in_out = os.path.join(product_out, "system.img")
     else:
         publish_file(locals(), "%(product_out)s/recovery.img.POS.bin", fastboot_dir, enforce=False)
         system_img_path_in_out = os.path.join(product_out, "system.tar.gz")
