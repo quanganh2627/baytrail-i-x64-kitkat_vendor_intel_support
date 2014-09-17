@@ -37,15 +37,26 @@ case "$TYPE" in
     droidboot) IMGNAME="droidboot";;
     ramdump) IMGNAME="ramdump";;
 esac
+
+if [ -z "$IMGNAME" ]; then
+    case `basename "$OUT"` in
+        boot.img) IMGNAME="boot"; TYPE="mos" ;;
+        recovery.img) IMGNAME="recovery" ; TYPE="recovery";;
+        droidboot.img) IMGNAME="droidboot" ; TYPE="droidboot";;
+        ramdump.img) IMGNAME="ramdump" ; TYPE="ramdump";;
+    esac
+fi
+
 if [ -z "$IMGNAME" ]; then
     # should be a fatal error
-    # we need to allow to call this script from standard AOSP build
-    # some parameters will miss : we workaround
+    # we need to allow to call this script from standard AOSP build for recovery generation
+    echo "Warning: image type shall be one of: mos,recovery,combined,fastboot,droidboot,ramdump"
+    echo "=> Generating RECOVERY image"
+
     IMGNAME="recovery"
     TYPE="recovery"
-    echo "Error: image type shall be one of: mos,recovery,combined,fastboot,droidboot,ramdump"
-    #exit 1
 fi
+
 if [ -z "$SIGN_WITH" ]; then
     SIGN_WITH="xfstk"
 fi
@@ -100,7 +111,8 @@ fi
 
 if [ -e "${OUT}" ]; then
     echo "${OUT} exists, remove the old one"
-    rm -f ${OUT}
+    # do not rm the file : it is already opened in the caller script
+    truncate -s 0 ${OUT}
 fi
 
 echo "Creating image \`${OUT}'for FSTK stitching..."
@@ -129,7 +141,15 @@ UPPER_TYPE=${TYPE^^}
 TMPFILE=`mktemp /tmp/gen-os.tmp.XXX`
 
 GEN_OS=vendor/intel/support/gen_os
-GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --sign-with $SIGN_WITH"
+# If UNSIGNED_OUT is absolute path, then no need to prefix with TOP
+# This happens during OTA generation
+if [[ "${UNSIGNED_OUT}" = /* ]]
+then
+  GEN_OS_CMD="./$GEN_OS --input ${UNSIGNED_OUT} --output ${OUT} --xml ${UPPER_TYPE}_OTA.XML --sign-with $SIGN_WITH"
+else
+  GEN_OS_CMD="./$GEN_OS --input ${TOP}/${UNSIGNED_OUT} --output ${TOP}/${OUT} --xml ${UPPER_TYPE}_OTA.XML --sign-with $SIGN_WITH"
+fi
+
 $GEN_OS_CMD 2>${TMPFILE}
 if [ $? -ne 0 ]; then
     echo -e "$GEN_OS_CMD: error\n$(cat ${TMPFILE})" >&2

@@ -427,6 +427,7 @@ def publish_ota_flashfile(bld, bld_variant, bld_prod, buildnumber):
     f.add_file("OTA", full_ota_file, buildnumber)
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
     f.add_command("adb root", "As root user")
+    f.add_command("adb wait-for-device", "Wait ADB availability")
     f.add_command("adb shell rm /cache/recovery/update/*", "Clean cache")
     f.add_command("adb shell rm /cache/ota.zip", "Clean ota.zip")
 
