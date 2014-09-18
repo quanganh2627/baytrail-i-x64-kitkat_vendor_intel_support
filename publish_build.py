@@ -864,9 +864,6 @@ if __name__ == '__main__':
     bootonly_flashfile = get_build_options(key='FLASHFILE_BOOTONLY',
                                            key_type='boolean',
                                            default_value=False)
-    external_release = get_build_options(key='EXTERNAL_BINARIES',
-                                         key_type='boolean',
-                                         default_value=False)
 
     init_global()
 
@@ -884,9 +881,10 @@ if __name__ == '__main__':
     if goal == "blankphone":
         locals()["publish_blankphone_" + bios_type](bld, buildnumber, board_soc)
 
+    elif goal == "publish_intel_prebuilts":
+        publish_external(bld, bld_variant, board_soc)
+
     elif goal == "fastboot_flashfile":
-        if external_release:
-            publish_external(bld, bld_variant, board_soc)
         if do_we_publish_bld_variant(bld_variant):
             locals()["publish_build_" + bios_type](bld, bld_variant, bld_prod, buildnumber, board_soc)
 
