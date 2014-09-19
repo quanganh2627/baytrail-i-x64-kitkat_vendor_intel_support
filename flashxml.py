@@ -78,6 +78,9 @@ class FlashFileXml:
             elif cmd['type'] == 'ferase':
                 desc = cmd.get('desc', 'Erase ' + cmd['partition'] + ' partition')
                 command = ['fastboot', 'erase', cmd['partition']]
+            elif cmd['type'] == 'fformat':
+                desc = cmd.get('desc', 'Format ' + cmd['partition'] + ' partition')
+                command = ['fastboot', 'format', cmd['partition']]
             elif cmd['type'] == 'fboot':
                 desc = cmd.get('desc', 'Uploading fastboot image.')
                 command = ['fastboot', 'boot', cmd['pftname']]
@@ -122,6 +125,8 @@ class FlashFileSh:
                 self.sh += 'fastboot update ' + os.path.basename(t2f[cmd['target']]) + '\n'
             elif cmd['type'] == 'ferase':
                 self.sh += 'fastboot erase ' + cmd['partition'] + '\n'
+            elif cmd['type'] == 'fformat':
+                self.sh += 'fastboot format ' + cmd['partition'] + '\n'
             elif cmd['type'] == 'foem':
                 self.sh += 'fastboot oem ' + cmd['arg'] + '\n'
             elif cmd['type'] == 'fcontinue':
@@ -147,6 +152,8 @@ class FlashFileCmd:
                 self.cmd += 'update:' + '#/installer/' + os.path.basename(t2f[cmd['target']]) + '\n'
             elif cmd['type'] == 'ferase':
                 self.cmd += 'erase:' + cmd['partition'] + '\n'
+            elif cmd['type'] == 'fformat':
+                self.cmd += 'format: ' + cmd['partition'] + '\n'
             elif cmd['type'] == 'foem':
                 self.cmd += 'oem:' + cmd['arg'] + '\n'
             elif cmd['type'] == 'fcontinue':
