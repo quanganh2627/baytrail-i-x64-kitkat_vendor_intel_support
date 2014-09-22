@@ -226,7 +226,6 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     bld_supports_ramdump = get_build_options(key='TARGET_USE_RAMDUMP', key_type='boolean')
     bld_supports_silentlake = get_build_options(key='INTEL_FEATURE_SILENTLAKE', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
-    bld_flash_modem = get_build_options(key='FLASH_MODEM', key_type='boolean')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
 
     product_out = os.path.join("out/target/product", bld)
@@ -261,18 +260,12 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     ifwis = find_ifwis(board_soc)
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
-    if bld_flash_modem:
-        f.add_xml_file("no-modem-reflash.xml")
 
     f.xml_header("fastboot", bld, flashfile_version)
     f.add_file("KERNEL", os.path.join(fastboot_dir, "boot.img"), buildnumber)
     if bld_supports_silentlake:
         f.add_file("SILENTLAKE", os.path.join(fastboot_dir, "sl_vmm.bin"), buildnumber)
     f.add_file("RECOVERY", os.path.join(fastboot_dir, "recovery.img"), buildnumber)
-
-    if bld_flash_modem:
-        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem.zip", fastboot_dir, enforce=False)
-        f.add_file("MODEM", os.path.join(fastboot_dir, "modem.zip"), buildnumber)
 
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir, "droidboot.img"), buildnumber)
@@ -316,8 +309,6 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     if bld_supports_silentlake:
         f.add_command("fastboot flash silentlake $silentlake_file", "Flashing silentlake")
 
-    if bld_flash_modem:
-        f.add_command("fastboot flash radio $modem_file", "Flashing modem", xml_filter=["flash.xml"], timeout=220000)
     f.add_command("fastboot continue", "Reboot system")
 
     # build the flash-capsule.xml
@@ -344,19 +335,6 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     f.finish()
 
 
-def publish_attach_modem_files(f, product_out, directory, buildnumber):
-    if get_build_options(key='FLASH_MODEM', key_type='boolean'):
-        f.add_xml_file("no-modem-reflash.xml")
-        publish_file(locals(), "%(product_out)s/system/etc/firmware/modem/modem.zip",
-                     directory, enforce=False)
-        f.add_file("MODEM", os.path.join(directory, "modem.zip"), buildnumber)
-
-def publish_flash_modem_files(f):
-    if get_build_options(key='FLASH_MODEM', key_type='boolean'):
-        f.add_command("fastboot flash radio $modem_file", "Flashing modem.",
-                      xml_filter=["flash.xml"], timeout=220000)
-
-
 def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images")
@@ -368,11 +346,8 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant,
                                "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
-    if get_build_options(key='FLASH_MODEM', key_type='boolean'):
-        f.add_xml_file("no-modem-reflash.xml")
     f.xml_header("fastboot", bld, flashfile_version)
 
-    publish_attach_modem_files(f, product_out, fastboot_dir, buildnumber)
     publish_attach_target2file(f, product_out, buildnumber, target2file)
     f.add_file("esp_update", os.path.join(product_out, "esp.zip"), buildnumber);
 
@@ -394,8 +369,6 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
     for board, args in ifwis.items():
          if args["capsule"]:
               f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower(),), "Attempt flashing capsule " + board)
-
-    publish_flash_modem_files(f)
 
     f.add_command("fastboot continue", "Rebooting now.")
     f.finish()
@@ -716,20 +689,6 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     f.finish()
 
 
-def publish_modem(bld):
-    # environment variables
-    board_have_modem = get_build_options(key='BOARD_HAVE_MODEM', key_type='boolean')
-    if not board_have_modem:
-        print >> sys.stderr, "bld:%s not supported, no modem for this target" % (bld,)
-        return 0
-
-    modem_dest_dir = os.path.join(bldpub, "MODEM/")
-    product_out = os.path.join("out/target/product", bld)
-    modem_out_dir = os.path.join(product_out, "system/etc/firmware/modem/")
-
-    publish_file(locals(), modem_out_dir + "modem.zip", modem_dest_dir)
-
-
 def publish_kernel(bld, bld_variant):
     product_out = os.path.join("out/target/product", bld)
     fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
@@ -915,8 +874,6 @@ if __name__ == '__main__':
     # Publish goal
     if goal == "blankphone":
         locals()["publish_blankphone_" + bios_type](bld, buildnumber, board_soc)
-    elif goal == "modem":
-        publish_modem(bld)
 
     elif goal == "fastboot_flashfile":
         if external_release:
