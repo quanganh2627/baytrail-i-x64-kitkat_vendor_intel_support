@@ -296,7 +296,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
         if args["ulpmc"]:
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", retry=3, mandatory=0)
 
-    publish_erase_partitions(f, ["cache"])
+    publish_format_partitions(f, ["cache"])
 
     if bld_supports_silentlake:
         f.add_command("fastboot flash silentlake $silentlake_file", "Flashing silentlake")
@@ -353,7 +353,8 @@ def publish_build_uefi(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     f.add_buildproperties("%(product_out)s/system/build.prop" % locals())
 
-    publish_erase_partitions(f, ["cache", "system"])
+    publish_erase_partitions(f, ["system"])
+    publish_format_partitions(f, ["cache"])
 
     f.add_command("fastboot flash esp_update $esp_update_file", "Updating ESP.")
 
@@ -441,8 +442,11 @@ def publish_erase_partitions(f, partitions):
     for part in partitions:
         f.add_command("fastboot erase " + part, "Erase '%s' partition." % part)
 
+def publish_format_partitions(f, partitions):
+    for part in partitions:
+        f.add_command("fastboot format " + part, "Format '%s' partition." % part)
 
-def publish_partitioning_commands(f, bld, buildnumber, filename, erase_list):
+def publish_partitioning_commands(f, bld, buildnumber, filename, format_list):
     f.add_command("fastboot oem start_partitioning", "Start partitioning.")
     f.add_command("fastboot flash /tmp/%s $partition_table_file" % (filename,), "Push the new partition table to the device.")
     f.add_command("fastboot oem partition /tmp/%s" % (filename), "Apply the new partition scheme.")
@@ -450,12 +454,11 @@ def publish_partitioning_commands(f, bld, buildnumber, filename, erase_list):
     tag = "-EraseFactory"
 
     xml_tag_list = [i for i in f.xml.keys() if tag in i]
-    f.add_command("fastboot erase %s" % ("factory",), "Erase '%s' partition." % ("factory",), xml_filter=xml_tag_list)
+    f.add_command("fastboot format %s" % ("factory",), "Format '%s' partition." % ("factory",), xml_filter=xml_tag_list)
 
-    publish_erase_partitions(f, erase_list)
+    publish_format_partitions(f, format_list)
 
     f.add_command("fastboot oem stop_partitioning", "Stop partitioning.")
-
 
 def publish_blankphone_iafw(bld, buildnumber, board_soc):
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
@@ -564,7 +567,7 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             f.add_command("fastboot oem erase_osip_header", "Erase OSIP header")
 
         publish_partitioning_commands(f, bld, buildnumber, partition_filename,
-                                      ["system", "cache", "config", "logs", "data"])
+                                      ["cache", "config", "logs", "data"])
 
         # must provision the AOSP droidboot during blankphone
         if part_scheme == "full-gpt":
@@ -685,7 +688,7 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
     f.add_command("fastboot oem wipe ESP", "Wiping ESP partition.", mandatory=0);
     f.add_command("fastboot oem wipe reserved", "Wiping reserved partition.", mandatory=0);
     publish_partitioning_commands(f, bld, buildnumber, os.path.split(part_file)[1],
-                                  ["system", "cache", "config", "logs", "data"])
+                                  ["cache", "config", "logs", "data"])
 
     publish_flash_target2file(f, target2file)
 
