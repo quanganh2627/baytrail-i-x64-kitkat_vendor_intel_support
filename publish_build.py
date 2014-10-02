@@ -474,8 +474,13 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
     blankphone_dir = os.path.join(bldpub, "flash_files/blankphone")
     partition_filename = "partition.tbl"
     partition_file = os.path.join(product_out, partition_filename)
+    part_scheme = get_build_options(key='TARGET_PARTITIONING_SCHEME', default_value='osip-gpt')
+
     if bld_supports_droidboot:
-        recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
+        if part_scheme == "full-gpt":
+            recoveryimg = os.path.join(product_out, "droidboot_dnx.img")
+        else:
+            recoveryimg = os.path.join(product_out, "droidboot.img.POS.bin")
     else:
         recoveryimg = os.path.join(product_out, "recovery.img.POS.bin")
     ifwis = find_ifwis(board_soc)
@@ -536,6 +541,9 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
         for xml_file in f.xml.keys():
             f.add_codegroup("FIRMWARE", ifwis_dict[xml_file], xml_filter=[xml_file])
 
+        if part_scheme == "full-gpt":
+            f.add_file("FASTBOOT", os.path.join(product_out, "droidboot.img"), buildnumber)
+
         if args["capsule"]:
             fastboot_dir = os.path.join(bldpub, "fastboot-images", bld_variant)
             f.add_file("FASTBOOT", os.path.join(product_out, "droidboot.img"), buildnumber)
@@ -559,8 +567,15 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
             f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
             f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
+        if part_scheme == "full-gpt":
+            f.add_command("fastboot oem erase_osip_header", "Erase OSIP header")
+
         publish_partitioning_commands(f, bld, buildnumber, partition_filename,
                                       ["system", "cache", "config", "logs", "data"])
+
+        # must provision the AOSP droidboot during blankphone
+        if part_scheme == "full-gpt":
+            f.add_command("fastboot flash fastboot $fastboot_file", "Flashing droidboot")
 
         fru_token_dir = fru_configs = get_build_options(key='FRU_TOKEN_DIR')
         if os.path.isdir(fru_token_dir):
