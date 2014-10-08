@@ -806,13 +806,16 @@ def publish_external(bld, bld_variant, board_soc):
             print fn, "->", arcname
             z.write(fn, arcname)
 
-        def find_sibling_file(fn, _type, possibilities):
+        def find_sibling_file(fn, _type, possibilities, depth=1):
             dn = os.path.dirname(fn)
-            for glform in possibilities:
-                glform = os.path.join(dn, *glform)
-                gl = glob.glob(glform)
-                if len(gl) == 1:
-                    return gl[0]
+            while depth >=1:
+                for glform in possibilities:
+                    glform = os.path.join(dn, *glform)
+                    gl = glob.glob(glform)
+                    if len(gl) == 1:
+                        return gl[0]
+                dn = os.path.split(dn)[0]
+                depth -= 1
             print >> sys.stderr, "unable to find %s for external release" % (_type,)
             print >> sys.stderr, "please put the file in:"
             print >> sys.stderr, possibilities
@@ -828,10 +831,7 @@ def publish_external(bld, bld_variant, board_soc):
                                                ("PROD", "*EXT.bin")]
                                              )
                 v["androidmk"] = find_sibling_file(v["ifwi"], "Android.mk",
-                                                   [("..", "Android.mk"),
-                                                    ("..", "..", "Android.mk"),
-                                                    ("..", "..", "..", "Android.mk")]
-                                                  )
+                                                   [("Android.mk",)], depth=6)
                 if v["fwdnx"]:
                     write_ifwi_bin(k, v["fwdnx"], "dnx_fwr.bin")
                 if v["osdnx"]:
@@ -844,8 +844,7 @@ def publish_external(bld, bld_variant, board_soc):
                 write_ifwi_bin(k, v["ifwi"], "ifwi-prod.bin")
                 write_ifwi_bin(k, v["androidmk"], "Android.mk")
             commonandroidmk = find_sibling_file(v["ifwi"], "external_Android.mk",
-                                                [("..", "..", "..", "common", "external_Android.mk"),
-                                                 ("..", "..", "..", "..", "common", "external_Android.mk")])
+                                                [("common", "external_Android.mk")], depth=8)
             write_ifwi_bin("common", commonandroidmk, "Android.mk")
         z.close()
 
