@@ -57,7 +57,7 @@ class FlashFileXml:
 
     def parse_command(self, commands):
         for cmd in commands:
-            if cmd['type'] in ['fflash', 'fboot', 'apush']:
+            if cmd['type'] in ['fflash', 'fboot', 'apush', 'fupdate']:
                 fname = os.path.basename(t2f[cmd['target']])
                 shortname = fname.split('.')[0]
                 self.add_file(shortname, fname, options.btag)
@@ -72,6 +72,9 @@ class FlashFileXml:
             elif cmd['type'] == 'fflash':
                 desc = cmd.get('desc', 'Flashing ' + cmd['partition'] + ' image')
                 command = ['fastboot', 'flash', cmd['partition'], cmd['pftname']]
+            elif cmd['type'] == 'fupdate':
+                desc = cmd.get('desc', 'Updating AOSP images boot, recovery and system')
+                command = ['fastboot', 'update', cmd['pftname']]
             elif cmd['type'] == 'ferase':
                 desc = cmd.get('desc', 'Erase ' + cmd['partition'] + ' partition')
                 command = ['fastboot', 'erase', cmd['partition']]
@@ -115,6 +118,8 @@ class FlashFileSh:
         for cmd in commands:
             if cmd['type'] == 'fflash':
                 self.sh += 'fastboot flash ' + cmd['partition'] + ' ' + os.path.basename(t2f[cmd['target']]) + '\n'
+            elif cmd['type'] == 'fupdate':
+                self.sh += 'fastboot update ' + os.path.basename(t2f[cmd['target']]) + '\n'
             elif cmd['type'] == 'ferase':
                 self.sh += 'fastboot erase ' + cmd['partition'] + '\n'
             elif cmd['type'] == 'foem':
@@ -138,6 +143,8 @@ class FlashFileCmd:
         for cmd in commands:
             if cmd['type'] == 'fflash':
                 self.cmd += 'flash:' + cmd['partition'] + '#/installer/' + os.path.basename(t2f[cmd['target']]) + '\n'
+            elif cmd['type'] == 'fupdate':
+                self.cmd += 'update:' + '#/installer/' + os.path.basename(t2f[cmd['target']]) + '\n'
             elif cmd['type'] == 'ferase':
                 self.cmd += 'erase:' + cmd['partition'] + '\n'
             elif cmd['type'] == 'foem':
