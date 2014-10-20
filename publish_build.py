@@ -234,12 +234,9 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     flashfile_dir = os.path.join(bldpub, "flash_files")
 
     print "publishing fastboot images"
-    # everything is already ready in product out directory, just publish it
     publish_kernel_keys(product_out, bld_variant)
-    publish_file(locals(), "%(product_out)s/boot.img", fastboot_dir)
     if bld_supports_silentlake:
         publish_file(locals(), "%(product_out)s/sl_vmm.bin", fastboot_dir)
-    publish_file(locals(), "%(product_out)s/recovery.img", fastboot_dir, enforce=False)
     system_img_path_in_out = None
 
     if bld_supports_droidboot:
@@ -250,11 +247,14 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
         publish_file(locals(), "%(product_out)s/recovery.img.POS.bin", fastboot_dir, enforce=False)
         system_img_path_in_out = os.path.join(product_out, "system.tar.gz")
 
+    publish_file(locals(), "%(product_out)s/%(bldx)s-img-%(buildnumber)s.zip", fastboot_dir)
+
     if bld_supports_ramdump:
         publish_file(locals(), "%(product_out)s/ramdump.img", fastboot_dir, enforce=False)
 
     if publish_system_img:
         publish_file_without_formatting(system_img_path_in_out, fastboot_dir)
+
     publish_file(locals(), "%(product_out)s/installed-files.txt", fastboot_dir, enforce=False)
     publish_file(locals(), "%(product_out)s/ifwi/iafw/ia32fw.bin", iafw_dir, enforce=False)
     ifwis = find_ifwis(board_soc)
@@ -262,16 +262,14 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     f = FlashFile(os.path.join(flashfile_dir,  "build-" + bld_variant, "%(bldx)s-%(bld_variant)s-fastboot-%(buildnumber)s.zip" % locals()), "flash.xml")
 
     f.xml_header("fastboot", bld, flashfile_version)
-    f.add_file("KERNEL", os.path.join(fastboot_dir, "boot.img"), buildnumber)
+
+    f.add_file("UPDATE", os.path.join(fastboot_dir,  bldx + "-img-" + buildnumber + ".zip"), buildnumber)
+
     if bld_supports_silentlake:
         f.add_file("SILENTLAKE", os.path.join(fastboot_dir, "sl_vmm.bin"), buildnumber)
-    f.add_file("RECOVERY", os.path.join(fastboot_dir, "recovery.img"), buildnumber)
 
     if bld_supports_droidboot:
         f.add_file("FASTBOOT", os.path.join(fastboot_dir, "droidboot.img"), buildnumber)
-    # the system_img is optionally published, therefore
-    # we use the one that is in out to be included in the flashfile
-    f.add_file("SYSTEM", system_img_path_in_out, buildnumber)
 
     for board, args in ifwis.items():
         if args["ulpmc"]:
@@ -288,8 +286,6 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     if bld_supports_droidboot:
         f.add_command("fastboot flash fastboot $fastboot_file", "Flashing fastboot")
 
-    f.add_command("fastboot flash recovery $recovery_file", "Flashing recovery")
-
     for board, args in ifwis.items():
         if args["capsule"]:
             f.add_command("fastboot flash capsule $capsule_%s_file" % (board.lower()), "Flashing capsule")
@@ -300,16 +296,13 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
         if args["ulpmc"]:
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", retry=3, mandatory=0)
 
-    publish_erase_partitions(f, ["cache", "system"])
+    publish_erase_partitions(f, ["cache"])
 
-    system_flash_timeout = 300000
-
-    f.add_command("fastboot flash system $system_file", "Flashing system", timeout=system_flash_timeout)
-    f.add_command("fastboot flash boot $kernel_file", "Flashing boot")
     if bld_supports_silentlake:
         f.add_command("fastboot flash silentlake $silentlake_file", "Flashing silentlake")
 
-    f.add_command("fastboot continue", "Reboot system")
+    update_timeout = 600000
+    f.add_command("fastboot update $update_file", "Flashing AOSP images", timeout=update_timeout)
 
     # build the flash-capsule.xml
     for board, args in ifwis.items():
