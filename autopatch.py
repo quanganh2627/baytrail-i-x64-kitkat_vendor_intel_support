@@ -30,7 +30,7 @@ def print_verbose(a):
         print a
 
 # call an external program in a specific directory
-def call(wd, cmd, quiet=False):
+def call(wd, cmd, quiet=False, raise_error=True):
     print_verbose(wd + ' : ' + ' '.join(cmd))
 
     P = subprocess.Popen(args=cmd, stdout=subprocess.PIPE,
@@ -42,7 +42,8 @@ def call(wd, cmd, quiet=False):
         if not quiet:
             print 'Command', cmd
             print 'Failed ' + stderr
-        raise CommandError(stderr)
+        if raise_error:
+            raise CommandError(stderr)
     return stdout
 
 # look for ".repo" in parent directory
@@ -166,7 +167,7 @@ def chpick_one(p, r):
         return stline + 'Applied\n'
     except CommandError:
         status = 1
-        call(p, ['git','cherry-pick','--abort'])
+        call(p, ['git','cherry-pick','--abort'], raise_error=False)
         log =  stline + 'Cherry pick FAILED\n'
         log += '\n\t\t'.join(['\t\tyou can resolve the conflict with','cd ' + p, 'git cherry-pick ' + br, 'git mergetool'])
         return log + '\n'
