@@ -131,16 +131,12 @@ def find_ifwis(board_soc):
              ifwiglobs = {"redhookbay": "ctp_pr[23] ctp_pr3.1 ctp_vv2 ctp_vv3",
                           "redhookbay_xen": "ctp_pr[23]/XEN ctp_pr3.1/XEN",
                           "ctp7160": "cpa_v3_vv cpa_v3_vv_b0_b1",
-                          "pf450cl": "me372cl/pf450cl",
-                          "baylake": "baytrail/baylake",
-                          "byt_t_ffrd8": "baytrail/byt_t"
+                          "pf450cl": "me372cl/pf450cl"
                          }[bld_prod]
         else:
             kernel_x64_format = get_build_options(key='BOARD_USE_64BIT_KERNEL', default_value='false')
             if kernel_x64_format != "true":
-                ifwiglobs = {"byt_t_crv2": "baytrail_edk2/byt_crv2/ia32",
-                             "cht_rvp": "no_directory",
-                             "byt_t_ffrd8": "baytrail_edk2/byt_t/ia32",
+                ifwiglobs = {"cht_rvp": "no_directory",
                              "bsw_rvp": "braswell_edk2/bsw_rvp"
                             }[bld_prod]
             else:
