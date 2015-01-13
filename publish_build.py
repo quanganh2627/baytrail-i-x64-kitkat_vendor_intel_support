@@ -220,6 +220,7 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     board = ""
     bld_supports_droidboot = get_build_options(key='TARGET_USE_DROIDBOOT', key_type='boolean')
     bld_supports_ramdump = get_build_options(key='TARGET_USE_RAMDUMP', key_type='boolean')
+    bld_supports_splashscreen = get_build_options(key='INSTALLED_SPLASHSCREEN_TARGET')
     bld_supports_silentlake = get_build_options(key='INTEL_FEATURE_SILENTLAKE', key_type='boolean')
     bldx = get_build_options(key='GENERIC_TARGET_NAME')
     publish_system_img = do_we_publish_extra_build(bld_variant, 'system_img')
@@ -231,6 +232,10 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
 
     print "publishing fastboot images"
     publish_kernel_keys(product_out, bld_variant)
+
+    if bld_supports_splashscreen:
+        publish_file(locals(), "%(bld_supports_splashscreen)s", fastboot_dir)
+
     if bld_supports_silentlake:
         publish_file(locals(), "%(product_out)s/sl_vmm.bin", fastboot_dir)
     system_img_path_in_out = None
@@ -260,6 +265,9 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
     f.xml_header("fastboot", bld, flashfile_version)
 
     f.add_file("UPDATE", os.path.join(fastboot_dir,  bldx + "-img-" + buildnumber + ".zip"), buildnumber)
+
+    if bld_supports_splashscreen:
+        f.add_file("SPLASHSCREEN", os.path.join(fastboot_dir, "splashscreen.img"), buildnumber)
 
     if bld_supports_silentlake:
         f.add_file("SILENTLAKE", os.path.join(fastboot_dir, "sl_vmm.bin"), buildnumber)
@@ -293,6 +301,9 @@ def publish_build_iafw(bld, bld_variant, bld_prod, buildnumber, board_soc):
             f.add_command("fastboot flash ulpmc $ulpmc_file", "Flashing ulpmc", retry=3, mandatory=0)
 
     publish_format_partitions(f, ["cache"])
+
+    if bld_supports_splashscreen:
+        f.add_command("fastboot flash splashscreen $splashscreen_file", "Flashing splashscreen")
 
     if bld_supports_silentlake:
         f.add_command("fastboot flash silentlake $silentlake_file", "Flashing silentlake")
