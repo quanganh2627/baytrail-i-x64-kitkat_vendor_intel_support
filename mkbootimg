@@ -40,10 +40,10 @@ esac
 
 if [ -z "$IMGNAME" ]; then
     case `basename "$OUT"` in
-        boot.img) IMGNAME="boot"; TYPE="mos" ;;
-        recovery.img) IMGNAME="recovery" ; TYPE="recovery";;
-        droidboot.img) IMGNAME="droidboot" ; TYPE="droidboot";;
-        ramdump.img) IMGNAME="ramdump" ; TYPE="ramdump";;
+        boot*.img) IMGNAME="boot"; TYPE="mos" ;;
+        recovery*.img) IMGNAME="recovery" ; TYPE="recovery";;
+        droidboot*.img) IMGNAME="droidboot" ; TYPE="droidboot";;
+        ramdump*.img) IMGNAME="ramdump" ; TYPE="ramdump";;
     esac
 fi
 
