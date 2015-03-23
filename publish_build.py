@@ -455,8 +455,7 @@ def publish_format_partitions(f, partitions):
 
 def publish_partitioning_commands(f, bld, buildnumber, filename, format_list):
     f.add_command("fastboot oem start_partitioning", "Start partitioning.")
-    f.add_command("fastboot flash /tmp/%s $partition_table_file" % (filename,), "Push the new partition table to the device.")
-    f.add_command("fastboot oem partition /tmp/%s" % (filename), "Apply the new partition scheme.")
+    f.add_command("fastboot flash gpt $partition_table_file", "Push the new partition table to the device.")
 
     tag = "-EraseFactory"
 
@@ -607,7 +606,6 @@ def publish_blankphone_iafw(bld, buildnumber, board_soc):
         if config_list:
             # populate alternate config XML files with corresponding configuration
             for conf in config_list.split():
-                f.add_command("fastboot oem mount config ext4", "Mount config partition", xml_filter="flash-%s.xml" % conf)
                 f.add_command("fastboot oem config %s" % conf, "Activating config %s" % conf, xml_filter="flash-%s.xml" % conf)
 
             if f.clear_xml_file("flash.xml"):
@@ -651,9 +649,6 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
         fastboot_mode = "fastboot"
         osloader = False
 
-    if bld == "byt_t_ffrd8":
-        f.add_xml_file("flash-rvp8.xml")
-
     f.xml_header(fastboot_mode, bld, flashfile_version)
 
     publish_attach_target2file(f, product_out, buildnumber, target2file)
@@ -661,12 +656,6 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
         f.add_file("osloader", os.path.join(product_out, "efilinux-%s.efi" % bld_variant), buildnumber);
 
     f.add_file("INSTALLER", "device/intel/baytrail/installer.cmd", buildnumber)
-    if bld == "byt_t_ffrd8":
-        efilinuxcfg_file = os.path.join(product_out, "efilinux_fakebatt.cfg")
-        fe = open(efilinuxcfg_file, 'w')
-        fe.write('-e fake \n')
-        fe.close()
-        f.add_codegroup("CONFIG", (("EFILINUX_CFG", efilinuxcfg_file, buildnumber),), xml_filter=["flash-rvp8.xml"])
 
     ifwis = find_ifwis(board_soc)
     for board, args in ifwis.items():
@@ -698,10 +687,6 @@ def publish_blankphone_uefi(bld, buildnumber, board_soc):
                                   ["cache", "config", "logs", "data"])
 
     publish_flash_target2file(f, target2file)
-
-    if bld == "byt_t_ffrd8":
-        f.add_command("fastboot oem mount ESP vfat", "Mounting ESP partition.", xml_filter=["flash-rvp8.xml"])
-        f.add_command("fastboot flash /mnt/ESP/EFI/BOOT/efilinux.cfg $efilinux_cfg_file","Copy efilinux.cfg", xml_filter=["flash-rvp8.xml"])
 
     f.copy_xml_file("flash.xml", "flash-buildbot.xml")
 
